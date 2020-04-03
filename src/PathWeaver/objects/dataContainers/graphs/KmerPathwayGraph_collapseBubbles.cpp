@@ -68,8 +68,8 @@ bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllo
 			//groupedNodes[n->uid_].emplace_back(n);
 		}
 	}
-	std::cout << __FILE__ << " " << __LINE__ << std::endl;
-	std::cout << "groupedNodes.size(): " << groupedNodes.size() << std::endl;
+//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	std::cout << "groupedNodes.size(): " << groupedNodes.size() << std::endl;
 //	struct CovInfoPerPos {
 //		CovInfoPerPos(){
 //		}
@@ -163,15 +163,15 @@ bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllo
 //			}
 //
 //			std::cout << __FILE__ << " " << __LINE__ << std::endl;
-			std::cout << __FILE__ << " " << __LINE__ << std::endl;
-			std::cout << "group.second.front()->k_: " << group.second.front()->k_ << std::endl;
-			std::cout << "group.second.back()->k_: " << group.second.back()->k_ << std::endl;
-
-			std::cout << njh::bashCT::cyan;
-			std::cout << "\tapproxPerBaseCoverageNode1: " << approxPerBaseCoverageNode1<< std::endl;
-			std::cout << "\tapproxPerBaseCoverageNode2: " << approxPerBaseCoverageNode2<< std::endl;
-			std::cout << "\tapproxPerBaseCoverageNode1/approxPerBaseCoverageNode2: " << approxPerBaseCoverageNode1/approxPerBaseCoverageNode2<< std::endl;
-			std::cout << njh::bashCT::reset;
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			std::cout << "group.second.front()->k_: " << group.second.front()->k_ << std::endl;
+//			std::cout << "group.second.back()->k_: " << group.second.back()->k_ << std::endl;
+//
+//			std::cout << njh::bashCT::cyan;
+//			std::cout << "\tapproxPerBaseCoverageNode1: " << approxPerBaseCoverageNode1<< std::endl;
+//			std::cout << "\tapproxPerBaseCoverageNode2: " << approxPerBaseCoverageNode2<< std::endl;
+//			std::cout << "\tapproxPerBaseCoverageNode1/approxPerBaseCoverageNode2: " << approxPerBaseCoverageNode1/approxPerBaseCoverageNode2<< std::endl;
+//			std::cout << njh::bashCT::reset;
 			if(group.second.front()->k_.length() > 2 * klen_ && group.second.back()->k_.length() > 2 * klen_){
 				//node1
 				auto estCovNode1 = CoverageEstimator::estimateCov(group.second.front()->k_, MetaDataInName(), *this);
@@ -184,13 +184,13 @@ bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllo
 				approxPerBaseCoverageNode2 = estCovNode2.minCov_.avgCov_;
 //				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			}
-			std::cout << __FILE__ << " " << __LINE__ << std::endl;
-			std::cout << njh::bashCT::red;
-			std::cout << "\tapproxPerBaseCoverageNode1: " << approxPerBaseCoverageNode1<< std::endl;
-			std::cout << "\tapproxPerBaseCoverageNode2: " << approxPerBaseCoverageNode2<< std::endl;
-			std::cout << "\tapproxPerBaseCoverageNode1/approxPerBaseCoverageNode2: " << approxPerBaseCoverageNode1/approxPerBaseCoverageNode2<< std::endl;
-			std::cout << njh::bashCT::reset;
-			std::cout << std::endl;
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			std::cout << njh::bashCT::red;
+//			std::cout << "\tapproxPerBaseCoverageNode1: " << approxPerBaseCoverageNode1<< std::endl;
+//			std::cout << "\tapproxPerBaseCoverageNode2: " << approxPerBaseCoverageNode2<< std::endl;
+//			std::cout << "\tapproxPerBaseCoverageNode1/approxPerBaseCoverageNode2: " << approxPerBaseCoverageNode1/approxPerBaseCoverageNode2<< std::endl;
+//			std::cout << njh::bashCT::reset;
+//			std::cout << std::endl;
 			//if the coverage of the second node is approximately homopolymerIndelCollapseFreqMultiplier_ times less than node one, compare them
 			if(approxPerBaseCoverageNode1/approxPerBaseCoverageNode2 >= freqMultiCutOff){
 //				std::cout << "\t" << "uAbsdiff(group.second.front()->k_.length(), group.second.back()->k_.length()) : " << uAbsdiff(group.second.front()->k_.length(), group.second.back()->k_.length())  << std::endl;
@@ -414,20 +414,20 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingC
 	//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				}
 
-
-	//			std::cout << "\tapproxPerBaseCoverageNode1: " << approxPerBaseCoverageNode1<< std::endl;
-	//			std::cout << "\tapproxPerBaseCoverageNode2: " << approxPerBaseCoverageNode2<< std::endl;
-	//			std::cout << "\tapproxPerBaseCoverageNode1/approxPerBaseCoverageNode2: " << approxPerBaseCoverageNode1/approxPerBaseCoverageNode2<< std::endl;
+//
+//				std::cout << "\tapproxPerBaseCoverageNode1: " << approxPerBaseCoverageNode1<< std::endl;
+//				std::cout << "\tapproxPerBaseCoverageNode2: " << approxPerBaseCoverageNode2<< std::endl;
+//				std::cout << "\tapproxPerBaseCoverageNode1/approxPerBaseCoverageNode2: " << approxPerBaseCoverageNode1/approxPerBaseCoverageNode2<< std::endl;
 				//if the coverage of the second node is approximately homopolymerIndelCollapseFreqMultiplier_ times less than node one, compare them
 				if(approxPerBaseCoverageNode1/approxPerBaseCoverageNode2 >= homopolymerIndelCollapseFreqMultiplier_){
 					if(uAbsdiff(group.second[0]->k_.length(), group.second[nodePos]->k_.length()) <= 10){
 
-		//				std::cout << "\t" << "uAbsdiff(group.second[0]->k_.length(), group.second[nodePos]->k_.length()) : " << uAbsdiff(group.second[0]->k_.length(), group.second[nodePos]->k_.length())  << std::endl;
+//						std::cout << "\t" << "uAbsdiff(group.second[0]->k_.length(), group.second[nodePos]->k_.length()) : " << uAbsdiff(group.second[0]->k_.length(), group.second[nodePos]->k_.length())  << std::endl;
 						//if(uAbsdiff(group.second[0]->k_.length(), group.second[nodePos]->k_.length()) == 1){}
 
-						//					std::cout << "std::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()): " << std::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()) << std::endl;
+//											std::cout << "\tstd::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()): " << std::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()) << std::endl;
 						//compare the two nodes
-						aligner alignerObj(std::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()), gapScoringParameters(5,1,5,1,5,1));
+						aligner alignerObj(std::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()), gapScoringParameters(3,1,3,1,3,1));
 						//aligner alignerObj(std::max(group.second[0]->k_.length(), group.second[nodePos]->k_.length()), gapScoringParameters(5,1,0,0,0,0));
 
 						alignerObj.countEndGaps_ = true;
@@ -438,9 +438,9 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingC
 								seqInfo("1", group.second[0]->k_),
 								seqInfo("2", group.second[nodePos]->k_), false, false, false);
 		//					//uncomment for debugging purposes
-		//					alignerObj.alignObjectA_.seqBase_.outPutSeqAnsi(std::cout);
-		//					alignerObj.alignObjectB_.seqBase_.outPutSeqAnsi(std::cout);
-		//					std::cout << "allowableErrorForHPIndexCollapse_.passErrorProfile(alignerObj.comp_): " << njh::colorBool(allowableErrorForHPIndexCollapse_.passErrorProfile(alignerObj.comp_)) << std::endl;
+//							alignerObj.alignObjectA_.seqBase_.outPutSeqAnsi(std::cout);
+//							alignerObj.alignObjectB_.seqBase_.outPutSeqAnsi(std::cout);
+//							std::cout << "allowableErrorForHPIndexCollapse_.passErrorProfile(alignerObj.comp_): " << njh::colorBool(allowableErrorForHPIndexCollapse_.passErrorProfile(alignerObj.comp_)) << std::endl;
 						if(allowableErrorForHPIndexCollapse_.passErrorProfile(alignerObj.comp_)){
 							modifiedNodes = true;
 							//add in the other node's read names
@@ -844,7 +844,7 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 											if(approxPerBaseCoverageNode1/approxPerBaseCoverageNode2 >= homopolymerIndelCollapseFreqMultiplier_){
 												aligner alignerObj(std::max(
 														groupedNodes[tailsFront.front()].front()->k_.length(),
-														groupedNodes[tailsFront.front()].back()->k_.length()), gapScoringParameters(5,1,5,1,5,1));
+														groupedNodes[tailsFront.front()].back()->k_.length()), gapScoringParameters(3,1,3,1,3,1));
 												alignerObj.countEndGaps_ = false;
 												alignerObj.weighHomopolymers_ = true;
 												alignerObj.alignRegGlobal(
@@ -871,7 +871,7 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 											if(approxPerBaseCoverageNode1/approxPerBaseCoverageNode2 >= homopolymerIndelCollapseFreqMultiplier_){
 												aligner alignerObj(std::max(
 														groupedNodes[tailsFront.back()].front()->k_.length(),
-														groupedNodes[tailsFront.back()].back()->k_.length()), gapScoringParameters(5,1,5,1,5,1));
+														groupedNodes[tailsFront.back()].back()->k_.length()), gapScoringParameters(3,1,3,1,3,1));
 												alignerObj.countEndGaps_ = false;
 												alignerObj.weighHomopolymers_ = true;
 												alignerObj.alignRegGlobal(
@@ -968,3 +968,4 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 
 
 }// namespace njhseq
+

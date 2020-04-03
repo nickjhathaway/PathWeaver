@@ -323,6 +323,8 @@ void HaploPathFinder::PathFinderCorePars::setNodeProcessingOpts(seqSetUp & setUp
 	bool noCollapseOneBaseIndelsNodes = false;
 	setUp.setOption(noCollapseOneBaseIndelsNodes, "--noCollapseOneBaseIndelsNodes", "Don't Combine nodes that share the same heads and tails that only differ by a 1 base indel in a long homopolymer");
 	collapseOneBaseIndelsNodes_ = ! noCollapseOneBaseIndelsNodes;
+	setUp.setOption(collapseOneBaseIndelsBeforeDisentanglement_, "--collapseOneBaseIndelsBeforeDisentanglement", "Collapse One Base Indels Before Disentanglement");
+
 
 	setUp.setOption(oneBaseIndelError_, "--oneBaseIndelError", "The amount of one base indel error to allow when collapsing nodes");
 	setUp.setOption(twoBaseIndelError_, "--twoBaseIndelError", "The amount of two base indel error to allow when collapsing nodes");
@@ -372,6 +374,7 @@ void HaploPathFinder::PathFinderCorePars::setRunningOpts(seqSetUp & setUp){
 void HaploPathFinder::PathFinderCorePars::setPossibleHapsOpts(seqSetUp & setUp){
 	setUp.setOption(writeAllPossibleHaps_, "--writeAllPossibleHaps", "Write All Possible Haps");
 	setUp.setOption(writeEstimatedMajorHaps_, "--writeEstimatedMajorHaps", "Write Estimated Major Haps");
+	setUp.setOption(writeOutFinalConnections_, "--writeOutFinalConnections", "Write out possible connections for multitailed and multiheaded nodes utilizing firstgraph");
 }
 
 
@@ -451,6 +454,8 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	setUp.setOption(bamExtractPars_.throwAwayUnmappedMate_, "--throwAwayUnmappedMate", "Throw Away Unmapped Mate");
 	setUp.setOption(bamExtractPars_.percInRegion_,          "--percInRegion",          "Percent of bases in Region to be included");
 	setUp.setOption(bamExtractPars_.minAlnMapSize_, "--minAlnMapSize", "min Aln Map Size for initial recruitment");
+	setUp.setOption(bamExtractPars_.softClipPercentageCutOff_, "--softClipPercentageCutOff", "The minimum percentage of the bases that can be soft clipped to include alignment");
+
 }
 
 
@@ -575,3 +580,5 @@ HaploPathFinder::HaploPathFinder(ExtractParams inPars) :
 
 
 }  // namespace njhseq
+
+

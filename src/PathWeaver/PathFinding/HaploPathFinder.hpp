@@ -124,6 +124,7 @@ public:
 
 		bool writeAllPossibleHaps_ = false;
 		bool writeEstimatedMajorHaps_ = false;
+		bool writeOutFinalConnections_ = false;
 
 		uint32_t numThreads = 1;
 
@@ -188,6 +189,7 @@ public:
 
 		bool trimShortTips_ = false;
 		bool trimAllShortTips_ = false;
+		bool forceTipsByFreq_ = false;
 		uint32_t optShortTipNumberStart = 2;
 		uint32_t optShortTipNumberStop  = 10;
 		uint32_t optShortTipNumberStep  = 4;
@@ -293,3 +295,8 @@ public:
 };
 
 }  // namespace njhseq
+
+
+
+
+

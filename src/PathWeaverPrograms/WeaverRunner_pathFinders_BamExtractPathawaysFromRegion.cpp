@@ -122,6 +122,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	//recuritment
 	masterPars.bamExtractPars_.keepMarkedDuplicate_ = false;
 	masterPars.bamExtractPars_.filterOffLowEntropyOrphansRecruits_ = false;
+	//masterPars.bamExtractPars_.softClipPercentageCutOff_ = 0.30;
+	masterPars.bamExtractPars_.softClipPercentageCutOff_ = 0.00;
 	masterPars.setBamExtractOpts(setUp);
 
 	//adding meta to the final seqs

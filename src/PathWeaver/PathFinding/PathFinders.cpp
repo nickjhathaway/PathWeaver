@@ -538,9 +538,10 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				klenLog["medianNodeCountAbove50Percent"] = medianNodeCountAbove50Percent;
 				klenLog["meanNodeCountAbove50Percent"] = meanNodeCountAbove50Percent;
 				nodeCountForAutoCutOff = std::max(meanNodeCountAbove50Percent, medianNodeCountAbove50Percent);
-				klenLog["nodeCountForAutoCutOff"] = nodeCountForAutoCutOff;
+
 
 			}
+			klenLog["nodeCountForAutoCutOff"] = nodeCountForAutoCutOff;
 //			std::cout << "klen: " << currentKLen << std::endl;
 //			std::cout << "medianNodeCount       : " << medianNodeCount << std::endl;
 //			std::cout << "meanNodeCount         : " << meanNodeCount << std::endl;
@@ -709,9 +710,17 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				shortTipLog["shortTipNumber"] =  shortTipNumber;
 
 				uint32_t tipCutOff = std::numeric_limits<uint32_t>::max();
-				if(!extractionPars.trimAllShortTips_){
-					tipCutOff = std::max<uint32_t>(std::round(nodeCountForAutoCutOff * .30), kmerOccurenceCutOff + 1);
+				if (!extractionPars.trimAllShortTips_) {
+
+					if (nodeCountForAutoCutOff < 10 && !extractionPars.forceTipsByFreq_) {
+						tipCutOff = std::numeric_limits<uint32_t>::max();
+					} else {
+						tipCutOff = std::max<uint32_t>(
+								std::round(nodeCountForAutoCutOff * .30),
+								kmerOccurenceCutOff + 2);
+					}
 				}
+
 				shortTipLog["shortTipNumber-tipCutOff"] =  tipCutOff;
 
 				//headlessTaillessLenCutOff
@@ -733,7 +742,8 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					std::shared_ptr<KmerPathwayGraph> currentGraph;
 					//copy graph so the entire setup doesn't have to be done again
 					if(kmerOccurenceCutOff == maxKCut &&
-							shortTipNumberIter == maxShortTip){
+							shortTipNumberIter == maxShortTip &&
+							!extractionPars.writeOutFinalConnections_){
 						//last time graph is going to be used so can just use the input since it won't be needed again
 						currentGraph = firstGraph;
 					}else{
@@ -1818,6 +1828,18 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					if(extractionPars.debug){
 						graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-final"));
 					}
+					if(extractionPars.writeOutFinalConnections_){
+//						std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
+//						for(const auto & n : currentGraph->nodes_){
+//							if(!n->tailless() && !n->headless() && (n->tailCount() > 1 || n->headCount() > 1)){
+//								nodesToProcess.emplace_back(n);
+//							}
+//						}
+//						for(const auto & n : nodesToProcess){
+//							auto finalConsFnp = njh::files::make_path(currentShortTipNumberDir, "finalConnectionsInfo.tab.txt");
+//							OutputStream finalConsOut(finalConsFnp);
+//						}
+					}
 //					OptimizationReconResult optRunResAfterFurtherSpliting(OptimizationReconResult::Params(currentKLen, kmerOccurenceCutOff, shortTipNumber),
 //							OptimizationReconResult::Dirs(currentKmerDirectory, currentKCutOffDir, currentShortTipNumberDir),
 //							kCutIter, shortTipIter);
@@ -2753,9 +2775,59 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					}
 				}
 			}
+
+			std::unordered_map<std::string, double> coverageForReadSorting;
+			for(auto & seq : outSeqs){
+				auto estCov = CoverageEstimator::estimateCov(seq, estimatingGraph);
+				MetaDataInName meta(seq.name_);
+				double covForSorting = 0;
+				if(std::numeric_limits<double>::max() != estCov.minCov_.avgCov_ ){
+					meta.addMeta("estimatedPerBaseCoverage", estCov.minCov_.avgCov_, true);
+					covForSorting = estCov.minCov_.avgCov_;
+					if(extractionPars.debug){
+						{
+							OutputStream seqCovCountsOut(OutOptions(njh::files::make_path(bestResult.runDirs_.klenDir_, seq.name_ + "_coverage.txt")));
+							seqCovCountsOut << "coverage" << "\n";
+							seqCovCountsOut << njh::conToStr(estCov.allCounts_, "\n") << std::endl;
+						}
+						OutputStream seqCovCountsDetailedOut(OutOptions(njh::files::make_path(bestResult.runDirs_.klenDir_, seq.name_ + "_coverageDetailed.txt")));
+						seqCovCountsDetailedOut << "pos\tcoverage\tminPos\tsdCov\tavgCov\tstart\tend\tallCounts.size()" << "\n";
+						for(const auto & estCovPos : iter::range(estCov.coverageInfos_.size())){
+							auto pos = estCov.coverageInfos_[estCovPos].pos_;
+							seqCovCountsDetailedOut << pos
+									<< "\t" << estCov.allCounts_[pos]
+									<< "\t" << estCov.coverageInfos_[estCovPos].minPos_
+									<< "\t" << estCov.coverageInfos_[estCovPos].sdCov_
+									<< "\t" << estCov.coverageInfos_[estCovPos].avgCov_
+									<< "\t" << (pos + 1 > estimatingGraph.klen_ ? pos + 1 - estimatingGraph.klen_: 0)
+									<< "\t" << pos + 1
+									<< "\t" << estCov.allCounts_.size() << std::endl;
+						}
+					}
+				} else{
+					meta.addMeta("estimatedPerBaseCoverage", "NA", true);
+				}
+
+				meta.resetMetaInName(seq.name_);
+				coverageForReadSorting[seq.name_] = covForSorting;
+			}
+
+
 			uint32_t finalTotalCountAbove = 0;
 			std::vector<seqInfo> finalFilteredSeqs;
+
 			if(extractionPars.collapseFinalClusters_){
+				//sort by coverage and then tie break with read counts
+				//this is mostly being done for collapsing on homopolymer indels and especially in SWGA if there is insertions having reads sorted by length
+				//will lead to the longer sequence (which is incorrect due to it's insertions) will be kept, so need to sort by coverage and read count
+				njh::sort(outSeqs, [&coverageForReadSorting](const seqInfo & seq1, const seqInfo & seq2){
+					if(coverageForReadSorting[seq1.name_] == coverageForReadSorting[seq2.name_]){
+						return seq1.cnt_ > seq2.cnt_;
+					}else{
+						return coverageForReadSorting[seq1.name_] > coverageForReadSorting[seq2.name_];
+					}
+				});
+
 				uint64_t maxLen = 0;
 				readVec::getMaxLength(outSeqs, maxLen);
 				//throw away any seqs that differ only in homopolymers and can be completely found in the other sequences
@@ -2825,36 +2897,9 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					}
 				}
 			}
-			for(auto & seq : finalFilteredSeqs){
-				auto estCov = CoverageEstimator::estimateCov(seq, estimatingGraph);
-				MetaDataInName meta(seq.name_);
-				if(std::numeric_limits<double>::max() != estCov.minCov_.avgCov_ ){
-					meta.addMeta("estimatedPerBaseCoverage", estCov.minCov_.avgCov_, true);
-					if(extractionPars.debug){
-						{
-							OutputStream seqCovCountsOut(OutOptions(njh::files::make_path(bestResult.runDirs_.klenDir_, seq.name_ + "_coverage.txt")));
-							seqCovCountsOut << "coverage" << "\n";
-							seqCovCountsOut << njh::conToStr(estCov.allCounts_, "\n") << std::endl;
-						}
-						OutputStream seqCovCountsDetailedOut(OutOptions(njh::files::make_path(bestResult.runDirs_.klenDir_, seq.name_ + "_coverageDetailed.txt")));
-						seqCovCountsDetailedOut << "pos\tcoverage\tminPos\tsdCov\tavgCov\tstart\tend\tallCounts.size()" << "\n";
-						for(const auto & estCovPos : iter::range(estCov.coverageInfos_.size())){
-							auto pos = estCov.coverageInfos_[estCovPos].pos_;
-							seqCovCountsDetailedOut << pos
-									<< "\t" << estCov.allCounts_[pos]
-									<< "\t" << estCov.coverageInfos_[estCovPos].minPos_
-									<< "\t" << estCov.coverageInfos_[estCovPos].sdCov_
-									<< "\t" << estCov.coverageInfos_[estCovPos].avgCov_
-									<< "\t" << (pos + 1 > estimatingGraph.klen_ ? pos + 1 - estimatingGraph.klen_: 0)
-									<< "\t" << pos + 1
-									<< "\t" << estCov.allCounts_.size() << std::endl;
-						}
-					}
-				}else{
-					meta.addMeta("estimatedPerBaseCoverage", "NA", true);
-				}
-				meta.resetMetaInName(seq.name_);
-			}
+
+
+
 			auto outSeqOptsAboveFrac = SeqIOOptions::genFastaOut(njh::files::make_path(bestResult.runDirs_.klenDir_, "output_aboveCutOff.fasta"));
 			OutOptions outInfoAboveFracOpts(njh::files::make_path(bestResult.runDirs_.klenDir_, "outputInfo_aboveCutOff.tab.txt"));
 			std::ofstream outInfoAboveFracFile;
