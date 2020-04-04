@@ -108,6 +108,7 @@ int WeaverRunner::SeqsExtractPathaways(const njh::progutils::CmdArgs & inputComm
 
 	setUp.setOption(fracCutOff, "--fracCutOff", "Fraction Cut Off");
 	setUp.setOption(sampName, "--sampName", "Samp Name", true);
+	pars.pFinderPars_.reOrientPairsForStitching = false;
 	setExtractPathWaysDefault(pars, setUp, false);
 	setUp.processRefFilename(pars.pFinderPars_.trimToInputSeqs);
 	bfs::path fastq1Fnp = "";

@@ -262,9 +262,15 @@ void HaploPathFinder::PathFinderCorePars::setStitchParameters(seqSetUp & setUp){
 	setUp.setOption(noStitchPairs, "--noStitchPairs", "Don't attempt to stitch pairs");
 	stitchPairs = !noStitchPairs;
 
-	bool noReOrientPairsForStitching = false;
-	setUp.setOption(reOrientPairsForStitching, "--noReOrientPairsForStitching", "Don't reorient pairs when stitching, this should only be turned on if adaptors have been trimmed off");
-	reOrientPairsForStitching = !noReOrientPairsForStitching;
+	if(reOrientPairsForStitching){
+		bool noReOrientPairsForStitching = false;
+		setUp.setOption(reOrientPairsForStitching, "--noReOrientPairsForStitching", "Don't reorient pairs when stitching, this should only be turned on if adaptors have been trimmed off");
+		reOrientPairsForStitching = !noReOrientPairsForStitching;
+	}else{
+		setUp.setOption(reOrientPairsForStitching, "--reOrientPairsForStitching", "Reorient pairs when stitching, this should only be turned on if adaptors have been trimmed off");
+
+	}
+
 
 	setUp.setOption(pairProcessorParams_.minOverlap_, "--stitchPairsMinOverlap", "stitch pairs min overlap");
 	setUp.setOption(pairProcessorParams_.errorAllowed_, "--stitchErrorAllowed", "Stitch Error Allowed");
