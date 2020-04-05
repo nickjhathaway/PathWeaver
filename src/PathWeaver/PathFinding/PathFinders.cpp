@@ -90,6 +90,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 	writeOutTandemsAndOptionallyStitchPars findTanStitchPars{OutOptions(tandemInfoFnp), finalCurrentDir};
 
 	findTanStitchPars.usedFilteredPairedOpts = SeqIOOptions::genPairedIn(preprocessResults.usedFilteredPairedR1Fnp, preprocessResults.usedFilteredPairedR2Fnp);
+	findTanStitchPars.usedFilteredPairedOpts.revComplMate_ = inOpts.inPairs_.revComplMate_;
 	findTanStitchPars.usedFilteredSinglesOpts = SeqIOOptions::genFastqIn(preprocessResults.usedFilteredSinglesFnp);
 //	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -588,7 +589,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 		firstGraph->populateNodesFromCounts();
 
 
-		if(extractionPars.debug){
+		if(extractionPars.writeNodeCounts_){
 			OutOptions nodeCountsOutOpts(njh::files::make_path(currentKmerDirectory, "nodeCounts.tab.txt"));
 			OutputStream nodeCountsOut(nodeCountsOutOpts);
 			nodeCountsOut << "node\tcount" << std::endl;

@@ -60,6 +60,9 @@ struct preprocessSeqsForWayFindingRes{
 	uint32_t filteredR1Qual_{0};
 	uint32_t filteredR2Qual_{0};
 	uint32_t filteredSinglesQual_{0};
+	uint32_t filteredR1LowEntropy_{0};
+	uint32_t filteredR2LowEntropy_{0};
+	uint32_t filteredSinglesLowEntropy_{0};
 
 
 	Json::Value filteredInfo() const{
@@ -69,6 +72,9 @@ struct preprocessSeqsForWayFindingRes{
 		ret["filteredR1Qual_"] = filteredR1Qual_;
 		ret["filteredR2Qual_"] = filteredR2Qual_;
 		ret["filteredSinglesQual_"] = filteredSinglesQual_;
+		ret["filteredR1LowEntropy_"] = filteredR1LowEntropy_;
+		ret["filteredR2LowEntropy_"] = filteredR2LowEntropy_;
+		ret["filteredSinglesLowEntropy_"] = filteredSinglesLowEntropy_;
 		return ret;
 	}
 };

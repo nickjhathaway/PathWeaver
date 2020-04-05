@@ -52,6 +52,8 @@ public:
 		bool debug = false;
 		bool exitOnException_ = false;
 
+		bool writeNodeCounts_{false};
+
 		bool graphVerbose_ = false;
 		bool graphDebug_ = false;
 		bool debugWriteEdgeInfo_ = false;
@@ -68,6 +70,9 @@ public:
 
 		double qualCheckCutOff_  = 0.5;
 		uint32_t qualCheck_ = 30;
+		bool preFilterReadsOnEntropy_{true};
+		double preFilterReadsOnEntropyCutOff_{0.75};
+		bool markPreFilterInfo_{true};
 
 		double nodeBridgingReadPercCutOff_ = 0.00;
 		bool startDisentanglementConservative_ {false};

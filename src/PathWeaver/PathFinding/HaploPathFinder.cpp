@@ -297,6 +297,22 @@ void HaploPathFinder::PathFinderCorePars::setQualityTrimAndFiltOpts(seqSetUp & s
 	setUp.setOption(qualCheckCutOff_, "--qualCheckCutOff", "Fraction of a read has to be above this of the given quality by --qualCheck");
 	setUp.setOption(qualCheck_, "--qualCheck", "Per base quality check to for filtering based off of quality");
 	setUp.setOption(trimSeqsWithNs_, "--trimSeqsWithNs", "Trim Seqs With Ns to the largest sub seq without Ns");
+
+	if(preFilterReadsOnEntropy_){
+		bool noPreFilterReadsOnEntropy = false;
+		setUp.setOption(noPreFilterReadsOnEntropy, "--noPreFilterReadsOnEntropy", "no pre-filtering reads on entropy");
+		preFilterReadsOnEntropy_ = !noPreFilterReadsOnEntropy;
+	}else{
+		setUp.setOption(preFilterReadsOnEntropy_, "--preFilterReadsOnEntropy", "pre-filter reads on entropy");
+	}
+	setUp.setOption(preFilterReadsOnEntropyCutOff_, "--preFilterReadsOnEntropyCutOff", "Pre-filtering reads on entropy cut off");
+	if(markPreFilterInfo_){
+		bool noMarkPreFilterInfo = false;
+		setUp.setOption(noMarkPreFilterInfo, "--noMarkPreFilterInfo", "no mark pre-filtered reads with failed check info");
+		markPreFilterInfo_ = !noMarkPreFilterInfo;
+	}else{
+		setUp.setOption(markPreFilterInfo_, "--markPreFilterInfo", "mark pre-filtered reads with failed check info");
+	}
 }
 
 
@@ -375,6 +391,7 @@ void HaploPathFinder::PathFinderCorePars::setRunningOpts(seqSetUp & setUp){
 	setUp.setOption(writeOutFinalDot_, "--writeOutFinalDot", "Write Out Final Dot file for the final contigs");
 	setUp.setOption(exitOnException_, "--exitOnException", "Exit On Exception");
 	setUp.setOption(numThreads, "--numThreads", "Number of CPUs to utilize");
+	setUp.setOption(writeNodeCounts_, "--writeNodeCounts", "write Node Counts");
 }
 
 void HaploPathFinder::PathFinderCorePars::setPossibleHapsOpts(seqSetUp & setUp){

@@ -120,7 +120,7 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 		uint32_t internalCount = std::numeric_limits<uint32_t>::max(); //this is used to break ties of optimal counts
 
 		double percentUsed = percentageUsed;
-		while(bestOptResults.empty() && percentUsed > 0){
+		while(bestOptResults.empty() && percentUsed >= 0){
 			for(const auto & optResTest : allResults){
 				if(optResTest.percentOfInputUsed_ > percentUsed && 0 != optResTest.numberOfFinalFilteredSeqs_ ){
 					uint32_t currentOptCount = useFullOptimalCount ? optResTest.optimalCount_ : optResTest.optimalCountBelowLen_;
@@ -149,7 +149,11 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 					}
 				}
 			}
-			percentUsed -= percentagedUsedStepDown;
+			if(percentUsed >0 && percentagedUsedStepDown > percentUsed){
+				percentUsed = 0;
+			}else{
+				percentUsed -= percentagedUsedStepDown;
+			}
 		} //end while
 		njh::sort(bestOptResults,OptimizationReconResult::sortFunc);
 		return bestOptResults;

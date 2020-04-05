@@ -66,7 +66,7 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 	SeqOutput dup_writer(outPars.filteredOffDups_pairedOpts);
 	SeqOutput dup_singleWriter(outPars.filteredOffDups_singletOuts);
 
-	ReadCheckerQualCheck readQualChecker(extractionPars.qualCheck_, extractionPars.qualCheckCutOff_, false);
+	ReadCheckerQualCheck readQualChecker(extractionPars.qualCheck_, extractionPars.qualCheckCutOff_, extractionPars.markPreFilterInfo_);
 	/**@todo take the time to program a more efficient way of doing this*/
 	std::unordered_map<std::string, std::unordered_set<std::string>> alreadyAddedSeqBySamplePair;
 	std::unordered_map<std::string, std::unordered_set<std::string>> alreadyAddedSeqBySampleSingles;
@@ -110,6 +110,39 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			if(secondSkipped){
 				++ret.filteredR2Qual_;
 			}
+
+			if(!firstSkipped && extractionPars.preFilterReadsOnEntropy_){
+				charCounter r1CharCount(pSeq.seqBase_.seq_);
+				//this doesn't take into account N's which throw off the entropy count (won't be ranged from 0-2), so below is a hacky workaround
+				//not doing just N = 0 since if the whole thing is just N's it won't filter on it (but it would still filter downstream so it probably doesn't matter)
+				r1CharCount.chars_['A'] = r1CharCount.chars_['N'];
+				r1CharCount.chars_['N'] = 0;
+				auto r1Entropy = r1CharCount.computeEntrophy();
+				if(r1Entropy < extractionPars.preFilterReadsOnEntropyCutOff_){
+					++ret.filteredR1LowEntropy_;
+					if(extractionPars.markPreFilterInfo_){
+						pSeq.seqBase_.name_.append(njh::pasteAsStr("[", "entropy=", r1Entropy, "]"));
+					}
+					firstSkipped = true;
+				}
+			}
+
+			if(!secondSkipped && extractionPars.preFilterReadsOnEntropy_){
+				charCounter r2CharCount(pSeq.mateSeqBase_.seq_);
+				//this doesn't take into account N's which throw off the entropy count (won't be ranged from 0-2), so below is a hacky workaround
+				//not doing just N = 0 since if the whole thing is just N's it won't filter on it (but it would still filter downstream so it probably doesn't matter)
+				r2CharCount.chars_['A'] = r2CharCount.chars_['N'];
+				r2CharCount.chars_['N'] = 0;
+				auto r2Entropy = r2CharCount.computeEntrophy();
+				if(r2Entropy < extractionPars.preFilterReadsOnEntropyCutOff_){
+					++ret.filteredR2LowEntropy_;
+					if(extractionPars.markPreFilterInfo_){
+						pSeq.mateSeqBase_.name_.append(njh::pasteAsStr("[", "entropy=", r2Entropy, "]"));
+					}
+					secondSkipped = true;
+				}
+			}
+
 			bool dup = false;
 			if(extractionPars.removeDuplicatedSequences_){
 				if(!firstSkipped && !secondSkipped){
@@ -178,6 +211,37 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			if(secondSkipped){
 				++ret.filteredR2Qual_;
 			}
+			if(!firstSkipped && extractionPars.preFilterReadsOnEntropy_){
+				charCounter r1CharCount(pSeq.seqBase_.seq_);
+				//this doesn't take into account N's which throw off the entropy count (won't be ranged from 0-2), so below is a hacky workaround
+				//not doing just N = 0 since if the whole thing is just N's it won't filter on it (but it would still filter downstream so it probably doesn't matter)
+				r1CharCount.chars_['A'] = r1CharCount.chars_['N'];
+				r1CharCount.chars_['N'] = 0;
+				auto r1Entropy = r1CharCount.computeEntrophy();
+				if(r1Entropy < extractionPars.preFilterReadsOnEntropyCutOff_){
+					++ret.filteredR1LowEntropy_;
+					if(extractionPars.markPreFilterInfo_){
+						pSeq.seqBase_.name_.append(njh::pasteAsStr("[", "entropy=", r1Entropy, "]"));
+					}
+					firstSkipped = true;
+				}
+			}
+
+			if(!secondSkipped && extractionPars.preFilterReadsOnEntropy_){
+				charCounter r2CharCount(pSeq.mateSeqBase_.seq_);
+				//this doesn't take into account N's which throw off the entropy count (won't be ranged from 0-2), so below is a hacky workaround
+				//not doing just N = 0 since if the whole thing is just N's it won't filter on it (but it would still filter downstream so it probably doesn't matter)
+				r2CharCount.chars_['A'] = r2CharCount.chars_['N'];
+				r2CharCount.chars_['N'] = 0;
+				auto r2Entropy = r2CharCount.computeEntrophy();
+				if(r2Entropy < extractionPars.preFilterReadsOnEntropyCutOff_){
+					++ret.filteredR2LowEntropy_;
+					if(extractionPars.markPreFilterInfo_){
+						pSeq.mateSeqBase_.name_.append(njh::pasteAsStr("[", "entropy=", r2Entropy, "]"));
+					}
+					secondSkipped = true;
+				}
+			}
 			bool dup = false;
 			if(extractionPars.removeDuplicatedSequences_){
 				if(!firstSkipped && !secondSkipped){
@@ -193,7 +257,7 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 					}
 				}
 			}
-			//check mate
+
 			if(dup){
 				dup_writer.openWrite(pSeq);
 			}else	if (!firstSkipped && !secondSkipped) {
@@ -225,23 +289,45 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			}
 			//quality filter, will turn read off if it doesn't pass checks
 			readQualChecker.checkRead(seq);
-			if (seq.on_) {
-			//if (seq.on_ && std::string::npos == seq.seq_.find("N")) { //moved checking for N's later
-				if (extractionPars.removeDuplicatedSequences_) {
-					std::string seqSampName = getPossibleSampleNameFromSeqName(seq.name_, sampName);
-					if (njh::in(seq.seq_, alreadyAddedSeqBySampleSingles[seqSampName])) {
-						dup_singleWriter.openWrite(seq);
-						++ret.filteredSinglesDups_;
-					} else {
-						alreadyAddedSeqBySampleSingles[seqSampName].emplace(seq.seq_);
-						singleWriter.openWrite(seq);
-					}
-				}else{
-					singleWriter.openWrite(seq);
-				}
-			}else{
+			bool singleSkipped = !seq.on_;
+			bool dup = false;
+			if(singleSkipped){
 				++ret.filteredSinglesQual_;
+			}
+
+			if(!singleSkipped && extractionPars.preFilterReadsOnEntropy_){
+				charCounter singleCharCount(seq.seq_);
+				//this doesn't take into account N's which throw off the entropy count (won't be ranged from 0-2), so below is a hacky workaround
+				//not doing just N = 0 since if the whole thing is just N's it won't filter on it (but it would still filter downstream so it probably doesn't matter)
+				singleCharCount.chars_['A'] = singleCharCount.chars_['N'];
+				singleCharCount.chars_['N'] = 0;
+				auto singleEntropy = singleCharCount.computeEntrophy();
+				if(singleEntropy < extractionPars.preFilterReadsOnEntropyCutOff_){
+					++ret.filteredSinglesLowEntropy_;
+					if(extractionPars.markPreFilterInfo_){
+						seq.name_.append(njh::pasteAsStr("[", "entropy=", singleEntropy, "]"));
+					}
+					singleSkipped = true;
+				}
+			}
+
+
+			if(!singleSkipped && extractionPars.removeDuplicatedSequences_){
+				std::string seqSampName = getPossibleSampleNameFromSeqName(seq.name_, sampName);
+				if (njh::in(seq.seq_, alreadyAddedSeqBySampleSingles[seqSampName])) {
+					dup = true;
+					singleSkipped = true;
+					++ret.filteredSinglesDups_;
+				}else{
+					alreadyAddedSeqBySampleSingles[seqSampName].emplace(seq.seq_);
+				}
+			}
+			if (dup) {
+				dup_singleWriter.openWrite(seq);
+			} else if (singleSkipped) {
 				unused_singleWriter.openWrite(seq);
+			} else {
+				singleWriter.openWrite(seq);
 			}
 		}
 	}
