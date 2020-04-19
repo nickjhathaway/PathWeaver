@@ -717,7 +717,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						tipCutOff = std::numeric_limits<uint32_t>::max();
 					} else {
 						tipCutOff = std::max<uint32_t>(
-								std::round(nodeCountForAutoCutOff * .30),
+								std::round(nodeCountForAutoCutOff * .40),
 								kmerOccurenceCutOff + 2);
 					}
 				}
