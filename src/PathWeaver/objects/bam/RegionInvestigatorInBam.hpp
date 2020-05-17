@@ -52,6 +52,7 @@ public:
 		uint32_t perBaseCountCutOff = 3;
 		bool forcePlusStrand = false;
 		bool countDuplicates = false;
+		uint32_t insertLengthCutOff = 1000;
 		PairedReadProcessor::ProcessParams pairPars;
 
 		void setDefaults(seqSetUp & setUp);
@@ -61,6 +62,7 @@ public:
 
 
 	struct RegionInfo {
+
 		RegionInfo(const GenomicRegion & region);
 
 		GenomicRegion region_; //!< region
@@ -71,7 +73,19 @@ public:
 		bool infoCalled_{false}; //!< whether PathWeaver could be called for this region
 		uint32_t totalReads_{0}; //!< the total number of reads that fall in this region
 		uint32_t totalFullySpanningReads_{0}; //!< the total number of reads that fully span this region
-		double getPerBaseCov() const; //!< calculate the estimated per base read coverage for this region
+
+		uint32_t totalPairedReads_{0}; //!< total number of paired reads that fall in this region, will count both mates of a pair twice
+		uint32_t totalProperPairedReads_{0};//!< total number of proper pairs within region
+		/**@brief calculate the estimated per base read coverage for this region
+		 *
+		 * @return the per base coverage for this region
+		 */
+		double getPerBaseCov() const;
+		/**@brief the fraction of the total pairs that are proper pairs
+		 *
+		 * @return fraction of proper pairs range [0-1]
+		 */
+		double getProperPairFrac() const;
 	};
 
 	struct BamRegionInvestigatorPars {
@@ -88,8 +102,13 @@ public:
 			const bfs::path & bamFnp,
 			const std::vector<GenomicRegion> & regions) const;
 
-	std::shared_ptr<RegionInfo> getCoverageForRegion(
+	RegionInfo getCoverageForRegion(
 			BamTools::BamReader & bReader, const GenomicRegion & region) const;
+
+	RegionInfo getCoverageAndFullySpanningForRegion(
+			BamTools::BamReader &bReader, const GenomicRegion &region,
+			const seqInfo &refSeq, const BamCountSpecficRegionsPars &spanningReadsPar,
+			aligner &alignerObj) const;
 
 
 	struct ReadCountsRes{
@@ -121,6 +140,10 @@ public:
 			std::unordered_map<std::string, std::shared_ptr<RegionInfo>> & pairsByUid) const;
 
 	ReadCountsResSingle getFullSpanningCountForRegion(const GenomicRegion & currentRegion, const seqInfo & refSeq,
+			const BamCountSpecficRegionsPars & spanningReadsPar,
+			BamTools::BamReader &currentBReader, aligner & alignerObj) const;
+
+	void updateFullSpanningCountForRegion(RegionInfo & currentRegion, const seqInfo & refSeq,
 			const BamCountSpecficRegionsPars & spanningReadsPar,
 			BamTools::BamReader &currentBReader, aligner & alignerObj) const;
 

@@ -68,6 +68,12 @@ double BamRegionInvestigator::RegionInfo::getPerBaseCov() const {
 	return static_cast<double>(coverage_) / region_.getLen();
 }
 
+double BamRegionInvestigator::RegionInfo::getProperPairFrac() const {
+	return totalPairedReads_ == 0 ? 0.0 : totalProperPairedReads_ / static_cast<double>(totalPairedReads_);
+}
+
+
+
 BamRegionInvestigator::BamRegionInvestigator(const BamRegionInvestigatorPars & pars) :
 		pars_(pars) {
 
@@ -90,7 +96,7 @@ std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvesti
 		BamTools::BamAlignment bAln;
 		auto refData = bReader.GetReferenceData();
 		while(regionsQueue.getVal(region)){
-			currentBamRegionsPairs.emplace_back(getCoverageForRegion(bReader, region));
+			currentBamRegionsPairs.emplace_back(std::make_shared<RegionInfo>(getCoverageForRegion(bReader, region)));
 		}
 		{
 			std::lock_guard<std::mutex> lock(pairsMut);
@@ -114,14 +120,20 @@ std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvesti
 	return pairs;
 }
 
-std::shared_ptr<BamRegionInvestigator::RegionInfo> BamRegionInvestigator::getCoverageForRegion(
+BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageForRegion(
 		BamTools::BamReader & bReader, const GenomicRegion & region) const {
-	auto val = std::make_shared<RegionInfo>(region);
+	RegionInfo ret(region);
 	setBamFileRegionThrow(bReader, region);
 	BamAlnsCache bCache;
 	BamTools::BamAlignment bAln;
 	auto refData = bReader.GetReferenceData();
 	while(bReader.GetNextAlignmentCore(bAln)){
+		if(bAln.IsPrimaryAlignment() && bAln.IsPaired()){
+				++ret.totalPairedReads_;
+			if(bAln.IsProperPair()){
+				++ret.totalProperPairedReads_;
+			}
+		}
 		if(bAln.IsMapped() && bAln.IsPrimaryAlignment()){
 			if(bAln.IsDuplicate() && !pars_.countDups_){
 				continue;
@@ -130,24 +142,24 @@ std::shared_ptr<BamRegionInvestigator::RegionInfo> BamRegionInvestigator::getCov
 				continue;
 			}
 			//only try to find and adjust for the mate's overlap if is mapped and could possibly fall within the region
-			if(bAln.IsPaired() && bAln.IsMateMapped() && bAln.MatePosition < val->region_.end_){
+			if(bAln.IsPaired() && bAln.IsMateMapped() && bAln.MatePosition < ret.region_.end_){
 				bAln.BuildCharData();
 				if(bCache.has(bAln.Name)){
 					//get and adjust current read region
 					GenomicRegion alnRegion(bAln, refData);
-					alnRegion.start_ = std::max(alnRegion.start_, val->region_.start_);
-					alnRegion.end_ = std::min(alnRegion.end_,     val->region_.end_);
+					alnRegion.start_ = std::max(alnRegion.start_, ret.region_.start_);
+					alnRegion.end_ = std::min(alnRegion.end_,     ret.region_.end_);
 					//get and adjust the mate's read region
 					auto mate = bCache.get(bAln.Name);
 					GenomicRegion mateRegion(*mate, refData);
-					mateRegion.start_ = std::max(mateRegion.start_, val->region_.start_);
-					mateRegion.end_ = std::min(mateRegion.end_,     val->region_.end_);
+					mateRegion.start_ = std::max(mateRegion.start_, ret.region_.start_);
+					mateRegion.end_ = std::min(mateRegion.end_,     ret.region_.end_);
 					//now that the two regions have been adjusted to be just what overlaps the current region
 					//coverage will be the length of the two regions minus the overlap between the two
 					auto cov = alnRegion.getLen() + mateRegion.getLen() - alnRegion.getOverlapLen(mateRegion);
-					val->coverage_ += cov;
+					ret.coverage_ += cov;
 					if(bAln.MapQuality < pars_.mapQualityCutOffForMultiMap_ || mate->MapQuality < pars_.mapQualityCutOffForMultiMap_){
-						val->multiMapCoverage_ += cov;
+						ret.multiMapCoverage_ += cov;
 					}
 					bCache.remove(bAln.Name);
 				}else{
@@ -156,9 +168,9 @@ std::shared_ptr<BamRegionInvestigator::RegionInfo> BamRegionInvestigator::getCov
 			} else {
 				/**@todo this doesn't take into account gaps, so base coverage isn't precise right here, more of an approximation, should improve */
 				GenomicRegion alnRegion(bAln, refData);
-				val->coverage_ += val->region_.getOverlapLen(alnRegion);
+				ret.coverage_ += ret.region_.getOverlapLen(alnRegion);
 				if(bAln.MapQuality < pars_.mapQualityCutOffForMultiMap_ ){
-					val->multiMapCoverage_ += val->region_.getOverlapLen(alnRegion);
+					ret.multiMapCoverage_ += ret.region_.getOverlapLen(alnRegion);
 				}
 			}
 		}
@@ -167,12 +179,24 @@ std::shared_ptr<BamRegionInvestigator::RegionInfo> BamRegionInvestigator::getCov
 	for(const auto & name : bCache.getNames()){
 		auto aln = bCache.get(name);
 		GenomicRegion alnRegion(*aln, refData);
-		val->coverage_ += val->region_.getOverlapLen(alnRegion);
+		ret.coverage_ += ret.region_.getOverlapLen(alnRegion);
 		if(aln->MapQuality < pars_.mapQualityCutOffForMultiMap_ ){
-			val->multiMapCoverage_ += val->region_.getOverlapLen(alnRegion);
+			ret.multiMapCoverage_ += ret.region_.getOverlapLen(alnRegion);
 		}
 	}
-	return val;
+	return ret;
+}
+
+
+
+BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageAndFullySpanningForRegion(
+		BamTools::BamReader &bReader, const GenomicRegion &region,
+		const seqInfo &refSeq, const BamCountSpecficRegionsPars &spanningReadsPar,
+		aligner &alignerObj) const {
+	RegionInfo ret(getCoverageForRegion(bReader, region));
+	updateFullSpanningCountForRegion(ret, refSeq, spanningReadsPar, bReader,
+			alignerObj);
+	return ret;
 }
 
 
@@ -272,6 +296,138 @@ void BamRegionInvestigator::getTotalAndFullySpanningReadCounts(const bfs::path &
 	}
 }
 
+void BamRegionInvestigator::updateFullSpanningCountForRegion(
+		RegionInfo &currentInfo, const seqInfo &refSeq,
+		const BamCountSpecficRegionsPars &spanningReadsPar,
+		BamTools::BamReader &currentBReader, aligner &alignerObj) const {
+
+	readVecTrimmer::GlobalAlnTrimPars trimPars;
+	trimPars.needJustOneEnd_ = false;
+	trimPars.startInclusive_ = spanningReadsPar.extendAmount;
+	trimPars.endInclusive_ = len(refSeq) - 1 - spanningReadsPar.extendAmount;
+
+	BamAlnsCache cache;
+	BamTools::BamAlignment bAln;
+	auto refData = currentBReader.GetReferenceData();
+	uint64_t maxlen = 0;
+	PairedReadProcessor pProcess(spanningReadsPar.pairPars);
+	PairedReadProcessor::ProcessedResultsCounts processCounts;
+	setBamFileRegionThrow(currentBReader, currentInfo.region_);
+	while(currentBReader.GetNextAlignment(bAln)){
+		if(bAln.IsPrimaryAlignment() && bAln.IsMapped()){
+			if(bAln.IsPaired() && bAln.IsMateMapped() && bAln.MatePosition < currentInfo.region_.end_){
+				if(bAln.Position < bAln.MatePosition){
+					cache.add(bAln);
+				} else {
+					if(cache.has(bAln.Name)) {
+						++currentInfo.totalReads_;
+						auto mate = cache.get(bAln.Name);
+						//see if stitching is even plausible
+						if(mate->GetEndPosition() >  bAln.Position){
+							if(mate->Position <= currentInfo.region_.start_ &&
+								 bAln.GetEndPosition() >= currentInfo.region_.end_ &&
+								 mate->IsReverseStrand() != bAln.IsReverseStrand()){
+								//stitching plausible and spanning
+								//spanning read
+								seqInfo firstMate;
+								seqInfo secondMate;
+								bool reverseCompFirstMate = false;
+								if(bAln.IsFirstMate()){
+									firstMate = bamAlnToSeqInfo(bAln, false);
+									secondMate = bamAlnToSeqInfo(*mate, false);
+									secondMate.reverseComplementRead(false, true);
+									reverseCompFirstMate = bAln.IsReverseStrand();
+								}else{
+									firstMate = bamAlnToSeqInfo(*mate, false);
+									secondMate = bamAlnToSeqInfo(bAln, false);
+									secondMate.reverseComplementRead(false, true);
+									reverseCompFirstMate = mate->IsReverseStrand();
+								}
+								readVec::getMaxLength(firstMate, maxlen);
+								readVec::getMaxLength(secondMate, maxlen);
+								PairedRead pseq(firstMate, secondMate);
+								pseq.mateRComplemented_ = false;
+								auto pairRes = pProcess.processPairedEnd(pseq, processCounts, alignerObj);
+								if(nullptr != pairRes.combinedSeq_){
+									readVec::getMaxLength(*pairRes.combinedSeq_, maxlen);
+									alignerObj.parts_.setMaxSize(maxlen);
+									if(reverseCompFirstMate != currentInfo.region_.reverseSrand_){
+										pairRes.combinedSeq_->reverseComplementRead(false, true);
+									}
+									readVecTrimmer::trimSeqToRefByGlobalAln(*pairRes.combinedSeq_, refSeq,trimPars, alignerObj);
+									if(pairRes.combinedSeq_->on_){
+										//spanning read
+										++currentInfo.totalFullySpanningReads_;
+									}
+								}else if(bAln.Position <= currentInfo.region_.start_ && bAln.GetEndPosition() >= currentInfo.region_.end_){
+									//spanning read
+									seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
+									if(bAln.IsReverseStrand() != currentInfo.region_.reverseSrand_){
+										querySeq.reverseComplementRead(false, true);
+									}
+									readVec::getMaxLength(querySeq, maxlen);
+									alignerObj.parts_.setMaxSize(maxlen);
+									readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq,trimPars, alignerObj);
+									if(querySeq.on_){
+										//spanning read
+										++currentInfo.totalFullySpanningReads_;
+									}
+								}else if(mate->Position <= currentInfo.region_.start_ && mate->GetEndPosition() >= currentInfo.region_.end_){
+									//spanning read
+									seqInfo querySeq = bamAlnToSeqInfo(*mate, false);
+									if(mate->IsReverseStrand() != currentInfo.region_.reverseSrand_){
+										querySeq.reverseComplementRead(false, true);
+									}
+									readVec::getMaxLength(querySeq, maxlen);
+									alignerObj.parts_.setMaxSize(maxlen);
+									readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq,trimPars, alignerObj);
+									if(querySeq.on_){
+										//spanning read
+										++currentInfo.totalFullySpanningReads_;
+									}
+								}
+							}
+						}
+						cache.remove(bAln.Name);
+					} else {
+						++currentInfo.totalReads_;
+						//doesn't have mate, it's mate probably doesn't map to this region
+						if(bAln.Position <= currentInfo.region_.start_ && bAln.GetEndPosition() >= currentInfo.region_.end_){
+							//spanning read
+							seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
+							if(bAln.IsReverseStrand() != currentInfo.region_.reverseSrand_){
+								querySeq.reverseComplementRead(false, true);
+							}
+							readVec::getMaxLength(querySeq, maxlen);
+							alignerObj.parts_.setMaxSize(maxlen);
+							readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq,trimPars, alignerObj);
+							if(querySeq.on_){
+								//spanning read
+								++currentInfo.totalFullySpanningReads_;
+							}
+						}
+					}
+				}
+			}else{
+				++currentInfo.totalReads_;
+				if(bAln.Position <= currentInfo.region_.start_ && bAln.GetEndPosition() >= currentInfo.region_.end_){
+					//spanning read
+					seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
+					if(bAln.IsReverseStrand() != currentInfo.region_.reverseSrand_){
+						querySeq.reverseComplementRead(false, true);
+					}
+					readVec::getMaxLength(querySeq, maxlen);
+					alignerObj.parts_.setMaxSize(maxlen);
+					readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq, trimPars, alignerObj);
+					if(querySeq.on_){
+						//spanning read
+						++currentInfo.totalFullySpanningReads_;
+					}
+				}
+			}
+		}
+	}
+}
 
 BamRegionInvestigator::ReadCountsResSingle BamRegionInvestigator::getFullSpanningCountForRegion(
 		const GenomicRegion & currentRegion, const seqInfo & refSeq,
@@ -416,9 +572,66 @@ std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvesti
 		const std::vector<GenomicRegion> & regions,
 		const BamCountSpecficRegionsPars & spanningReadsPar,
 		const bfs::path & genomeFnp) const{
-	auto ret = getCoverageOnFromBam(bamFnp, regions);
-	getTotalAndFullySpanningReadCounts(bamFnp, regions, spanningReadsPar, genomeFnp, ret);
-	return ret;
+
+	std::vector<std::shared_ptr<RegionInfo>> pairs;
+	std::mutex pairsMut;
+	njh::concurrent::LockableQueue<GenomicRegion> regionsQueue(regions);
+
+	auto genomeFnp2bit = genomeFnp;
+	if(!njh::endsWith(genomeFnp2bit.string(), ".2bit")){
+		if(njh::endsWith(genomeFnp2bit.string(), ".fasta") || njh::endsWith(genomeFnp2bit.string(), ".fna")){
+			genomeFnp2bit.replace_extension(".2bit");
+		}
+	}
+	TwoBit::TwoBitFile topRReader(genomeFnp2bit);
+	std::unordered_map<std::string, seqInfo> regionSeqs;
+	uint64_t maxlenForRegions = 0;
+	auto chromLengths = topRReader.getSeqLens();
+	for(const auto & reg : regions){
+		auto regCopy = reg;
+		BedUtility::extendLeftRight(regCopy, spanningReadsPar.extendAmount, spanningReadsPar.extendAmount, njh::mapAt(chromLengths, regCopy.chrom_));
+		regionSeqs[reg.createUidFromCoordsStrand()] = regCopy.extractSeq(topRReader);
+		readVec::getMaxLength(regionSeqs[reg.createUidFromCoordsStrand()], maxlenForRegions);
+	}
+
+	std::function<void()> getCov = [&bamFnp,&pairs,&pairsMut,&maxlenForRegions,
+																	&regionSeqs,&spanningReadsPar,
+																	&regionsQueue,this](){
+		std::vector<std::shared_ptr<RegionInfo>> currentBamRegionsPairs;
+		GenomicRegion region;
+		BamTools::BamReader bReader;
+		bReader.Open(bamFnp.string());
+		loadBamIndexThrow(bReader, __PRETTY_FUNCTION__);
+		checkBamOpenThrow(bReader, bamFnp);
+
+		aligner alignerObj(std::min<uint64_t>(std::max<uint64_t>(maxlenForRegions, 500), 1000), gapScoringParameters(5,1,0,0,0,0));
+
+		BamTools::BamAlignment bAln;
+		auto refData = bReader.GetReferenceData();
+		while(regionsQueue.getVal(region)){
+			const auto & refSeq = regionSeqs.at(region.createUidFromCoordsStrand());
+			currentBamRegionsPairs.emplace_back(std::make_shared<RegionInfo>(getCoverageAndFullySpanningForRegion(bReader, region, refSeq, spanningReadsPar, alignerObj)));
+		}
+		{
+			std::lock_guard<std::mutex> lock(pairsMut);
+			addOtherVec(pairs, currentBamRegionsPairs);
+		}
+	};
+
+	njh::concurrent::runVoidFunctionThreaded(getCov, pars_.numThreads_);
+	//sort
+	njh::sort(pairs,[](const std::shared_ptr<RegionInfo> & p1, const std::shared_ptr<RegionInfo> & p2){
+		if(p1->region_.chrom_ == p2->region_.chrom_) {
+			if(p1->region_.start_ == p2->region_.start_) {
+				return p1->region_.end_ < p2->region_.end_;
+			} else {
+				return p1->region_.start_ < p2->region_.start_;
+			}
+		} else {
+			return p1->region_.chrom_ < p2->region_.chrom_;
+		}
+	});
+	return pairs;
 }
 
 
@@ -470,6 +683,7 @@ void BamRegionInvestigator::writeBasicInfo(
 	if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 		regionInfoOut << "\tperBaseCoverageFromMapQOf<=" << pars_.mapQualityCutOffForMultiMap_;
 	}
+	regionInfoOut << "\t#OfPairedReads\tproperPairFrac";
 	regionInfoOut << "\tsample";
 	uint32_t maxExtraFields = 0;
 	for(const auto & p : pairs){
@@ -492,6 +706,7 @@ void BamRegionInvestigator::writeBasicInfo(
 		if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(p->region_.getLen());
 		}
+		regionInfoOut << "\t" << p->totalPairedReads_ << '\t' << p->getProperPairFrac();
 		regionInfoOut << "\t" << sampName;
 		for(const auto & extra : bedOut.extraFields_){
 			regionInfoOut << "\t" << extra;
@@ -512,6 +727,7 @@ void BamRegionInvestigator::writeBasicInfoWithHapRes(
 	if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 		regionInfoOut << "\tperBaseCoverageFromMapQOf<=" << pars_.mapQualityCutOffForMultiMap_;
 	}
+	regionInfoOut << "\t#OfPairedReads\tproperPairFrac";
 	regionInfoOut << "\tsample";
 	uint32_t maxExtraFields = 0;
 	for(const auto & p : pairs){
@@ -536,6 +752,7 @@ void BamRegionInvestigator::writeBasicInfoWithHapRes(
 		if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(p->region_.getLen());
 		}
+		regionInfoOut << "\t" << p->totalPairedReads_ << '\t' << p->getProperPairFrac();
 		regionInfoOut << "\t" << sampName;
 		for(const auto & extra : bedOut.extraFields_){
 			regionInfoOut << "\t" << extra;
