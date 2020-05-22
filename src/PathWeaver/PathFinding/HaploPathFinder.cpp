@@ -268,7 +268,6 @@ void HaploPathFinder::PathFinderCorePars::setStitchParameters(seqSetUp & setUp){
 		reOrientPairsForStitching = !noReOrientPairsForStitching;
 	}else{
 		setUp.setOption(reOrientPairsForStitching, "--reOrientPairsForStitching", "Reorient pairs when stitching, this should only be turned on if adaptors have been trimmed off");
-
 	}
 
 

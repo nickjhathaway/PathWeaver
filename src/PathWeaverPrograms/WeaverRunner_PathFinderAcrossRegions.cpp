@@ -264,7 +264,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			}
 		}
 	}
-
+	pars.pFinderPars_.reOrientPairsForStitching = true;
 	setExtractPathWaysDefault(pars, setUp);
 	finalHeadlessTaillessCutOff = pars.pFinderPars_.headlessTailessLenCutOff;
 	setUp.setOption(finalHeadlessTaillessCutOff, "--finalHeadlessTaillessCutOff", "Final Cut for headless and tailless nodes to use for the -finalPass");

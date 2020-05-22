@@ -84,6 +84,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	masterPars.pFinderPars_.setOptimizationParameters(setUp);
 
 	//pair stitching parameters
+	masterPars.pFinderPars_.reOrientPairsForStitching = true;
 	masterPars.pFinderPars_.setStitchParameters(setUp);
 
 	//group info
