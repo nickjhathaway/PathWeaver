@@ -3025,8 +3025,8 @@ void KmerPathwayGraph::resetGroups() const {
 		//group hasn't been set yet
 		if(std::numeric_limits<uint32_t>::max() == n->group_){
 			spreadGroup(n, groupId);
+			++groupId;
 		}
-		++groupId;
 	}
 }
 //KmerPathwayGraph::Pathway::Pathway() {
