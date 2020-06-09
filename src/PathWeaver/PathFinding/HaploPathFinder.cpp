@@ -468,6 +468,19 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 				"Filter Off Low Entropy Orphans Recruits");
 	}
 
+	if (bamExtractPars_.removeImproperPairs_) {
+		bool keepImproperMates = false;
+		setUp.setOption(keepImproperMates, "--keepImproperMates",
+				"Keep Pairs marked as improper (mate doesn't map, inverse mapping etc)");
+		bamExtractPars_.removeImproperPairs_ = !keepImproperMates;
+	} else {
+		setUp.setOption(bamExtractPars_.removeImproperPairs_,
+				"--removeImproperPairs",
+				"Filter Off Pairs marked as improper (mate doesn't map, inverse mapping etc)");
+	}
+
+
+
 	setUp.setOption(bamExtractPars_.filterOffLowEntropyOrphansRecruitsCutOff_,  "--filterOffLowEntropyOrphansRecruitsCutOff",  "Filter Off Low Entropy Orphans Recruits Cut Off");
 	setUp.setOption(bamExtractPars_.entropyKlen_,  "--entropyKlen",  "Entropy Klen");
 

@@ -125,6 +125,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	masterPars.bamExtractPars_.filterOffLowEntropyOrphansRecruits_ = false;
 	//masterPars.bamExtractPars_.softClipPercentageCutOff_ = 0.30;
 	masterPars.bamExtractPars_.softClipPercentageCutOff_ = 1.00;
+	masterPars.bamExtractPars_.removeImproperPairs_ = true;
 	masterPars.setBamExtractOpts(setUp);
 
 	//adding meta to the final seqs
@@ -155,7 +156,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	setUp.setOption(lzPars.identity, "--lastzIdentity", "Identity used for lastz when getting reference sequences");
 	setUp.setOption(lzPars.coverage, "--lastzCoverage", "Coverage used for lastz when getting reference sequences");
 	setUp.setOption(bedFile, "--bed", "Bed file of multiple regions to process", true);
-	setUp.setOption(refDir, "--refDir", "Reference directory created by PathWeaver extractRefSeqsFromGenomes", true);
+	//setUp.setOption(refDir, "--refDir", "Reference directory created by PathWeaver extractRefSeqsFromGenomes", true);
+	setUp.setOption(refDir, "--refDir", "Reference directory created by elucidator extractRefSeqsFromGenomes", true);
 
 	setUp.processDefaultReader( { "--bam" }, true);
 	setUp.processDirectoryOutputName(true);

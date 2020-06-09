@@ -2860,6 +2860,15 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						}else{
 							alignerObj.alignCacheGlobal(other, finalSeq);
 							alignerObj.profileAlignment(other, finalSeq, false, true, false);
+//							std::cout << njh::bashCT::red << njh::bashCT::bold << std::endl;
+//							std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//							std::cout << '\t' << "other.name_: " << other.name_ << std::endl;
+//							std::cout << '\t' << "finalSeq.name_: " << finalSeq.name_ << std::endl;
+//							std::cout << "\t" << "passableErrors.passErrorProfile(alignerObj.comp_): " << njh::colorBool(passableErrors.passErrorProfile(alignerObj.comp_)) << std::endl;
+//							std::cout << "\t" << "alignerObj.comp_.distances_.query_.coverage_ >= passableErrors.distances_.query_.coverage_: " << njh::colorBool(alignerObj.comp_.distances_.query_.coverage_ >= passableErrors.distances_.query_.coverage_) << std::endl;
+//
+//							std::cout << njh::bashCT::reset << std::endl;
+
 							if (passableErrors.passErrorProfile(alignerObj.comp_) &&
 									alignerObj.comp_.distances_.query_.coverage_ >= passableErrors.distances_.query_.coverage_) {
 								pass = false;
