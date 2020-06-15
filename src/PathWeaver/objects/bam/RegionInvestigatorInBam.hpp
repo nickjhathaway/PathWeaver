@@ -72,10 +72,13 @@ public:
 		uint32_t uniqHaps_{0}; //!< number of unique haplotypes called by PathWeaver for this region
 		bool infoCalled_{false}; //!< whether PathWeaver could be called for this region
 		uint32_t totalReads_{0}; //!< the total number of reads that fall in this region
+		uint32_t totalFinalReads_{0}; //!< the total number of reads that are used in the final analysis
 		uint32_t totalFullySpanningReads_{0}; //!< the total number of reads that fully span this region
 
 		uint32_t totalPairedReads_{0}; //!< total number of paired reads that fall in this region, will count both mates of a pair twice
 		uint32_t totalProperPairedReads_{0};//!< total number of proper pairs within region
+		uint32_t totalOneMateUnmappedImproperPairs_{0}; //!< total number of paired reads that are improper due to one mate being unmapped
+
 		/**@brief calculate the estimated per base read coverage for this region
 		 *
 		 * @return the per base coverage for this region
@@ -86,6 +89,11 @@ public:
 		 * @return fraction of proper pairs range [0-1]
 		 */
 		double getProperPairFrac() const;
+		/**@brief the fraction of the total pairs that are proper pairs or one mate was unmapped
+		 *
+		 * @return fraction of proper pairs range [0-1]
+		 */
+		double getProperPairMateUnmappedFrac() const;
 	};
 
 	struct BamRegionInvestigatorPars {

@@ -88,6 +88,7 @@ Json::Value OptimizationReconResult::toJson() const {
 	ret["internalNodesCountBelowLen_"] = njh::json::toJson(internalNodesCountBelowLen_);
 
 	ret["percentOfInputUsed_"] = njh::json::toJson(percentOfInputUsed_);
+	ret["totalInputReads_"] = njh::json::toJson(totalInputReads_);
 	ret["numberOfFinalFilteredSeqs_"] = njh::json::toJson(
 			numberOfFinalFilteredSeqs_);
 

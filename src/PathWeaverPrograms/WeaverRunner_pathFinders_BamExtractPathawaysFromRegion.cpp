@@ -126,6 +126,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	//masterPars.bamExtractPars_.softClipPercentageCutOff_ = 0.30;
 	masterPars.bamExtractPars_.softClipPercentageCutOff_ = 1.00;
 	masterPars.bamExtractPars_.removeImproperPairs_ = true;
+	masterPars.bamExtractPars_.keepImproperMateUnmapped_ = true;
 	masterPars.setBamExtractOpts(setUp);
 
 	//adding meta to the final seqs
@@ -315,6 +316,9 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 						auto outputOpts = SeqIOOptions::genFastaIn(njh::files::make_path(regionDir, sampName, "output_aboveCutOff.fasta"), true);
 
 						if(outputOpts.inExists()){
+							if(logValue.isMember("bestTotalInputReads")){
+								regInfosByUID.at(region.createUidFromCoordsStrand())->totalFinalReads_ = logValue["bestTotalInputReads"].asUInt();
+							}
 							SeqInput reader(outputOpts);
 							if(!reader.isFirstEmpty()){
 								std::vector<std::shared_ptr<seqInfo>> outputSeqs = reader.readAllReadsPtrs<seqInfo>();

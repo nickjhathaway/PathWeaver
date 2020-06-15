@@ -479,6 +479,17 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 				"Filter Off Pairs marked as improper (mate doesn't map, inverse mapping etc)");
 	}
 
+	if (bamExtractPars_.removeImproperPairs_) {
+		bool removeImproperMateUnmapped = false;
+		setUp.setOption(removeImproperMateUnmapped, "--removeImproperMateUnmapped",
+				"When Filtering Off Pairs marked as improper, also remove the improper pairs where it's due to one mate not mapping)");
+		bamExtractPars_.keepImproperMateUnmapped_ = !removeImproperMateUnmapped;
+	} else {
+		setUp.setOption(bamExtractPars_.keepImproperMateUnmapped_,
+				"--keepImproperMateUnmapped",
+				"When Filtering Off Pairs marked as improper,  keep the improper pairs where it's due to one mate not mapping");
+	}
+
 
 
 	setUp.setOption(bamExtractPars_.filterOffLowEntropyOrphansRecruitsCutOff_,  "--filterOffLowEntropyOrphansRecruitsCutOff",  "Filter Off Low Entropy Orphans Recruits Cut Off");

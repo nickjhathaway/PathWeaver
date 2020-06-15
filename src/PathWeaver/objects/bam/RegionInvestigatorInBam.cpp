@@ -71,6 +71,10 @@ double BamRegionInvestigator::RegionInfo::getPerBaseCov() const {
 double BamRegionInvestigator::RegionInfo::getProperPairFrac() const {
 	return totalPairedReads_ == 0 ? 0.0 : totalProperPairedReads_ / static_cast<double>(totalPairedReads_);
 }
+double BamRegionInvestigator::RegionInfo::getProperPairMateUnmappedFrac() const {
+	return totalPairedReads_ == 0 ? 0.0 : (totalProperPairedReads_ + totalOneMateUnmappedImproperPairs_) / static_cast<double>(totalPairedReads_);
+}
+
 
 
 
@@ -132,6 +136,8 @@ BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageForRegion(
 				++ret.totalPairedReads_;
 			if(bAln.IsProperPair()){
 				++ret.totalProperPairedReads_;
+			}else if(!bAln.IsProperPair() && ((bAln.IsMapped() && !bAln.IsMateMapped()) || (!bAln.IsMapped() && bAln.IsMateMapped())) ){
+				++ret.totalOneMateUnmappedImproperPairs_;
 			}
 		}
 		if(bAln.IsMapped() && bAln.IsPrimaryAlignment()){
@@ -643,6 +649,8 @@ void BamRegionInvestigator::writeCovInfo(
 	if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 		regionInfoOut << "\tperBaseCoverageFromMapQOf<=" << pars_.mapQualityCutOffForMultiMap_;
 	}
+	regionInfoOut << "\t#OfPairedReads\tproperPairs\timproperMateUnmapped\tproperPairFrac\tproperPairAndMateUnmappedFrac";
+
 	regionInfoOut << "\tsample";
 	uint32_t maxExtraFields = 0;
 	for(const auto & p : pairs){
@@ -663,6 +671,11 @@ void BamRegionInvestigator::writeCovInfo(
 		if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(p->region_.getLen());
 		}
+		regionInfoOut << "\t" << p->totalPairedReads_
+				<< '\t' << p->totalProperPairedReads_
+				<< '\t' << p->totalOneMateUnmappedImproperPairs_
+				<< '\t' << p->getProperPairFrac()
+				<< '\t' << p->getProperPairMateUnmappedFrac();
 		regionInfoOut << "\t" << sampName;
 		for(const auto & extra : bedOut.extraFields_){
 			regionInfoOut << "\t" << extra;
@@ -683,7 +696,7 @@ void BamRegionInvestigator::writeBasicInfo(
 	if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 		regionInfoOut << "\tperBaseCoverageFromMapQOf<=" << pars_.mapQualityCutOffForMultiMap_;
 	}
-	regionInfoOut << "\t#OfPairedReads\tproperPairFrac";
+	regionInfoOut << "\t#OfPairedReads\tproperPairs\timproperMateUnmapped\tproperPairFrac\tproperPairAndMateUnmappedFrac";
 	regionInfoOut << "\tsample";
 	uint32_t maxExtraFields = 0;
 	for(const auto & p : pairs){
@@ -706,7 +719,11 @@ void BamRegionInvestigator::writeBasicInfo(
 		if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(p->region_.getLen());
 		}
-		regionInfoOut << "\t" << p->totalPairedReads_ << '\t' << p->getProperPairFrac();
+		regionInfoOut << "\t" << p->totalPairedReads_
+				<< '\t' << p->totalProperPairedReads_
+				<< '\t' << p->totalOneMateUnmappedImproperPairs_
+				<< '\t' << p->getProperPairFrac()
+				<< '\t' << p->getProperPairMateUnmappedFrac();
 		regionInfoOut << "\t" << sampName;
 		for(const auto & extra : bedOut.extraFields_){
 			regionInfoOut << "\t" << extra;
@@ -723,11 +740,11 @@ void BamRegionInvestigator::writeBasicInfoWithHapRes(
 		const std::vector<std::shared_ptr<RegionInfo>> & pairs,
 		const std::string & sampName, const OutOptions & outOpts) const {
 	OutputStream regionInfoOut(outOpts);
-	regionInfoOut << "#chrom\tstart\tend\tname\tlength\tstrand\tsuccess\tuniqHaps\treadTotal\tfullySpanningReads\tperBaseCoverage";
+	regionInfoOut << "#chrom\tstart\tend\tname\tlength\tstrand\tsuccess\tuniqHaps\treadTotal\treadTotalUsed\tfullySpanningReads\tperBaseCoverage";
 	if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 		regionInfoOut << "\tperBaseCoverageFromMapQOf<=" << pars_.mapQualityCutOffForMultiMap_;
 	}
-	regionInfoOut << "\t#OfPairedReads\tproperPairFrac";
+	regionInfoOut << "\t#OfPairedReads\tproperPairs\timproperMateUnmapped\tproperPairFrac\tproperPairAndMateUnmappedFrac";
 	regionInfoOut << "\tsample";
 	uint32_t maxExtraFields = 0;
 	for(const auto & p : pairs){
@@ -747,12 +764,17 @@ void BamRegionInvestigator::writeBasicInfoWithHapRes(
 		regionInfoOut << "\t" << njh::boolToStr(p->infoCalled_);
 		regionInfoOut << "\t" << p->uniqHaps_;
 		regionInfoOut << "\t" << p->totalReads_;
+		regionInfoOut << "\t" << p->totalFinalReads_;
 		regionInfoOut << "\t" << p->totalFullySpanningReads_;
 		regionInfoOut << "\t" << p->coverage_/static_cast<double>(p->region_.getLen());
 		if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
 			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(p->region_.getLen());
 		}
-		regionInfoOut << "\t" << p->totalPairedReads_ << '\t' << p->getProperPairFrac();
+		regionInfoOut << "\t" << p->totalPairedReads_
+				<< '\t' << p->totalProperPairedReads_
+				<< '\t' << p->totalOneMateUnmappedImproperPairs_
+				<< '\t' << p->getProperPairFrac()
+				<< '\t' << p->getProperPairMateUnmappedFrac();
 		regionInfoOut << "\t" << sampName;
 		for(const auto & extra : bedOut.extraFields_){
 			regionInfoOut << "\t" << extra;

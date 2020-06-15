@@ -259,6 +259,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				pars.bamExtractPars_.keepMarkedDuplicate_ = false;
 				pars.pFinderPars_.removeDuplicatedSequences_ = false;
 				pars.bamExtractPars_.removeImproperPairs_ = true;
+				pars.bamExtractPars_.keepImproperMateUnmapped_ = true;
 			}else{
 				pars.bamExtractPars_.keepMarkedDuplicate_ = true;
 				pars.pFinderPars_.removeDuplicatedSequences_ = true;

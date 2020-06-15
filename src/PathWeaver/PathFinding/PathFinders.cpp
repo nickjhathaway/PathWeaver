@@ -2374,10 +2374,12 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 									<< std::endl;
 						}
 						optRunRes.percentOfInputUsed_ = static_cast<double>(totalReadsAboveCutOff)/totalReads;
+						optRunRes.totalInputReads_ = totalReads;
 						shortTipLog["percentOfInputReadsUsed"] = njh::json::toJson(optRunRes.percentOfInputUsed_);
 						shortTipLog["totalReadsAboveKmersUsedCutOff"] = njh::json::toJson(totalReadsAboveCutOff);
 					}else{
 						optRunRes.percentOfInputUsed_ = static_cast<double>(finalNodeReadCounts.size())/totalInputSequences;
+						optRunRes.totalInputReads_ = totalInputSequences;
 						shortTipLog["percentOfInputReadsUsed"] = njh::json::toJson(optRunRes.percentOfInputUsed_);
 					}
 
@@ -2603,6 +2605,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 		OptimizationReconResult bestResult = bestOptResults.front();
 		ret.log_["readLengthAverage"] = njh::json::toJson(bestResult.readLengthAverage_);
 		ret.log_["readLengthMedian"] = njh::json::toJson(bestResult.readLengthMedian_);
+		ret.log_["bestTotalInputReads"] = njh::json::toJson(bestResult.totalInputReads_);
 		ret.log_["bestShortTipNumber"] = bestResult.runParams_.shortNumber_;
 		ret.log_["bestKmerOccurenceCutOff"] = bestResult.runParams_.kcut_;
 		ret.log_["bestKmerLength"] = bestResult.runParams_.klen_;

@@ -59,8 +59,7 @@ struct OptimizationReconResult {
 
 	};
 
-	OptimizationReconResult(const Params runParams, const Dirs & runDirs,
-			uint32_t kcutIterNumber, uint32_t shortTipIterNumber);
+	OptimizationReconResult(const Params runParams, const Dirs & runDirs,uint32_t kcutIterNumber, uint32_t shortTipIterNumber);
 
 	Params runParams_;
 	Dirs runDirs_;
@@ -82,6 +81,7 @@ struct OptimizationReconResult {
 	uint32_t internalNodesCountBelowLen_ { 0 };
 
 	double percentOfInputUsed_ { 0.0 };
+	uint32_t totalInputReads_ { 0 };
 
 	uint32_t numberOfFinalFilteredSeqs_ { 0 };
 
