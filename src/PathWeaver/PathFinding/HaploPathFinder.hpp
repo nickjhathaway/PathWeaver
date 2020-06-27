@@ -87,6 +87,8 @@ public:
 		bool collapseOneBaseIndelsNodes_ = false;
 		bool collapseOneBaseIndelsBeforeDisentanglement_ = false;
 
+		bool collapsePossibleSimpleLoops_ = false;
+
 		bool trimTipsOfLowEntropyNodes_{false};
 		double trimTipsOfLowEntropyNodesCutOff_{1.5};
 

@@ -345,6 +345,7 @@ void HaploPathFinder::PathFinderCorePars::setNodeProcessingOpts(seqSetUp & setUp
 	setUp.setOption(noCollapseOneBaseIndelsNodes, "--noCollapseOneBaseIndelsNodes", "Don't Combine nodes that share the same heads and tails that only differ by a 1 base indel in a long homopolymer");
 	collapseOneBaseIndelsNodes_ = ! noCollapseOneBaseIndelsNodes;
 	setUp.setOption(collapseOneBaseIndelsBeforeDisentanglement_, "--collapseOneBaseIndelsBeforeDisentanglement", "Collapse One Base Indels Before Disentanglement");
+	setUp.setOption(collapsePossibleSimpleLoops_, "--collapsePossibleSimpleLoops", "Collapse Possible Simple Loops");
 
 
 	setUp.setOption(oneBaseIndelError_, "--oneBaseIndelError", "The amount of one base indel error to allow when collapsing nodes");

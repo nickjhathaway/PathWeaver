@@ -144,6 +144,8 @@ public:
 
 	bool hasCycle()const;
 	void collapseSingleLinkedPaths(bool initialCollapse = false);
+	void collapseSingleLinkedPathsForPossibleLoops();
+
 	void breakSingleLinkedPathsReadThreading();
 
 	bool removeShortTips(uint32_t shortNumber, uint32_t cntCutOff);
@@ -183,6 +185,7 @@ public:
 	bool disentangleInternalNodes(const disentangleInternalNodesPars & pars);
 
   bool breakSelfPointingPaths();
+  bool hasSelfPointingPaths();
 
 	bool splitEndNodes();
 	bool splitEndNodes(uint32_t maxLen);
@@ -301,6 +304,7 @@ public:
 	std::vector<seqInfo> nodesToSeqs(bool addSeqOfSingleHeadAndTailSeqs = false) const;
 
 	void resetGroups() const;
+	void resetGroupsLoopAware() const;
 
 
 

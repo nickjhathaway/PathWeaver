@@ -795,16 +795,39 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						graphWriter.writeOutDotsAndSeqs("collapsedInitialGraph-rmHeadTailLess");
 					}
 					watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(), "- Break Self Pointing Paths After Initial Collapse"));
-					//break self pointing paths;
-					if(currentGraph->breakSelfPointingPaths()){
-						if(extractionPars.debug){
-							graphWriter.writeOutDotsAndSeqs("collapsedInitialGraph-rmHeadTailLess-breakSelfPointingPaths");
+					if(currentGraph->hasSelfPointingPaths()){
+						//first remove short tips so they don't get incorporated into the contig when doing circular genomes
+						if(extractionPars.trimShortTips_){
+							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
+						"- Removing Short tips"));
+							uint32_t removeShortTipRunNumber = 0;
+							while(currentGraph->removeShortTips(shortTipNumber, tipCutOff)){
+								if(extractionPars.debug){
+									std::cout << "Removing short tips run: " << removeShortTipRunNumber << std::endl;
+								}
+								if(extractionPars.debug){
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("collapsedInitialGraph-rmHeadTailLess-removedShortTips-beforeBreakSelfPointingPaths", "-", removeShortTipRunNumber));
+								}
+								//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
+								currentGraph->collapseSingleLinkedPaths();
+								if(extractionPars.debug){
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("collapsedInitialGraph-rmHeadTailLess-removedShortTips-beforeBreakSelfPointingPaths", "-", removeShortTipRunNumber, "-collapsed"));
+								}
+								++removeShortTipRunNumber;
+							}
 						}
-						currentGraph->collapseSingleLinkedPaths();
-						if(extractionPars.debug){
-							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("collapsedInitialGraph-rmHeadTailLess-breakSelfPointingPaths-collapsed"));
+						//break self pointing paths;
+						if(currentGraph->breakSelfPointingPaths()){
+							if(extractionPars.debug){
+								graphWriter.writeOutDotsAndSeqs("collapsedInitialGraph-rmHeadTailLess-breakSelfPointingPaths");
+							}
+							currentGraph->collapseSingleLinkedPaths();
+							if(extractionPars.debug){
+								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("collapsedInitialGraph-rmHeadTailLess-breakSelfPointingPaths-collapsed"));
+							}
 						}
 					}
+
 
 					if(extractionPars.collapseOneBaseIndelsBeforeDisentanglement_){
 						//collapse homopolymer nodes
@@ -999,6 +1022,17 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						if(extractionPars.debug){
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << "disentagleCount: " << disentagleCount << std::endl;
+						}
+					}
+
+					if(extractionPars.collapsePossibleSimpleLoops_){
+						currentGraph->collapseSingleLinkedPathsForPossibleLoops();
+						if(extractionPars.debug){
+							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops"));
+						}
+						if(currentGraph->hasSelfPointingPaths()){
+							currentGraph->breakSelfPointingPaths();
+							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops-breakSelfPointingPaths"));
 						}
 					}
 
@@ -1251,6 +1285,17 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 								}
 							}
 
+							if(extractionPars.collapsePossibleSimpleLoops_){
+								currentGraph->collapseSingleLinkedPathsForPossibleLoops();
+								if(extractionPars.debug){
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops"));
+								}
+								if(currentGraph->hasSelfPointingPaths()){
+									currentGraph->breakSelfPointingPaths();
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops-breakSelfPointingPaths"));
+								}
+							}
+
 							if(extractionPars.removeHeadlessTaillessAlongTheWay && extractionPars.removeHeadlessTaillessAfterDisentaglement){
 								currentGraph->removeHeadlessTaillessNodes(headlessTaillessLenCutOff);
 								if(extractionPars.debug){
@@ -1424,6 +1469,16 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 								if(extractionPars.debug){
 									std::cout << __FILE__ << " " << __LINE__ << std::endl;
 									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
+								}
+							}
+							if(extractionPars.collapsePossibleSimpleLoops_){
+								currentGraph->collapseSingleLinkedPathsForPossibleLoops();
+								if(extractionPars.debug){
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-final-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops"));
+								}
+								if(currentGraph->hasSelfPointingPaths()){
+									currentGraph->breakSelfPointingPaths();
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-final-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops-breakSelfPointingPaths"));
 								}
 							}
 
@@ -1960,7 +2015,12 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					if(extractionPars.addGroups_){
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 						"- Creating out seqs - creating groups"));
-						currentGraph->resetGroups();
+						if(extractionPars.keepCycles_){
+							currentGraph->resetGroupsLoopAware();
+						}else{
+							currentGraph->resetGroups();
+						}
+
 						if(extractionPars.writeGroupInputNames_){
 							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 							"- Creating out seqs - writing out group names"));

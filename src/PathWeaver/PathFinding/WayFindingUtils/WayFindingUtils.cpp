@@ -121,29 +121,43 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 		uint32_t internalCount = std::numeric_limits<uint32_t>::max(); //this is used to break ties of optimal counts
 
 		double percentUsed = percentageUsed;
+		std::cout << std::endl<< std::endl<< std::endl<< std::endl;
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		while(bestOptResults.empty() && percentUsed >= 0){
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			for(const auto & optResTest : allResults){
+				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+				std::cout << "\t"<< njh::json::writeAsOneLine(optResTest.runParams_.toJson()) << std::endl;
 				if(optResTest.percentOfInputUsed_ > percentUsed && 0 != optResTest.numberOfFinalFilteredSeqs_ ){
 					uint32_t currentOptCount = useFullOptimalCount ? optResTest.optimalCount_ : optResTest.optimalCountBelowLen_;
 					//uint32_t currentInternalCountBelowCount = useFullOptimalCount ? 1 : optResTest.internalNodesCountBelowLen_;
 					uint32_t currentInternalCountBelowCount = optResTest.internalNodesCountBelowLen_;
+					std::cout << '\t' << "currentOptCount: " << currentOptCount << " currentInternalCountBelowCount: " << currentInternalCountBelowCount << std::endl;
 					if(bestOptResults.empty()){
+						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						bestOptResults.emplace_back(optResTest);
 						optimalCount = currentOptCount;
 						internalCount = currentInternalCountBelowCount;
 					}else{
+						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						if(currentOptCount < optimalCount){
 							bestOptResults.clear();
 							bestOptResults.emplace_back(optResTest);
 							optimalCount = currentOptCount;
 							internalCount = currentInternalCountBelowCount;
 						}else if(currentOptCount == optimalCount){
+							std::cout << __FILE__ << " " << __LINE__ << std::endl;
+							std::cout << "\t" << "currentInternalCountBelowCount: " << currentInternalCountBelowCount << std::endl;
+							std::cout << "\t" << "internalCount: " << internalCount << std::endl;
+							std::cout << "\t" << "currentInternalCountBelowCount < internalCount: " << njh::colorBool(currentInternalCountBelowCount < internalCount) << std::endl;
 							if(currentInternalCountBelowCount < internalCount){
+								std::cout << __FILE__ << " " << __LINE__ << std::endl;
 								bestOptResults.clear();
 								bestOptResults.emplace_back(optResTest);
 								optimalCount = currentOptCount;
 								internalCount = currentInternalCountBelowCount;
-							}else{
+							}else if(currentInternalCountBelowCount == internalCount){
+								std::cout << __FILE__ << " " << __LINE__ << std::endl;
 								bestOptResults.emplace_back(optResTest);
 							}
 						}
@@ -157,6 +171,10 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 			}
 		} //end while
 		njh::sort(bestOptResults,OptimizationReconResult::sortFunc);
+		std::cout << "bestOptResults.size(): " << bestOptResults.size() << std::endl;
+		for(const auto & opt : bestOptResults){
+			std::cout << opt.toJson() << std::endl<< std::endl;
+		}
 		return bestOptResults;
 	}
 

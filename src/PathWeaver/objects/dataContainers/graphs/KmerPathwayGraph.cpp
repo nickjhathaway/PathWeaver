@@ -756,6 +756,141 @@ void KmerPathwayGraph::breakSingleLinkedPathsReadThreading(){
 	resetNodePositions();
 	//exit(1);
 }
+
+
+void KmerPathwayGraph::collapseSingleLinkedPathsForPossibleLoops(){
+
+
+	std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesWithOneTailedTailsToProcess;
+	{
+		//grab the all nodes with one tail connected to a node with just one tail
+		std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesWithOneTailedTails;
+		for(const auto & n : nodes_){
+			if(1 == n->tailCount()
+					&& 1 == n->getFirstOnTailEdge()->tail_.lock()->tailCount() && 1 == n->getFirstOnTailEdge()->tail_.lock()->headCount()
+					&& n->uid_ != n->getFirstOnTailEdge()->tail_.lock()->uid_){
+				nodesWithOneTailedTails.push_back(n);
+			}
+		}
+		njh::sort(nodesWithOneTailedTails,[](const std::shared_ptr<KmerPathwayGraph::node> & n1, const std::shared_ptr<KmerPathwayGraph::node> & n2){
+			uint32_t n1HeadCntCount = 0;
+			uint32_t n2HeadCntCount = 0;
+			for(const auto & h : n1->headEdges_){
+				if(h->on_){
+					n1HeadCntCount += h->cnt_;
+				}
+			}
+			for(const auto & h : n2->headEdges_){
+				if(h->on_){
+					n2HeadCntCount += h->cnt_;
+				}
+			}
+			if(n1HeadCntCount == n2HeadCntCount){
+				return n1->k_.size() < n2->k_.size();
+			}else{
+				return n1HeadCntCount < n2HeadCntCount;
+			}
+		});
+		if(!nodesWithOneTailedTails.empty()){
+			nodesWithOneTailedTailsToProcess.push_back(nodesWithOneTailedTails.front());
+		}
+	}
+	while(!nodesWithOneTailedTailsToProcess.empty()){
+		std::vector<uint32_t> nodesToErase;
+		for(auto & n : nodesWithOneTailedTailsToProcess){
+			//auto firstTailEdge = n->getFirstOnTailEdge();
+			//std::cout << "On " << n->k_ << std::endl;
+			auto next = n->getFirstOnTailEdge()->tail_.lock();
+			//a tail count of one indicates that the next node should be added in
+			//also head count should be less than 2
+			while(next != nullptr && next->headCount() == 1 && next->uid_ != n->uid_){
+				////pushing backing only the back of the next k only works if there has been no processing before
+				//std::cout << next->k_ << std::endl;
+				//std::cout << next->k_.size() << std::endl;
+				n->k_.append(next->k_.substr(klen_ - 1 ));
+				n->cnt_+= next->cnt_;
+				//n->inReadNamesIdx_.reserve(n->inReadNamesIdx_.size() + next->inReadNamesIdx_.size());
+				n->inReadNamesIdx_.insert(next->inReadNamesIdx_.begin(), next->inReadNamesIdx_.end());
+				auto toErase = next->uid_;
+				if (0 == next->tailCount()) {
+					//head a tailless node, end of the line
+					//need to erase tail edges
+					n->tailEdges_.erase(n->tailEdges_.begin());
+					next = nullptr;
+				} else if (next->tailCount() > 1) {
+					//head a multi tailed node, section collapse is done
+					//need to add all the multiple tail edges
+					n->tailEdges_.clear();
+					for (const auto & tail : next->tailEdges_) {
+						if(!tail->on_){
+							continue;
+						}
+						n->tailEdges_.push_back(tail);
+						n->tailEdges_.back()->head_ = n;
+					}
+					next = nullptr;
+				} else {
+					//can still collapse more set next to the tail edge
+					//will only hit here if tailEdges_.size() is 1
+					n->tailEdges_.clear();
+					for (const auto & tail : next->tailEdges_) {
+						if (!tail->on_) {
+							continue;
+						}
+						n->tailEdges_.push_back(tail);
+						n->tailEdges_.back()->head_ = n;
+					}
+					next = next->getFirstOnTailEdge()->tail_.lock();
+				}
+				nodesToErase.emplace_back(nodePositions_[toErase]);
+				nodes_[nodePositions_[toErase]] = nullptr;
+			}
+		}
+		if(!nodesToErase.empty()){
+			std::sort(nodesToErase.rbegin(), nodesToErase.rend());
+			for(const auto & remove : nodesToErase){
+				nodes_.erase(nodes_.begin() + remove);
+			}
+			resetNodePositions();
+		}
+		nodesWithOneTailedTailsToProcess.clear();
+		{
+			//grab the all nodes with one tail connected to a node with just one tail
+			std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesWithOneTailedTails;
+			for(const auto & n : nodes_){
+				if(1 == n->tailCount()
+						&& 1 == n->getFirstOnTailEdge()->tail_.lock()->tailCount() && 1 == n->getFirstOnTailEdge()->tail_.lock()->headCount()
+						&& n->uid_ != n->getFirstOnTailEdge()->tail_.lock()->uid_){
+					nodesWithOneTailedTails.push_back(n);
+				}
+			}
+			njh::sort(nodesWithOneTailedTails,[](const std::shared_ptr<KmerPathwayGraph::node> & n1, const std::shared_ptr<KmerPathwayGraph::node> & n2){
+				uint32_t n1HeadCntCount = 0;
+				uint32_t n2HeadCntCount = 0;
+				for(const auto & h : n1->headEdges_){
+					if(h->on_){
+						n1HeadCntCount += h->cnt_;
+					}
+				}
+				for(const auto & h : n2->headEdges_){
+					if(h->on_){
+						n2HeadCntCount += h->cnt_;
+					}
+				}
+				if(n1HeadCntCount == n2HeadCntCount){
+					return n1->k_.size() < n2->k_.size();
+				}else{
+					return n1HeadCntCount < n2HeadCntCount;
+				}
+			});
+			if(!nodesWithOneTailedTails.empty()){
+				nodesWithOneTailedTailsToProcess.push_back(nodesWithOneTailedTails.front());
+			}
+		}
+	}
+}
+
+
 void KmerPathwayGraph::collapseSingleLinkedPaths(bool initialCollapse){
 	//njh::stopWatch watch;
 	//watch.setLapName(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps(), 100) + " - preprocess - remove off nodes");
@@ -814,27 +949,88 @@ void KmerPathwayGraph::collapseSingleLinkedPaths(bool initialCollapse){
 			}
 		}
 	}
+
+
+
+
 	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 //watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - processing nodes");
-	std::vector<uint32_t> nodesToErase;
-
-	if (nodesToProcess.size() > 1 && numThreads_ > 1) {
-
-		std::vector<uint32_t> nodesToProcessPositions(nodesToProcess.size());
-		njh::iota<uint32_t>(nodesToProcessPositions, 0);
-		njh::concurrent::LockableQueue<uint32_t> posQueue(nodesToProcessPositions);
-		std::mutex nodesToEraseMut;
-		std::function<void()> collapsePaths = [this,&nodesToErase,&nodesToEraseMut,&posQueue,&nodesToProcess](){
-			uint32_t position = 0;
-			std::vector<uint32_t> nodesToEraseThread;
-			while(posQueue.getVal(position)){
-				auto & n = nodesToProcess[position];
+	if(initialCollapse && nodesToProcess.empty() && nodes_.size() > 1){
+		collapseSingleLinkedPathsForPossibleLoops();
+	} else {
+		std::vector<uint32_t> nodesToErase;
+		if (nodesToProcess.size() > 1 && numThreads_ > 1) {
+			std::vector<uint32_t> nodesToProcessPositions(nodesToProcess.size());
+			njh::iota<uint32_t>(nodesToProcessPositions, 0);
+			njh::concurrent::LockableQueue<uint32_t> posQueue(nodesToProcessPositions);
+			std::mutex nodesToEraseMut;
+			std::function<void()> collapsePaths = [this,&nodesToErase,&nodesToEraseMut,&posQueue,&nodesToProcess](){
+				uint32_t position = 0;
+				std::vector<uint32_t> nodesToEraseThread;
+				while(posQueue.getVal(position)){
+					auto & n = nodesToProcess[position];
+					//auto firstTailEdge = n->getFirstOnTailEdge();
+					//std::cout << "On " << n->k_ << std::endl;
+					auto next = n->getFirstOnTailEdge()->tail_.lock();
+					//a tail count of one indicates that the next node should be added in
+					//also head count should be less than 2
+					while(next != nullptr && next->headCount() == 1 && next->uid_ != n->uid_){
+						////pushing backing only the back of the next k only works if there has been no processing before
+						//std::cout << next->k_ << std::endl;
+						//std::cout << next->k_.size() << std::endl;
+						n->k_.append(next->k_.substr(klen_ - 1 ));
+						n->cnt_+= next->cnt_;
+						//n->inReadNamesIdx_.reserve(n->inReadNamesIdx_.size() + next->inReadNamesIdx_.size());
+						n->inReadNamesIdx_.insert(next->inReadNamesIdx_.begin(), next->inReadNamesIdx_.end());
+						auto toErase = next->uid_;
+						if (0 == next->tailCount()) {
+							//head a tailless node, end of the line
+							//need to erase tail edges
+							n->tailEdges_.erase(n->tailEdges_.begin());
+							next = nullptr;
+						} else if (next->tailCount() > 1) {
+							//head a multi tailed node, section collapse is done
+							//need to add all the multiple tail edges
+							n->tailEdges_.clear();
+							for (const auto & tail : next->tailEdges_) {
+								if(!tail->on_){
+									continue;
+								}
+								n->tailEdges_.push_back(tail);
+								n->tailEdges_.back()->head_ = n;
+							}
+							next = nullptr;
+						} else {
+							//can still collapse more set next to the tail edge
+							//will only hit here if tailEdges_.size() is 1
+							n->tailEdges_.clear();
+							for (const auto & tail : next->tailEdges_) {
+								if (!tail->on_) {
+									continue;
+								}
+								n->tailEdges_.push_back(tail);
+								n->tailEdges_.back()->head_ = n;
+							}
+							next = next->getFirstOnTailEdge()->tail_.lock();
+						}
+						nodesToEraseThread.emplace_back(nodePositions_[toErase]);
+						nodes_[nodePositions_[toErase]] = nullptr;
+					}
+				}
+				{
+					std::lock_guard<std::mutex> lock(nodesToEraseMut);
+					addOtherVec(nodesToErase, nodesToEraseThread);
+				}
+			};
+			njh::concurrent::runVoidFunctionThreaded(collapsePaths, numThreads_);
+		} else {
+			for(auto & n : nodesToProcess){
 				//auto firstTailEdge = n->getFirstOnTailEdge();
 				//std::cout << "On " << n->k_ << std::endl;
 				auto next = n->getFirstOnTailEdge()->tail_.lock();
 				//a tail count of one indicates that the next node should be added in
 				//also head count should be less than 2
-				while(next != nullptr && next->headCount() == 1){
+				while(next != nullptr && next->headCount() == 1 && next->uid_ != n->uid_){
 					////pushing backing only the back of the next k only works if there has been no processing before
 					//std::cout << next->k_ << std::endl;
 					//std::cout << next->k_.size() << std::endl;
@@ -873,81 +1069,29 @@ void KmerPathwayGraph::collapseSingleLinkedPaths(bool initialCollapse){
 						}
 						next = next->getFirstOnTailEdge()->tail_.lock();
 					}
-					nodesToEraseThread.emplace_back(nodePositions_[toErase]);
+					nodesToErase.emplace_back(nodePositions_[toErase]);
 					nodes_[nodePositions_[toErase]] = nullptr;
 				}
 			}
-			{
-				std::lock_guard<std::mutex> lock(nodesToEraseMut);
-				addOtherVec(nodesToErase, nodesToEraseThread);
+		}
+		if(!nodesToErase.empty()){
+		//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - sorting nodes to process");
+			std::sort(nodesToErase.rbegin(), nodesToErase.rend());
+		//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - set nodes to null");
+	//		for(const auto & remove : nodesToErase){
+	//			nodes_[remove] = nullptr;
+	//		}
+		//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - remove old nodes");
+			for(const auto & remove : nodesToErase){
+				nodes_.erase(nodes_.begin() + remove);
 			}
-		};
-		njh::concurrent::runVoidFunctionThreaded(collapsePaths, numThreads_);
-	} else {
-		for(auto & n : nodesToProcess){
-			//auto firstTailEdge = n->getFirstOnTailEdge();
-			//std::cout << "On " << n->k_ << std::endl;
-			auto next = n->getFirstOnTailEdge()->tail_.lock();
-			//a tail count of one indicates that the next node should be added in
-			//also head count should be less than 2
-			while(next != nullptr && next->headCount() == 1){
-				////pushing backing only the back of the next k only works if there has been no processing before
-				//std::cout << next->k_ << std::endl;
-				//std::cout << next->k_.size() << std::endl;
-				n->k_.append(next->k_.substr(klen_ - 1 ));
-				n->cnt_+= next->cnt_;
-				//n->inReadNamesIdx_.reserve(n->inReadNamesIdx_.size() + next->inReadNamesIdx_.size());
-				n->inReadNamesIdx_.insert(next->inReadNamesIdx_.begin(), next->inReadNamesIdx_.end());
-				auto toErase = next->uid_;
-				if (0 == next->tailCount()) {
-					//head a tailless node, end of the line
-					//need to erase tail edges
-					n->tailEdges_.erase(n->tailEdges_.begin());
-					next = nullptr;
-				} else if (next->tailCount() > 1) {
-					//head a multi tailed node, section collapse is done
-					//need to add all the multiple tail edges
-					n->tailEdges_.clear();
-					for (const auto & tail : next->tailEdges_) {
-						if(!tail->on_){
-							continue;
-						}
-						n->tailEdges_.push_back(tail);
-						n->tailEdges_.back()->head_ = n;
-					}
-					next = nullptr;
-				} else {
-					//can still collapse more set next to the tail edge
-					//will only hit here if tailEdges_.size() is 1
-					n->tailEdges_.clear();
-					for (const auto & tail : next->tailEdges_) {
-						if (!tail->on_) {
-							continue;
-						}
-						n->tailEdges_.push_back(tail);
-						n->tailEdges_.back()->head_ = n;
-					}
-					next = next->getFirstOnTailEdge()->tail_.lock();
-				}
-				nodesToErase.emplace_back(nodePositions_[toErase]);
-				nodes_[nodePositions_[toErase]] = nullptr;
-			}
+		//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - reset node positions");
+			resetNodePositions();
 		}
 	}
-	if(!nodesToErase.empty()){
-	//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - sorting nodes to process");
-		std::sort(nodesToErase.rbegin(), nodesToErase.rend());
-	//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - set nodes to null");
-//		for(const auto & remove : nodesToErase){
-//			nodes_[remove] = nullptr;
-//		}
-	//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - remove old nodes");
-		for(const auto & remove : nodesToErase){
-			nodes_.erase(nodes_.begin() + remove);
-		}
-	//watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - reset node positions");
-		resetNodePositions();
-	}
+
+
+
 	//exit(1);
 //	watch.startNewLap(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 100) + " - post process - remove null nodes");
 //	removeNullNodes();
@@ -2082,6 +2226,39 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 }
 
 
+bool KmerPathwayGraph::hasSelfPointingPaths(){
+	resetNodePositions();
+	std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
+	for (const auto & n : nodes_) {
+		//check for nodes with 1 head node that points to it's self
+		if(n->headCount() == 1 ){
+			for( auto & head : n->headEdges_){
+				if(head->on_){
+					if(head->head_.lock()->uid_ == n->uid_){
+						//this node has one head and it's head node is this node
+						return true;
+					}
+				}
+			}
+		}
+		//check tail nodes that point to it's self
+		if(n->tailCount() == 1 ){
+			for( auto & tail : n->tailEdges_){
+				if(tail->on_){
+					if(tail->tail_.lock()->uid_ == n->uid_){
+						//this node has one tail and it's tail node is this node
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+
+
 bool KmerPathwayGraph::breakSelfPointingPaths() {
 	resetNodePositions();
 	std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
@@ -2450,7 +2627,22 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 	out << "\t" << "node [fixedsize=true, shape=rect]" << std::endl;
 	double heightNormalizer = 250; // 250 bases will equate 1 inch
 //	double widthNormalizer = 25; // per base coverage of 25 will equate 1 inch
-	double penWidthNormalizer = 50; // 50 will equate 1 inch
+	//double penWidthNormalizer = 50; // 50 will equate 1 inch
+	double maxPenWidth = 12.5; // 50 will equate 1 inch
+
+	std::unordered_map<std::string, std::string> nodeLabels;
+	uint64_t nodePos = 0;
+	for(const auto & node : nodes_){
+		if(node->on_){
+			if(node->uid_.size() > 16000){
+				nodeLabels[node->uid_] = njh::pasteAsStr("node", njh::leftPadNumStr(nodePos, static_cast<uint64_t>(nodes_.size())));
+			} else {
+				nodeLabels[node->uid_] = node->uid_;
+			}
+		}
+		++nodePos;
+	}
+
 //	std::vector<double> avgBaseCoverages;
 //	for(const auto & node : nodes_){
 //		std::vector<uint32_t> allCounts;
@@ -2516,7 +2708,7 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 		}
 
 		uint32_t readCnt = finalNodeReadCounts.size();
-		out << "\t" << node->uid_ << "[fixedsize=true,shape=rect,width=" << nwidth
+		out << "\t" << nodeLabels[node->uid_] << "[fixedsize=true,shape=rect,width=" << nwidth
 				<< ",height=" << nheight << ",style=filled,fillcolor=\"" << nodeColor
 				<< "\", label=\""
 				<< (noLabels ?
@@ -2529,18 +2721,42 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 				<< "\"]" << std::endl;
 		;
 	}
+
+	uint32_t maxTailCnt = 0;
 	for (const auto & node : nodes_){
 		if(!node->on_){
 			continue;
 		}
 		for(const auto & tail : node->tailEdges_){
 			if(tail->on_){
-				out << "\t" << tail->head_.lock()->uid_ << " -> " << tail->tail_.lock()->uid_ << "[penwidth=" << tail->cnt_/penWidthNormalizer << ", label=\"" << (noLabels ? "" : estd::to_string(tail->cnt_)) << "\""<< "]"   << std::endl;
+				if(tail->cnt_ > maxTailCnt){
+					maxTailCnt = tail->cnt_;
+				}
+			}
+		}
+	}
+
+	scale<double> edgePenWidthScale(std::make_pair(0,maxTailCnt), std::make_pair(0,maxPenWidth));
+
+	for (const auto & node : nodes_){
+		if(!node->on_){
+			continue;
+		}
+		for(const auto & tail : node->tailEdges_){
+			if(tail->on_){
+				out << "\t" << nodeLabels[tail->head_.lock()->uid_] << " -> " << nodeLabels[tail->tail_.lock()->uid_] << "[penwidth=" <<  edgePenWidthScale.get(tail->cnt_) << ", label=\"" << (noLabels ? "" : estd::to_string(tail->cnt_)) << "\""<< "]"   << std::endl;
 			}
 		}
 	}
 	out << "}" << std::endl;
+	for(const auto & nodeLabel : nodeLabels){
+		if(nodeLabel.first.size() > 16000){
+			out << "#" << nodeLabel.second << "=" << nodeLabel.first << std::endl;
+		}
+	}
 }
+
+
 void KmerPathwayGraph::writeRectangleDot(std::ostream & out, bool noLabels) const{
 	VecStr colors = {"#006E82","#8214A0","#005AC8","#00A0FA","#FA78FA","#14D2DC","#AA0A3C","#FA7850","#0AB45A","#F0F032","#A0FA82","#FAE6BE"};
 	VecStr moreColors = { "#ff358f", "#07c652", "#a2009b", "#467f00", "#cb73fd",
@@ -2989,7 +3205,10 @@ bool KmerPathwayGraph::skipInputSeqForKCountOld(const std::string & seq, uint32_
 	}
 	return false;
 }
+
 void KmerPathwayGraph::resetGroups() const {
+	//really should do a non-recursive group set
+
 	//first reset all nodes back to max
 	for(auto & n : nodes_){
 		n->group_ = std::numeric_limits<uint32_t>::max();
@@ -3029,6 +3248,47 @@ void KmerPathwayGraph::resetGroups() const {
 		}
 	}
 }
+
+void KmerPathwayGraph::resetGroupsLoopAware() const {
+	//really should do a non-recursive group set
+
+	//first reset all nodes back to max
+	for(auto & n : nodes_){
+		n->group_ = std::numeric_limits<uint32_t>::max();
+	}
+	std::function<void(const std::shared_ptr<node> &, uint32_t)> spreadGroup = [&spreadGroup](const std::shared_ptr<node> & spnode, uint32_t groupUID){
+		//set self
+		spnode->group_ = groupUID;
+		//spread to heads
+		for(const auto & head : spnode->headEdges_){
+			if(head->on_){
+				if(std::numeric_limits<uint32_t>::max() == head->head_.lock()->group_){
+					spreadGroup(head->head_.lock(), groupUID);
+				}
+			}
+		}
+		//spread to tails
+		for(const auto & tail : spnode->tailEdges_){
+			if(tail->on_){
+				if(std::numeric_limits<uint32_t>::max() == tail->tail_.lock()->group_){
+					spreadGroup(tail->tail_.lock(), groupUID);
+				}
+			}
+		}
+	};
+	uint32_t groupId = 0;
+	for(const auto & n : nodes_){
+		//group hasn't been set yet
+		if(std::numeric_limits<uint32_t>::max() == n->group_){
+			spreadGroup(n, groupId);
+			++groupId;
+		}
+	}
+}
+
+
+
+
 //KmerPathwayGraph::Pathway::Pathway() {
 //}
 //
