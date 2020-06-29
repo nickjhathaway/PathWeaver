@@ -64,6 +64,11 @@ public:
 		bool removeDuplicatedSequences_ = false;
 		bool trimRemoveDuplicatedSequences_ = false;
 
+
+		bool trimSeqsEdgesForLowEntropy_ = true;
+		readVecTrimmer::TrimEdgesByLowEntropyPars seqEdgeEntropyTrimPars_;
+
+
 		bool trimSeqsWithNs_ = false;
 		uint32_t qualTrim_ = 2;
 		bool trimOnQual_ = false;
@@ -164,6 +169,8 @@ public:
 
 		bool trimToInputSeqs = false;
 		bool trimWithGlobalAln = true;
+		bool trimToCircularGenome = true;
+		readVecTrimmer::trimCircularGenomeToRefPars circularTrimPars_;
 
 		bool splitToRecruit_ {false};
 		bool addHeadTailSeqsToRecruit = false;

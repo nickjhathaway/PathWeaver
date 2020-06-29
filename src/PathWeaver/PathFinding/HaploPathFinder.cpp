@@ -81,6 +81,17 @@ HaploPathFinder::PathFinderCorePars::PathFinderCorePars(){
 	errorsToAllow_.hqMismatches_ = 1;
 	trimEdgesOfEndNodesPars_.entropyCutOff = 1.50;
 	pairProcessorParams_.minOverlap_ = 10;
+
+
+	seqEdgeEntropyTrimPars_.entropyCutOff = 0.75;
+	seqEdgeEntropyTrimPars_.kLen = 1;
+	seqEdgeEntropyTrimPars_.windowSize = 20;
+	seqEdgeEntropyTrimPars_.windowStep = 1;
+
+
+	circularTrimPars_.mark_ = true;
+	circularTrimPars_.preferHeader_ = true;
+
 }
 
 void HaploPathFinder::PathFinderCorePars::setTandemRepeatHandlingOptions(seqSetUp & setUp){
@@ -312,6 +323,18 @@ void HaploPathFinder::PathFinderCorePars::setQualityTrimAndFiltOpts(seqSetUp & s
 	}else{
 		setUp.setOption(markPreFilterInfo_, "--markPreFilterInfo", "mark pre-filtered reads with failed check info");
 	}
+
+	if(!trimSeqsEdgesForLowEntropy_){
+		setUp.setOption(trimSeqsEdgesForLowEntropy_, "--trimSeqsEdgesForLowEntropy", "Trim Seqs Edges For Low Entropy");
+	}else{
+		bool noTrimSeqsEdgesForLowEntropy = false;
+		setUp.setOption(noTrimSeqsEdgesForLowEntropy, "--noTrimSeqsEdgesForLowEntropy", "No Trim Seqs Edges For Low Entropy");
+		trimSeqsEdgesForLowEntropy_ = !noTrimSeqsEdgesForLowEntropy;
+	}
+	setUp.setOption(seqEdgeEntropyTrimPars_.entropyCutOff, "--trimSeqsEdgesForLowEntropy-entropyCutOff", "Entropy Cut Off for when --trimSeqsEdgesForLowEntropy is true");
+	setUp.setOption(seqEdgeEntropyTrimPars_.windowSize, "--trimSeqsEdgesForLowEntropy-windowSize", "Window Size for when --trimSeqsEdgesForLowEntropy is true");
+	setUp.setOption(seqEdgeEntropyTrimPars_.windowStep, "--trimSeqsEdgesForLowEntropy-windowStep", "Window Step for when --trimSeqsEdgesForLowEntropy is true");
+
 }
 
 
@@ -420,6 +443,7 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 	bool noTrimWithGlobalAln = false;
 	setUp.setOption(noTrimWithGlobalAln, "--noTrimWithGlobalAln", "Trim to the input references with global alignment to input seqs rather than with muscle");
 	trimWithGlobalAln = !noTrimWithGlobalAln;
+	setUp.setOption(trimToCircularGenome, "--trimToCircularGenome", "Trim contigs to the reference assuming ref is circular");
 	setUp.setOption(trimEnds, "--trimEnds", "Trim the ends of called haplotypes");
 	setUp.setOption(trimEndsByCoverage, "--trimEndsByCoverage", "Trim Ends By low coverage");
 	setUp.setOption(trimEndsBy, "--trimEndsBy", "Trim Ends By this length when trimming, rather than the kmer length");

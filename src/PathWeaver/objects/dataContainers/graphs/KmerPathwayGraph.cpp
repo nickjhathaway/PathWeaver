@@ -2259,7 +2259,7 @@ bool KmerPathwayGraph::hasSelfPointingPaths(){
 
 
 
-bool KmerPathwayGraph::breakSelfPointingPaths() {
+bool KmerPathwayGraph::breakSelfPointingPathsKeepOtherEdges() {
 	resetNodePositions();
 	std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
 	bool brokeConnections = false;
@@ -2288,6 +2288,57 @@ bool KmerPathwayGraph::breakSelfPointingPaths() {
 					}
 					break;
 				}
+			}
+		}
+	}
+	if(brokeConnections){
+		removeOffEdges();
+		return true;
+	}
+	return false;
+}
+
+bool KmerPathwayGraph::breakSelfPointingPaths() {
+	resetNodePositions();
+	std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
+	bool brokeConnections = false;
+	for (const auto & n : nodes_) {
+		bool nodeHasSelfPointing = false;
+		//check for nodes with 1 head node that points to it's self
+		if(n->headCount() == 1 ){
+			for( auto & head : n->headEdges_){
+				if(head->on_){
+					if(head->head_.lock()->uid_ == n->uid_){
+						//this node has one head nad it's head node is this node turn of this connection
+						head->on_ = false;
+						brokeConnections = true;
+						nodeHasSelfPointing = true;
+					}
+					break;
+				}
+			}
+		}
+		//check tail nodes that point to it's self
+		if(n->tailCount() == 1 ){
+			for( auto & tail : n->tailEdges_){
+				if(tail->on_){
+					if(tail->tail_.lock()->uid_ == n->uid_){
+						//this node has one head nad it's head node is this node turn of this connection
+						tail->on_ = false;
+						brokeConnections = true;
+						nodeHasSelfPointing = true;
+					}
+					break;
+				}
+			}
+		}
+		//if node had any self pointing paths, break all other edges
+		if(nodeHasSelfPointing){
+			for(auto & head : n->headEdges_){
+				head->on_ = false;
+			}
+			for(auto & tail : n->tailEdges_){
+				tail->on_ = false;
 			}
 		}
 	}
@@ -2554,6 +2605,42 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDotByGroup(const OutOptions
 			}
 		}
 		auto maxCov = *std::max_element(estBaseCoverages.begin(), estBaseCoverages.end());
+
+
+		uint32_t maxColorGroup = 0;
+		for (const auto &node : nodes_) {
+			if (!node->on_ || group != node->group_) {
+				continue;
+			}
+			uint32_t colorGroup = 0;
+			if (node->headless() && node->tailless()) {
+				colorGroup = 1;
+			} else if (node->headless()) {
+				colorGroup = 0;
+			} else if (node->tailless()) {
+				colorGroup = 2;
+			} else {
+				colorGroup = 2 + node->tailCount();
+			}
+			if(colorGroup > maxColorGroup){
+				maxColorGroup = colorGroup;
+			}
+		}
+		if(maxColorGroup >= colors.size() + moreColors.size()  ){
+			auto hColors = njh::heatmapColors(maxColorGroup + 1);
+			njh::reverse(hColors);
+			moreColors.clear();
+			for(const auto & hColor : hColors){
+				moreColors.emplace_back(hColor.getHexStr());
+			}
+			out << "\t"
+					<< "graph [ bgcolor=black, resolution=128, fontname=Arial, fontcolor=white,  fontsize=12 ]; "
+					<< std::endl;
+			out << "\t" << "node [ fontname=Arial, fontcolor=white, fontsize=11];"
+					<< std::endl;
+			out << "\t" << "edge [ fontname=Helvetica, fontcolor=white, fontsize=10 ];"
+					<< std::endl;
+		}
 		for(const auto & node : nodes_){
 			if(!node->on_ || group != node->group_){
 				continue;
@@ -2666,6 +2753,38 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 		}
 	}
 	auto maxCov = *std::max_element(estBaseCoverages.begin(), estBaseCoverages.end());
+
+	uint32_t maxColorGroup = 0;
+	for (const auto &node : nodes_) {
+		uint32_t colorGroup = 0;
+		if (node->headless() && node->tailless()) {
+			colorGroup = 1;
+		} else if (node->headless()) {
+			colorGroup = 0;
+		} else if (node->tailless()) {
+			colorGroup = 2;
+		} else {
+			colorGroup = 2 + node->tailCount();
+		}
+		if(colorGroup > maxColorGroup){
+			maxColorGroup = colorGroup;
+		}
+	}
+	if(maxColorGroup >= colors.size() + moreColors.size() ){
+		auto hColors = njh::heatmapColors(maxColorGroup + 1);
+		njh::reverse(hColors);
+		moreColors.clear();
+		for(const auto & hColor : hColors){
+			moreColors.emplace_back(hColor.getHexStr());
+		}
+		out << "\t"
+				<< "graph [ bgcolor=black, resolution=128, fontname=Arial, fontcolor=white,  fontsize=12 ]; "
+				<< std::endl;
+		out << "\t" << "node [ fontname=Arial, fontcolor=white, fontsize=11];"
+				<< std::endl;
+		out << "\t" << "edge [ fontname=Helvetica, fontcolor=white, fontsize=10 ];"
+				<< std::endl;
+	}
 	for(const auto & node : nodes_){
 		if(!node->on_){
 			continue;
@@ -2778,6 +2897,37 @@ void KmerPathwayGraph::writeRectangleDot(std::ostream & out, bool noLabels) cons
 		avgBaseCoverages.emplace_back(approxPerBaseCoverage);
 	}
 	auto maxCov = *std::max_element(avgBaseCoverages.begin(), avgBaseCoverages.end());
+	uint32_t maxColorGroup = 0;
+	for (const auto &node : nodes_) {
+		uint32_t colorGroup = 0;
+		if (node->headless() && node->tailless()) {
+			colorGroup = 1;
+		} else if (node->headless()) {
+			colorGroup = 0;
+		} else if (node->tailless()) {
+			colorGroup = 2;
+		} else {
+			colorGroup = 2 + node->tailCount();
+		}
+		if(colorGroup > maxColorGroup){
+			maxColorGroup = colorGroup;
+		}
+	}
+	if(maxColorGroup >= colors.size() + moreColors.size() ){
+		auto hColors = njh::heatmapColors(maxColorGroup + 1);
+		njh::reverse(hColors);
+		moreColors.clear();
+		for(const auto & hColor : hColors){
+			moreColors.emplace_back(hColor.getHexStr());
+		}
+		out << "\t"
+				<< "graph [ bgcolor=black, resolution=128, fontname=Arial, fontcolor=white,  fontsize=12 ]; "
+				<< std::endl;
+		out << "\t" << "node [ fontname=Arial, fontcolor=white, fontsize=11];"
+				<< std::endl;
+		out << "\t" << "edge [ fontname=Helvetica, fontcolor=white, fontsize=10 ];"
+				<< std::endl;
+	}
 	for(const auto & node : nodes_){
 		if(!node->on_){
 			continue;
@@ -2844,6 +2994,37 @@ void KmerPathwayGraph::writeDot(std::ostream & out) const{
 			"#e4b7f0", "#ff97a2" };
 	out << "digraph graphname {" << std::endl;
 	out << "\t" << "node [fixedsize=true regular=true shape=ellipse]" << std::endl;
+	uint32_t maxColorGroup = 0;
+	for (const auto &node : nodes_) {
+		uint32_t colorGroup = 0;
+		if (node->headless() && node->tailless()) {
+			colorGroup = 1;
+		} else if (node->headless()) {
+			colorGroup = 0;
+		} else if (node->tailless()) {
+			colorGroup = 2;
+		} else {
+			colorGroup = 2 + node->tailCount();
+		}
+		if(colorGroup > maxColorGroup){
+			maxColorGroup = colorGroup;
+		}
+	}
+	if(maxColorGroup >= colors.size() + moreColors.size() ){
+		auto hColors = njh::heatmapColors(maxColorGroup + 1);
+		njh::reverse(hColors);
+		moreColors.clear();
+		for(const auto & hColor : hColors){
+			moreColors.emplace_back(hColor.getHexStr());
+		}
+		out << "\t"
+				<< "graph [ bgcolor=black, resolution=128, fontname=Arial, fontcolor=white,  fontsize=12 ]; "
+				<< std::endl;
+		out << "\t" << "node [ fontname=Arial, fontcolor=white, fontsize=11];"
+				<< std::endl;
+		out << "\t" << "edge [ fontname=Helvetica, fontcolor=white, fontsize=10 ];"
+				<< std::endl;
+	}
 	for(const auto & node : nodes_){
 		if(!node->on_){
 			continue;

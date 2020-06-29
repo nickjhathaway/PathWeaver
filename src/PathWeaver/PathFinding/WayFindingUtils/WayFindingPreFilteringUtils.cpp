@@ -88,27 +88,36 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				readVecTrimmer::trimAtLstripQualScore(pSeq.mateSeqBase_, extractionPars.trimOnQual_);
 				readVecTrimmer::trimAtRstripQualScore(pSeq.mateSeqBase_, extractionPars.trimOnQual_);
 			}
+			if(extractionPars.trimSeqsEdgesForLowEntropy_){
+				readVecTrimmer::trimEdgesForLowEntropy(pSeq.seqBase_, extractionPars.seqEdgeEntropyTrimPars_);
+				readVecTrimmer::trimEdgesForLowEntropy(pSeq.mateSeqBase_, extractionPars.seqEdgeEntropyTrimPars_);
+			}
 
 			//moved checking for Ns later
 			//bool firstSkipped = std::string::npos != pSeq.seqBase_.seq_.find("N");
 			//bool secondSkipped = std::string::npos != pSeq.mateSeqBase_.seq_.find("N");
-			bool firstSkipped = false;
-			bool secondSkipped = false;
+//			bool firstSkipped = false;
+//			bool secondSkipped = false;
+			bool firstSkipped = !pSeq.seqBase_.on_;
+			bool secondSkipped = !pSeq.mateSeqBase_.on_;
 			//quality filter, will turn read off if it doesn't pass checks
-			if(!firstSkipped){
+			if (!firstSkipped) {
 				readQualChecker.checkRead(pSeq.seqBase_);
 				firstSkipped = !pSeq.seqBase_.on_;
+				if (firstSkipped) {
+					++ret.filteredR1Qual_;
+				}
+			} else {
+				++ret.filteredR1LowEntropy_;
 			}
-
-			if(!secondSkipped){
+			if (!secondSkipped) {
 				readQualChecker.checkRead(pSeq.mateSeqBase_);
 				secondSkipped = !pSeq.mateSeqBase_.on_;
-			}
-			if(firstSkipped){
-				++ret.filteredR1Qual_;
-			}
-			if(secondSkipped){
-				++ret.filteredR2Qual_;
+				if (secondSkipped) {
+					++ret.filteredR2Qual_;
+				}
+			} else {
+				++ret.filteredR2LowEntropy_;
 			}
 
 			if(!firstSkipped && extractionPars.preFilterReadsOnEntropy_){
@@ -190,27 +199,39 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				readVecTrimmer::trimAtLstripQualScore(pSeq.mateSeqBase_, extractionPars.trimOnQual_);
 				readVecTrimmer::trimAtRstripQualScore(pSeq.mateSeqBase_, extractionPars.trimOnQual_);
 			}
+			if(extractionPars.trimSeqsEdgesForLowEntropy_){
+				readVecTrimmer::trimEdgesForLowEntropy(pSeq.seqBase_, extractionPars.seqEdgeEntropyTrimPars_);
+				readVecTrimmer::trimEdgesForLowEntropy(pSeq.mateSeqBase_, extractionPars.seqEdgeEntropyTrimPars_);
+			}
 			//moved checking for Ns later
 			//bool firstSkipped = std::string::npos != pSeq.seqBase_.seq_.find("N");
 			//bool secondSkipped = std::string::npos != pSeq.mateSeqBase_.seq_.find("N");
-			bool firstSkipped = false;
-			bool secondSkipped = false;
+//			bool firstSkipped = false;
+//			bool secondSkipped = false;
+			bool firstSkipped = !pSeq.seqBase_.on_;
+			bool secondSkipped = !pSeq.mateSeqBase_.on_;
 			//quality filter, will turn read off if it doesn't pass checks
 
 			if(!firstSkipped){
 				readQualChecker.checkRead(pSeq.seqBase_);
 				firstSkipped = !pSeq.seqBase_.on_;
+				if(firstSkipped){
+					++ret.filteredR1Qual_;
+				}
+			}else{
+				++ret.filteredR1LowEntropy_;
 			}
 			if(!secondSkipped){
 				readQualChecker.checkRead(pSeq.mateSeqBase_);
 				secondSkipped = !pSeq.mateSeqBase_.on_;
+				if(secondSkipped){
+					++ret.filteredR2Qual_;
+				}
+			}else{
+				++ret.filteredR2LowEntropy_;
 			}
-			if(firstSkipped){
-				++ret.filteredR1Qual_;
-			}
-			if(secondSkipped){
-				++ret.filteredR2Qual_;
-			}
+
+
 			if(!firstSkipped && extractionPars.preFilterReadsOnEntropy_){
 				charCounter r1CharCount(pSeq.seqBase_.seq_);
 				//this doesn't take into account N's which throw off the entropy count (won't be ranged from 0-2), so below is a hacky workaround
@@ -287,9 +308,17 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				readVecTrimmer::trimAtRstripQualScore(seq,
 						extractionPars.trimOnQual_);
 			}
-			//quality filter, will turn read off if it doesn't pass checks
-			readQualChecker.checkRead(seq);
+			if(extractionPars.trimSeqsEdgesForLowEntropy_){
+				readVecTrimmer::trimEdgesForLowEntropy(seq, extractionPars.seqEdgeEntropyTrimPars_);
+			}
 			bool singleSkipped = !seq.on_;
+			if (!singleSkipped) {
+				//quality filter, will turn read off if it doesn't pass checks
+				readQualChecker.checkRead(seq);
+				singleSkipped = !seq.on_;
+			} else {
+				++ret.filteredSinglesLowEntropy_;
+			}
 			bool dup = false;
 			if(singleSkipped){
 				++ret.filteredSinglesQual_;

@@ -384,15 +384,21 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				reader.openIn();
 				PairedRead seq;
 				while(reader.readNextRead(seq)){
-					kmerInfo firstInfo(seq.seqBase_.seq_, debugEstimatingGraph.klen_, false);
-					debugEstimatingGraph.increaseKCounts(seq.seqBase_.seq_);
-					if(seq.mateSeqBase_.seq_.size() > debugEstimatingGraph.klen_){
-						for (auto pos : iter::range(seq.mateSeqBase_.seq_.size() - debugEstimatingGraph.klen_ + 1)) {
-							auto mateSeqKmer = seq.mateSeqBase_.seq_.substr(pos, debugEstimatingGraph.klen_);
-							debugEstimatingGraph.kCounts_[mateSeqKmer] += 1;
-//							if(!njh::in(mateSeqKmer, firstInfo.kmers_)){
-//								debugEstimatingGraph.kCounts_[mateSeqKmer] += 1;
-//							}
+					if (seq.seqBase_.seq_.size() > debugEstimatingGraph.klen_) {
+						kmerInfo firstInfo(seq.seqBase_.seq_, debugEstimatingGraph.klen_, false);
+						debugEstimatingGraph.increaseKCounts(seq.seqBase_.seq_);
+						if(seq.mateSeqBase_.seq_.size() > debugEstimatingGraph.klen_){
+							for (auto pos : iter::range(seq.mateSeqBase_.seq_.size() - debugEstimatingGraph.klen_ + 1)) {
+								auto mateSeqKmer = seq.mateSeqBase_.seq_.substr(pos, debugEstimatingGraph.klen_);
+								debugEstimatingGraph.kCounts_[mateSeqKmer] += 1;
+	//							if(!njh::in(mateSeqKmer, firstInfo.kmers_)){
+	//								debugEstimatingGraph.kCounts_[mateSeqKmer] += 1;
+	//							}
+							}
+						}
+					} else {
+						if(seq.mateSeqBase_.seq_.size() > debugEstimatingGraph.klen_){
+							debugEstimatingGraph.increaseKCounts(seq.mateSeqBase_.seq_);
 						}
 					}
 				}
@@ -402,7 +408,9 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				reader.openIn();
 				seqInfo seq;
 				while(reader.readNextRead(seq)){
-					debugEstimatingGraph.increaseKCounts(seq.seq_);
+					if(seq.seq_.size() > debugEstimatingGraph.klen_){
+						debugEstimatingGraph.increaseKCounts(seq.seq_);
+					}
 				}
 			}
 		}
@@ -1566,6 +1574,25 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 							}
 						}
 					}
+					if(extractionPars.keepCycles_){
+						//if allowing groups, add each loop as an optimal count
+						//this way loops won't get optimal counts of 0
+						//there is probably a better way of doing this
+						currentGraph->resetGroupsLoopAware();
+						std::unordered_map<uint32_t, uint32_t> groupOptimalCounts;
+						for(const auto & node : currentGraph->nodes_){
+							if(node->tailless() || node->headless()){
+								groupOptimalCounts[node->group_] += 1;
+							}else{
+								groupOptimalCounts[node->group_] += 0;
+							}
+						}
+						for(const auto & groupCount : groupOptimalCounts){
+							if(0 == groupCount.second){
+								optRunRes.optimalCount_ += 1;
+							}
+						}
+					}
 					if(extractionPars.throwAwayConservedAddNodesDuringDisentaglement && extractionPars.adjustForHeadLessAddedAfterDisentanglement){
 						if(extractionPars.debug){
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -1681,6 +1708,25 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 									if(node->k_.size() < extractionPars.optimizeNodeSizeCutOff_){
 										++optRunResAfterOneEndSplit.internalNodesCountBelowLen_;
 									}
+								}
+							}
+						}
+						if(extractionPars.keepCycles_){
+							//if allowing groups, add each loop as an optimal count
+							//this way loops won't get optimal counts of 0
+							//there is probably a better way of doing this
+							currentGraph->resetGroupsLoopAware();
+							std::unordered_map<uint32_t, uint32_t> groupOptimalCounts;
+							for(const auto & node : currentGraph->nodes_){
+								if(node->tailless() || node->headless()){
+									groupOptimalCounts[node->group_] += 1;
+								}else{
+									groupOptimalCounts[node->group_] += 0;
+								}
+							}
+							for(const auto & groupCount : groupOptimalCounts){
+								if(0 == groupCount.second){
+									optRunResAfterOneEndSplit.optimalCount_ += 1;
 								}
 							}
 						}
@@ -2363,13 +2409,15 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 							while(reader.readNextRead(seq)){
 								uint32_t kmersFound = 0;
 								uint32_t totalKmers = 0;
-								for(uint32_t pos = 0; pos < len(seq) + 1 - extractionPars.estimatorKlen; ++pos){
-									auto k = seq.seq_.substr(pos, extractionPars.estimatorKlen);
-									if(debugEstimatingGraph.kCounts_[k] > 1){
-										if(njh::in(k, kmersInOutSeqs)){
-											++kmersFound;
+								if(len(seq) > extractionPars.estimatorKlen){
+									for(uint32_t pos = 0; pos < len(seq) + 1 - extractionPars.estimatorKlen; ++pos){
+										auto k = seq.seq_.substr(pos, extractionPars.estimatorKlen);
+										if(debugEstimatingGraph.kCounts_[k] > 1){
+											if(njh::in(k, kmersInOutSeqs)){
+												++kmersFound;
+											}
+											++totalKmers;
 										}
-										++totalKmers;
 									}
 								}
 								if(totalKmers > 0){
@@ -2687,6 +2735,35 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 //				auto usedSinglesFnp = njh::files::make_path(bestResult.runDirs_.klenDir_,  "extractedSingles.fastq");
 //				auto usedPairedR1Fnp = njh::files::make_path(bestResult.runDirs_.klenDir_, "extractedPairs_R1.fastq");
 //				auto usedPairedR2Fnp = njh::files::make_path(bestResult.runDirs_.klenDir_, "extractedPairs_R2.fastq");
+//				auto usedSinglesFnp =  njh::files::make_path(finalCurrentDir, "filteredSingles.fastq");
+//				auto usedPairedR1Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R1.fastq");
+//				auto usedPairedR2Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R2.fastq");
+//				if(bfs::exists(usedPairedR1Fnp)){
+//					SeqInput reader(SeqIOOptions::genPairedIn(usedPairedR1Fnp, usedPairedR2Fnp));
+//					reader.openIn();
+//					PairedRead seq;
+//					while(reader.readNextRead(seq)){
+//						kmerInfo firstInfo(seq.seqBase_.seq_, estimatingGraph.klen_, false);
+//						estimatingGraph.increaseKCounts(seq.seqBase_.seq_);
+//						//estimatingGraph.increaseKCounts(seq.mateSeqBase_.seq_);
+//						if(seq.mateSeqBase_.seq_.size() > estimatingGraph.klen_){
+//							for (auto pos : iter::range(seq.mateSeqBase_.seq_.size() - estimatingGraph.klen_ + 1)) {
+//								estimatingGraph.kCounts_[seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_)] += 1;
+////								if(!njh::in(seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_), firstInfo.kmers_)){
+////									estimatingGraph.kCounts_[seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_)] += 1;
+////								}
+//							}
+//						}
+//					}
+//				}
+//				if(bfs::exists(usedSinglesFnp)){
+//					SeqInput reader(SeqIOOptions::genFastqIn(usedSinglesFnp));
+//					reader.openIn();
+//					seqInfo seq;
+//					while(reader.readNextRead(seq)){
+//						estimatingGraph.increaseKCounts(seq.seq_);
+//					}
+//				}
 				auto usedSinglesFnp =  njh::files::make_path(finalCurrentDir, "filteredSingles.fastq");
 				auto usedPairedR1Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R1.fastq");
 				auto usedPairedR2Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R2.fastq");
@@ -2695,15 +2772,21 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					reader.openIn();
 					PairedRead seq;
 					while(reader.readNextRead(seq)){
-						kmerInfo firstInfo(seq.seqBase_.seq_, estimatingGraph.klen_, false);
-						estimatingGraph.increaseKCounts(seq.seqBase_.seq_);
-						//estimatingGraph.increaseKCounts(seq.mateSeqBase_.seq_);
-						if(seq.mateSeqBase_.seq_.size() > estimatingGraph.klen_){
-							for (auto pos : iter::range(seq.mateSeqBase_.seq_.size() - estimatingGraph.klen_ + 1)) {
-								estimatingGraph.kCounts_[seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_)] += 1;
-//								if(!njh::in(seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_), firstInfo.kmers_)){
-//									estimatingGraph.kCounts_[seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_)] += 1;
-//								}
+						if (seq.seqBase_.seq_.size() > estimatingGraph.klen_) {
+							kmerInfo firstInfo(seq.seqBase_.seq_, estimatingGraph.klen_, false);
+							estimatingGraph.increaseKCounts(seq.seqBase_.seq_);
+							if(seq.mateSeqBase_.seq_.size() > estimatingGraph.klen_){
+								for (auto pos : iter::range(seq.mateSeqBase_.seq_.size() - estimatingGraph.klen_ + 1)) {
+									auto mateSeqKmer = seq.mateSeqBase_.seq_.substr(pos, estimatingGraph.klen_);
+									estimatingGraph.kCounts_[mateSeqKmer] += 1;
+		//							if(!njh::in(mateSeqKmer, firstInfo.kmers_)){
+		//								estimatingGraph.kCounts_[mateSeqKmer] += 1;
+		//							}
+								}
+							}
+						} else {
+							if(seq.mateSeqBase_.seq_.size() > estimatingGraph.klen_){
+								estimatingGraph.increaseKCounts(seq.mateSeqBase_.seq_);
 							}
 						}
 					}
@@ -2713,7 +2796,9 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					reader.openIn();
 					seqInfo seq;
 					while(reader.readNextRead(seq)){
-						estimatingGraph.increaseKCounts(seq.seq_);
+						if(seq.seq_.size() > estimatingGraph.klen_){
+							estimatingGraph.increaseKCounts(seq.seq_);
+						}
 					}
 				}
 			}
@@ -2750,7 +2835,45 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				}
 
 				Muscler mRunner;
-				if(extractionPars.trimWithGlobalAln){
+				if(extractionPars.trimToCircularGenome){
+					std::vector<seqInfo> trimmedOutSeqs;
+					uint64_t maxLen = 0;
+					const auto & trimSeqsVec = extractionPars.trimSeqs.empty() ? extractionPars.inputSeqs : extractionPars.trimSeqs;
+					readVec::getMaxLength(trimSeqsVec, maxLen);
+					readVec::getMaxLength(outSeqs, maxLen);
+					aligner alignerObj(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix(2,-2), false);
+					alignerObj.processAlnInfoInputNoCheck(njh::files::make_path(workingDir, "trimAlnCache").string(), extractionPars.verbose);
+					std::vector<kmerInfo> inputSeqsKmerInfos;
+					for(const auto & input : trimSeqsVec){
+						inputSeqsKmerInfos.emplace_back(input.seq_, extractionPars.circularTrimPars_.kmerLength_, false);
+					}
+					for(auto & seq : outSeqs){
+						//find best matching ref and trim to that
+						uint32_t bestRefPos = 0;
+						double bestRefScore = 0;
+						if(trimSeqsVec.size() > 0){
+							kmerInfo seqKInfo(seq.seq_, extractionPars.circularTrimPars_.kmerLength_, true);
+							for(const auto pos : iter::range(trimSeqsVec.size())){
+								auto forComp = inputSeqsKmerInfos[pos].compareKmers(seqKInfo);
+								if(forComp.second > bestRefScore){
+									bestRefPos = pos;
+									bestRefScore = forComp.second;
+								}
+								auto revComp = inputSeqsKmerInfos[pos].compareKmersRevComp(seqKInfo);
+								if(revComp.second > bestRefScore){
+									bestRefPos = pos;
+									bestRefScore = revComp.second;
+								}
+							}
+						}
+						auto circularParsCopy = extractionPars.circularTrimPars_;
+						circularParsCopy.refSeq_ = trimSeqsVec[bestRefPos];
+						auto res = readVecTrimmer::trimCircularGenomeToRef(seq, circularParsCopy, alignerObj);
+						addOtherVec(trimmedOutSeqs, res);
+					}
+					outSeqs = trimmedOutSeqs;
+					alignerObj.processAlnInfoOutputNoCheck(njh::files::make_path(workingDir, "trimAlnCache").string(), extractionPars.verbose);
+				} else if(extractionPars.trimWithGlobalAln){
 					uint64_t maxLen = 0;
 					readVec::getMaxLength(extractionPars.trimSeqs.empty() ? extractionPars.inputSeqs : extractionPars.trimSeqs, maxLen);
 					readVec::getMaxLength(outSeqs, maxLen);

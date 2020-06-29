@@ -184,6 +184,7 @@ public:
 
 	bool disentangleInternalNodes(const disentangleInternalNodesPars & pars);
 
+	bool breakSelfPointingPathsKeepOtherEdges();
   bool breakSelfPointingPaths();
   bool hasSelfPointingPaths();
 
