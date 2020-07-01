@@ -1040,7 +1040,9 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						}
 						if(currentGraph->hasSelfPointingPaths()){
 							currentGraph->breakSelfPointingPaths();
-							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops-breakSelfPointingPaths"));
+							if(extractionPars.debug){
+								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops-breakSelfPointingPaths"));
+							}
 						}
 					}
 
