@@ -349,6 +349,11 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	sampName = getPossibleSampleNameFromFnp(setUp.pars_.ioOptions_.firstName_);
 	setUp.setOption(sampName, "--sampName", "Sample Name");
 	setUp.processDirectoryOutputName(true);
+
+	seqInfo realignToSeq("realign");
+	setUp.processSeq(realignToSeq, "--realignToSeq", "realign raw extract To input Seq");
+	std::string extraBwaArgsForReAlign = "";
+
 	setUp.finishSetUp(std::cout);
 	setUp.startARunLog(setUp.pars_.directoryName_);
 	pars.pFinderPars_.verbose = setUp.pars_.verbose_;
@@ -361,6 +366,145 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		std::cout << "Kmer Lengths      : " << njh::conToStr(pars.pFinderPars_.kmerLengths) << std::endl;
 		std::cout << "Occurence Cut Offs: " << njh::conToStr(pars.pFinderPars_.kmerKOcurrenceCutOffs) << std::endl;
 		std::cout << "Short Tip Number  : " << njh::conToStr(pars.pFinderPars_.shortTipNumbers) << std::endl;
+	}
+
+
+	if("" != realignToSeq.seq_){
+		BamExtractor bExtractor(setUp.pars_.verbose_);
+		auto realignmentDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"realignment"});
+		OutOptions extractRegion(njh::files::make_path(setUp.pars_.directoryName_));
+
+		auto realignmentDirGenome = njh::files::makeDir(realignmentDir, njh::files::MkdirPar{"genome"});
+		auto realignmentBamDir = njh::files::makeDir(realignmentDir, njh::files::MkdirPar{"bam"});
+
+		auto genomeFnp = njh::files::make_path(realignmentDirGenome, "realign.fasta");
+		SeqOutput::write(std::vector<seqInfo>{realignToSeq}, SeqIOOptions::genFastaOut(genomeFnp));
+		BioCmdsUtils bRunner(setUp.pars_.verbose_);
+		auto indexRunLog = bRunner.RunBwaIndex(genomeFnp);
+		BioCmdsUtils::checkRunOutThrow(indexRunLog, __PRETTY_FUNCTION__);
+		auto inputRegions = gatherRegions(bedFile.string(), "", setUp.pars_.verbose_);
+
+		for(const auto & region : inputRegions){
+			OutOptions seqOutOpts(njh::files::make_path(realignmentDir, "rawExtract"));
+			seqOutOpts.append_ = true;
+			bExtractor.writeExtractReadsFromBamRegion(setUp.pars_.ioOptions_.firstName_, region, pars.bamExtractPars_.percInRegion_, seqOutOpts);
+		}
+		bfs::path inputSingles = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract.fastq"));
+		bfs::path inputPairedFirstMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R1.fastq"));;
+		bfs::path inputPairedSecondMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R2.fastq"));;
+		njh::files::checkExistenceThrow(genomeFnp,__PRETTY_FUNCTION__);
+		bfs::path outputFnp = njh::files::make_path(realignmentBamDir, "realigned.sorted.bam");
+
+		bfs::path outputFnpBai = outputFnp.string() + ".bai";
+		bfs::path singlesSortedBam = njh::files::make_path(realignmentBamDir, inputSingles.filename().string() + ".sorted.bam");
+		bfs::path pairedSortedBam = njh::files::make_path(realignmentBamDir,  inputPairedFirstMates.filename().string() + ".sorted.bam");
+
+		bool useSambamba = false;
+		std::stringstream singlesCmd;
+		auto singlesBwaLogFnp = bfs::path(singlesSortedBam.string() + ".bwa.log");
+		singlesCmd << "bwa mem  -M -t " << pars.pFinderPars_.numThreads
+				<< " -R " << R"("@RG\tID:)" << bfs::basename(inputSingles) << "" << R"(\tSM:)"
+				<< sampName << R"(")"
+				<< " "   << extraBwaArgsForReAlign
+				<< " "   << genomeFnp
+				<< " "   << inputSingles
+				<< " 2> " << singlesBwaLogFnp;
+		if(useSambamba){
+			singlesCmd << " | sambamba view -S /dev/stdin -o /dev/stdout -f bam | sambamba sort -t " << pars.pFinderPars_.numThreads << " -o " << singlesSortedBam << " /dev/stdin";
+		}else{
+			singlesCmd << " | samtools sort -@ " << pars.pFinderPars_.numThreads << " -o " << singlesSortedBam;
+		}
+
+		std::stringstream pairedCmd;
+		auto pairedBwaLogFnp = bfs::path(pairedSortedBam.string() + ".bwa.log");
+		pairedCmd << "bwa mem  -M -t " << pars.pFinderPars_.numThreads
+				<< " -R " << R"("@RG\tID:)" << bfs::basename(inputPairedFirstMates) << "" << R"(\tSM:)"
+				<< sampName << R"(")"
+				<< " " << extraBwaArgsForReAlign
+				<< " " << genomeFnp
+				<< " " << inputPairedFirstMates
+				<< " " << inputPairedSecondMates
+				<< " 2> " << pairedBwaLogFnp;
+		if (useSambamba) {
+			pairedCmd << " | sambamba view -S /dev/stdin -o /dev/stdout -f bam | sambamba sort -t " << pars.pFinderPars_.numThreads << " -o " << pairedSortedBam << " /dev/stdin";
+
+		} else {
+			pairedCmd << " | samtools sort -@ " << pars.pFinderPars_.numThreads << " -o "
+					<< pairedSortedBam;
+		}
+
+
+		std::stringstream bamtoolsMergeAndIndexCmd;
+		if (useSambamba) {
+			bamtoolsMergeAndIndexCmd << "sambamba merge " << outputFnp << " " << pairedSortedBam;
+			if(bfs::exists(inputSingles)){
+				bamtoolsMergeAndIndexCmd <<  " " << singlesSortedBam;
+			}
+		}else{
+			bamtoolsMergeAndIndexCmd << "bamtools merge " << " -in " << pairedSortedBam;
+			if(bfs::exists(inputSingles)){
+				bamtoolsMergeAndIndexCmd << " -in " <<  singlesSortedBam;
+			}
+			bamtoolsMergeAndIndexCmd << " -out " << outputFnp
+					<< " && samtools index " << outputFnp;
+		}
+
+
+		if(true){
+			bfs::path logFnp = njh::files::make_path(realignmentBamDir, "alignTrimoOutputs_" + sampName + "_" + njh::getCurrentDate() + "_log.json");
+			logFnp = njh::files::findNonexitantFile(logFnp);
+			OutOptions logOpts(logFnp);
+			std::ofstream logFile;
+			logOpts.openFile(logFile);
+			std::unordered_map<std::string, njh::sys::RunOutput> runOutputs;
+			if(bfs::exists(inputSingles)){
+				auto singlesRunOutput = njh::sys::run({singlesCmd.str()});
+				BioCmdsUtils::checkRunOutThrow(singlesRunOutput, __PRETTY_FUNCTION__);
+				runOutputs["bwa-singles"] = singlesRunOutput;
+			}
+
+			auto pairedRunOutput = njh::sys::run({pairedCmd.str()});
+			BioCmdsUtils::checkRunOutThrow(pairedRunOutput, __PRETTY_FUNCTION__);
+			runOutputs["bwa-paired"] = pairedRunOutput;
+			if(bfs::exists(singlesSortedBam) ){
+				auto bamtoolsMergeAndIndexRunOutput = njh::sys::run({bamtoolsMergeAndIndexCmd.str()});
+				BioCmdsUtils::checkRunOutThrow(bamtoolsMergeAndIndexRunOutput, __PRETTY_FUNCTION__);
+				runOutputs["bamtools-merge-index"] = bamtoolsMergeAndIndexRunOutput;
+			}else{
+				bfs::rename(pairedSortedBam, outputFnp);
+				if(useSambamba){
+					bfs::rename(pairedSortedBam.string() + ".bai", outputFnp.string() + ".bai");
+				}else{
+					std::stringstream ss;
+					ss << "samtools index " << outputFnp;
+					auto indexRunOutput = njh::sys::run({ss.str()});
+					BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
+					runOutputs["index"] = indexRunOutput;
+				}
+			}
+			logFile << njh::json::toJson(runOutputs) << std::endl;
+			if(true){
+				if(bfs::exists(singlesSortedBam)){
+					bfs::remove(pairedSortedBam);
+					bfs::remove(singlesSortedBam);
+				}
+			}
+		}
+		setUp.pars_.ioOptions_.firstName_ = outputFnp;
+		pars.genomeFnp = genomeFnp;
+		pars.genomeDir = realignmentDirGenome;
+		pars.primaryGenome = "realign";
+		{
+			OutputStream bedOut(njh::files::make_path(realignmentDir, "region.bed"));
+			trimAtFirstWhitespace(realignToSeq.name_);
+			bedOut << realignToSeq.name_
+					<< "\t" << 0
+					<< "\t" << len(realignToSeq)
+					<< "\t" << realignToSeq.name_
+					<< "\t" << len(realignToSeq)
+					<< "\t" << '+' << std::endl;
+		}
+		bedFile = njh::files::make_path(realignmentDir, "region.bed");
 	}
 
 	std::unique_ptr<MultipleGroupMetaData> meta;
