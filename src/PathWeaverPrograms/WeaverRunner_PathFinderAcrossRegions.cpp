@@ -1975,7 +1975,8 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		  "thrownAwayMate_extracted.fastq",
 			"filteredSingles_extracted.fastq",
 		  "filteredPairs_extracted_R1.fastq",
-		  "filteredPairs_extracted_R2.fastq"};
+		  "filteredPairs_extracted_R2.fastq",
+			"filteredSoftClipSingles_extracted.fastq"};
 
 		njh::concurrent::LockableQueue<bfs::path> fileQueque(originalExtractionFiles);
 		if(development){
@@ -2046,7 +2047,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		std::vector<bfs::path> filesToCleanUp {
 			  "trimAlnCache", "logs",
 				"inputRegions.bed", "inputRegions.fasta",
-				"usedExpandedRegions.bed" };
+				"usedExpandedRegions.bed", "realignment"};
 //		std::vector<bfs::path> filesToCleanUp { "trimAlnCache", "logs",
 //				"extractionStats", "inputRegions.bed", "inputRegions.fasta",
 //				"usedExpandedRegions.bed" };
