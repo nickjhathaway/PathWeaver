@@ -427,10 +427,8 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				<< " 2> " << pairedBwaLogFnp;
 		if (useSambamba) {
 			pairedCmd << " | sambamba view -S /dev/stdin -o /dev/stdout -f bam | sambamba sort -t " << pars.pFinderPars_.numThreads << " -o " << pairedSortedBam << " /dev/stdin";
-
 		} else {
-			pairedCmd << " | samtools sort -@ " << pars.pFinderPars_.numThreads << " -o "
-					<< pairedSortedBam;
+			pairedCmd << " | samtools sort -@ " << pars.pFinderPars_.numThreads << " -o " << pairedSortedBam;
 		}
 
 
@@ -442,6 +440,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			}
 		}else{
 			bamtoolsMergeAndIndexCmd << "bamtools merge " << " -in " << pairedSortedBam;
+
 			if(bfs::exists(inputSingles)){
 				bamtoolsMergeAndIndexCmd << " -in " <<  singlesSortedBam;
 			}
@@ -462,30 +461,46 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				BioCmdsUtils::checkRunOutThrow(singlesRunOutput, __PRETTY_FUNCTION__);
 				runOutputs["bwa-singles"] = singlesRunOutput;
 			}
-
-			auto pairedRunOutput = njh::sys::run({pairedCmd.str()});
-			BioCmdsUtils::checkRunOutThrow(pairedRunOutput, __PRETTY_FUNCTION__);
-			runOutputs["bwa-paired"] = pairedRunOutput;
-			if(bfs::exists(singlesSortedBam) ){
+			if(bfs::exists(inputPairedFirstMates)){
+				auto pairedRunOutput = njh::sys::run({pairedCmd.str()});
+				BioCmdsUtils::checkRunOutThrow(pairedRunOutput, __PRETTY_FUNCTION__);
+				runOutputs["bwa-paired"] = pairedRunOutput;
+			}
+			if(bfs::exists(singlesSortedBam) && bfs::exists(pairedSortedBam)){
 				auto bamtoolsMergeAndIndexRunOutput = njh::sys::run({bamtoolsMergeAndIndexCmd.str()});
 				BioCmdsUtils::checkRunOutThrow(bamtoolsMergeAndIndexRunOutput, __PRETTY_FUNCTION__);
 				runOutputs["bamtools-merge-index"] = bamtoolsMergeAndIndexRunOutput;
-			}else{
-				bfs::rename(pairedSortedBam, outputFnp);
-				if(useSambamba){
-					bfs::rename(pairedSortedBam.string() + ".bai", outputFnp.string() + ".bai");
-				}else{
-					std::stringstream ss;
-					ss << "samtools index " << outputFnp;
-					auto indexRunOutput = njh::sys::run({ss.str()});
-					BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
-					runOutputs["index"] = indexRunOutput;
+			} else {
+				if(bfs::exists(pairedSortedBam)){
+					bfs::rename(pairedSortedBam, outputFnp);
+					if(useSambamba){
+						bfs::rename(pairedSortedBam.string() + ".bai", outputFnp.string() + ".bai");
+					} else {
+						std::stringstream ss;
+						ss << "samtools index " << outputFnp;
+						auto indexRunOutput = njh::sys::run({ss.str()});
+						BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
+						runOutputs["index"] = indexRunOutput;
+					}
+				}else if(bfs::exists(singlesSortedBam) ){
+					bfs::rename(singlesSortedBam, outputFnp);
+					if(useSambamba){
+						bfs::rename(singlesSortedBam.string() + ".bai", outputFnp.string() + ".bai");
+					} else {
+						std::stringstream ss;
+						ss << "samtools index " << outputFnp;
+						auto indexRunOutput = njh::sys::run({ss.str()});
+						BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
+						runOutputs["index"] = indexRunOutput;
+					}
 				}
 			}
 			logFile << njh::json::toJson(runOutputs) << std::endl;
 			if(true){
-				if(bfs::exists(singlesSortedBam)){
+				if(bfs::exists(pairedSortedBam)){
 					bfs::remove(pairedSortedBam);
+				}
+				if(bfs::exists(singlesSortedBam)){
 					bfs::remove(singlesSortedBam);
 				}
 			}
