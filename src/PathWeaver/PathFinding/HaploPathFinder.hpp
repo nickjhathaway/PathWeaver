@@ -169,7 +169,7 @@ public:
 
 		bool trimToInputSeqs = false;
 		bool trimWithGlobalAln = true;
-		bool trimToCircularGenome = true;
+		bool trimToCircularGenome = false;
 		readVecTrimmer::trimCircularGenomeToRefPars circularTrimPars_;
 
 		bool splitToRecruit_ {false};
