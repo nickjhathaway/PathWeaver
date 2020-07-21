@@ -33,8 +33,8 @@ namespace njhseq {
 
 KmerPathwayGraph KmerPathwayGraph::copyGraph() const{
 	KmerPathwayGraph outGraph(klen_, occurenceCutOff_);
-	outGraph.debug_ = debug_;
-	outGraph.verbose_ = verbose_;
+//	outGraph.debug_ = debug_;
+//	outGraph.verbose_ = verbose_;
 
 	outGraph.allowableErrorForHPIndexCollapse_ = allowableErrorForHPIndexCollapse_;
 	outGraph.homopolymerIndelCollapseFreqMultiplier_ = homopolymerIndelCollapseFreqMultiplier_;

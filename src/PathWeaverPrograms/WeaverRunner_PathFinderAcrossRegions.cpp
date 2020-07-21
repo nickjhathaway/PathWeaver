@@ -134,7 +134,7 @@ int WeaverRunner::SeqsExtractPathaways(const njh::progutils::CmdArgs & inputComm
 
 	setUp.startARunLog(setUp.pars_.directoryName_);
 	pars.pFinderPars_.verbose = setUp.pars_.verbose_;
-	pars.pFinderPars_.debug = setUp.pars_.debug_;
+	//pars.pFinderPars_.debug = setUp.pars_.debug_;
 	std::unique_ptr<MultipleGroupMetaData> meta;
 	if ("" != pars.metaDataFnp) {
 		meta = std::make_unique<MultipleGroupMetaData>(pars.metaDataFnp,
@@ -357,7 +357,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	setUp.finishSetUp(std::cout);
 	setUp.startARunLog(setUp.pars_.directoryName_);
 	pars.pFinderPars_.verbose = setUp.pars_.verbose_;
-	pars.pFinderPars_.debug = setUp.pars_.debug_;
+	//pars.pFinderPars_.debug = setUp.pars_.debug_;
 	spanningReadsPar.numThreads = pars.pFinderPars_.numThreads;
 	spanningReadsPar.countDuplicates = pars.bamExtractPars_.keepMarkedDuplicate_;
 
@@ -1043,7 +1043,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				remappingPairs.emplace_back(regionExtracted.inFilteredPairs_);
 			}
 		}
-		if(pars.pFinderPars_.debug){
+		if(setUp.pars_.debug_){
 			std::cout << "regionExtracted.inFilteredPairs_" << regionExtracted.inFilteredPairs_.firstName_ << std::endl;
 			std::cout << "iteration: " << iterNumber << std::endl;
 			std::cout << "remappingPairs.size(): " << remappingPairs.size() << std::endl;

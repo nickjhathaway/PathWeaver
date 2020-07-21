@@ -551,7 +551,7 @@ Json::Value HaploPathFinder::PathFinderCorePars::toJson() const{
 	ret["trimEnds"] = njh::json::toJson(trimEnds);
 	ret["trimEndsByCoverage"] = njh::json::toJson(trimEndsByCoverage);
 	ret["verbose"] = njh::json::toJson(verbose);
-	ret["debug"] = njh::json::toJson(debug);
+	//ret["debug"] = njh::json::toJson(debug);
 	ret["graphVerbose_"] = njh::json::toJson(graphVerbose_);
 	ret["graphDebug_"] = njh::json::toJson(graphDebug_);
 	ret["removeDuplicatedSequences_"] = njh::json::toJson(removeDuplicatedSequences_);

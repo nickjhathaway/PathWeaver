@@ -27,6 +27,8 @@
 
 #include "KmerPathwayGraph.hpp"
 
+
+
 namespace njhseq {
 
 
@@ -55,12 +57,14 @@ bool KmerPathwayGraph::trimEdgesNodeTipsWithLowEntropy(const readVecTrimmer::Tri
 						modifiedNodes = true;
 					} else {
 						trimmedNodes = true;
-						if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << "n->k_.size()  : "<< n->k_.size() << std::endl;
 							std::cout << "trimPos.start_: "<< trimPos.start_ << std::endl;
 							std::cout << "trimPos.end_  : "<< trimPos.end_ << std::endl;
 						}
+#endif
 						n->k_ = n->k_.substr(trimPos.start_, trimPos.end_); //trim the edges
 					}
 				} else {
@@ -78,12 +82,14 @@ bool KmerPathwayGraph::trimEdgesNodeTipsWithLowEntropy(const readVecTrimmer::Tri
 						modifiedNodes = true;
 					}else{
 						trimmedNodes = true;
-						if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << "n->k_.size()  : "<< n->k_.size() << std::endl;
 							std::cout << "trimPos.start_: "<< trimPos.start_ << std::endl;
 							std::cout << "trimPos.end_  : "<< trimPos.end_ << std::endl;
 						}
+#endif
 						n->k_ = n->k_.substr(0, trimPos.end_); //trim off the back
 					}
 				} //else it's tail is fine
@@ -96,19 +102,23 @@ bool KmerPathwayGraph::trimEdgesNodeTipsWithLowEntropy(const readVecTrimmer::Tri
 						modifiedNodes = true;
 					}else{
 						trimmedNodes = true;
-						if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << "n->k_.size()  : "<< n->k_.size() << std::endl;
 							std::cout << "trimPos.start_: "<< trimPos.start_ << std::endl;
 							std::cout << "trimPos.end_  : "<< trimPos.end_ << std::endl;
 						}
+#endif
 						n->k_ = n->k_.substr(trimPos.start_);//trim off the front
 					}
 				}//else it's front is fine
 			}
-			if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 			}
+#endif
 		}
 
 		if(modifiedNodes){

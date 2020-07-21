@@ -62,7 +62,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 //	if(!conservative){
 //		connectorCutOff = 0;
 //	}
-	if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+	{
 		OutOptions nodeCheckOpts(bfs::path("nodeCheck.txt"));
 		nodeCheckOpts.overWriteFile_ = true;
 		OutputStream nodeCheckOut(nodeCheckOpts);
@@ -119,6 +120,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 			exit(1);
 		}
 	}
+#endif
 
 	std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
 	//first add in multi-tailed and multi-headed nodes
@@ -171,10 +173,12 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 			}
 		}
 	}*/
-	if(verbose_){
+#if defined(PATHWEAVERSUPERDEBUG)
+	{
 		std::cout << __FILE__ << " " << __LINE__ << " " << __PRETTY_FUNCTION__ << std::endl;
 		std::cout << "There are " << nodesToProcess.size() << " nodes to process" << std::endl;
 	}
+#endif
 	if (nodesToProcess.empty()) {
 		return false;
 	}
@@ -184,7 +188,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 	bool nodesSplit = false;
 	uint32_t nodeProcessCount = 0;
 	for (const auto & n : nodesToProcess) {
-		bool printInfo = false;
+		//bool printInfo = false;
 //		if(n->k_.length() == 136){
 //			printInfo = true;
 //		}
@@ -233,23 +237,22 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 
 
 		//
-		if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+		{
 			std::cout << njh::bashCT::red;
 			std::cout << "n->k_: " << n->k_ << std::endl;
 			std::cout << "n->uid_: " << n->uid_ << std::endl;
 			std::cout << "n->visitCount_: " << n->visitCount_ << std::endl;
 			std::cout << njh::bashCT::reset;
 		}
+#endif
 
 		if(0 != n->visitCount_ ){
 			//node has been affect already, wait until next call
 			continue;
 		}
-
-
-
-
-		if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+		{
 			bool foundDupEdges = false;
 			for(const auto & n : nodes_){
 				if(n->on_){
@@ -296,18 +299,16 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				exit(1);
 			}
 		}
+#endif
 		++nodeProcessCount;
 //		if (n->headCount() > 1 && n->tailCount() > 1) {
 		if (!n->headless() && !n->tailless() && (n->headCount() > 1 || n->tailCount() > 1)) {
-//			if("AAGAGACAAATGAATTCATATTTTAAAGAAATTAATAATTTATTTTTTGATATAAAAGATATTTATGA" == n->k_){
-//				verbose_ = !verbose_;
-//				debug_ = !debug_;
-//				std::cout << std::endl<< std::endl<< std::endl<< std::endl<< std::endl<< std::endl<< std::endl<< std::endl<< std::endl<< std::endl;
-//			}
-			if (verbose_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << n->uid_ << std::endl;
 			}
+#endif
 			//head, read, that read count
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > incoming;
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > outgoing;
@@ -343,8 +344,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 			}
 			totalEnteringLeaving.insert(headReads.begin(), headReads.end());
 			totalEnteringLeaving.insert(tailReads.begin(), tailReads.end());
-
-			if (debug_ ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				table incommingTab(incoming, VecStr { "head", "readNames", "count" });
 				incommingTab.addColumn(VecStr { "incomming" }, "direction");
 				table outgoingTab(outgoing, VecStr { "head", "readNames", "count" });
@@ -353,10 +354,11 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				std::ofstream outOut(n->uid_ + "_goings.tab.txt");
 				outgoingTab.outPutContents(outOut, "\t");
 			}
-
+#endif
 
 			//if (debug_ || true ) {
-			if (debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << njh::bashCT::cyan;
 				std::cout << "\t" << "internalReads       : " << n->inReadNamesIdx_.size() << std::endl;
@@ -400,6 +402,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 //					throw std::runtime_error{ss.str()};
 //				}
 			}
+#endif
 			//if less than 10% of reads entering and leaving a node are bridging then skip
 //			if((n->inReadNamesIdx_.size() * bridgingCutOff) > bridgingReads.size()){
 //				continue;
@@ -413,7 +416,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 			}
 
 			std::unordered_map<std::string, std::unordered_map<std::string, uint32_t>> headsToTailsCounts;
-			if (debug_ || printInfo){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{// || true ) {
 				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::cout << __PRETTY_FUNCTION__ << std::endl;
 				std::cout << njh::bashCT::cyan << "Processing node \n\tuid:" << n->uid_
@@ -436,10 +440,13 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				}
 				std::cout << njh::bashCT::reset;
 			}
+#endif
 			for (const auto & head : incoming) {
-				if (debug_ || printInfo){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+				{// || true ) {
 					std::cout << "\t" << "head: " << head.first << " readsEntering: " << head.second.size() << std::endl;
 				}
+#endif
 				for (const auto & tail : outgoing) {
 					uint32_t headReadsCount = 0;
 					uint32_t headTotalCount = 0;
@@ -460,11 +467,13 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					if (tailReadsCount > occurenceCutOff_) {
 						headsToTails[head.first].emplace_back(tail.first);
 					}*/
-					if (debug_ || printInfo ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						std::cout << "\t\t" << "tail: " << tail.first << std::endl;
 						std::cout << "\t\t\t" << "tailTotal: " << tailReadsCount << " " << tailTotalCount << std::endl;
 						std::cout << "\t\t\t" << "headTotal: " << headReadsCount << " " << headTotalCount << std::endl;
 					}
+#endif
 				}
 			}
 
@@ -509,8 +518,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					}
 				}
 			}
-
-			if (debug_ || printInfo){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{// || true ) {
 				std::cout << "Unique heads to tail connections:  " << std::endl;
 				for(const auto & uniHead : uniqueHeadsToTailsCounts){
 					std::cout << "head: " <<uniHead.first << std::endl;
@@ -520,8 +529,9 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					}
 				}
 			}
-
-			if (debug_ || printInfo){// || true ) {
+#endif
+#if defined(PATHWEAVERSUPERDEBUG)
+			{// || true ) {
 				std::cout << njh::bashCT::flashing << njh::bashCT::red
 						<< "headsToTailsCounts: " << headsToTailsCounts.size()
 						<< njh::bashCT::reset << std::endl;
@@ -571,6 +581,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					}
 				}
 			}
+#endif
 			uint32_t amountBelowCutOff = 0;
 			uint32_t amountAboveCutOff = 0;
 
@@ -659,7 +670,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 			if(1 == headsToTails.size() && amountBelowCutOff/static_cast<double>(amountAboveCutOff) >= 0.33){
 				skipBasedOnCloseCutOff = true;
 			}
-			if (debug_  || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::cout << __PRETTY_FUNCTION__ << std::endl;
 				std::cout << "skipBasedOnCloseCutOff: " << njh::colorBool(skipBasedOnCloseCutOff) << std::endl;
@@ -667,6 +679,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				std::cout << "amountAboveCutOff: " << amountAboveCutOff << std::endl;
 				std::cout << "amountBelowCutOff/static_cast<double>(amountAboveCutOff) >= 0.33: " << njh::colorBool(amountBelowCutOff/static_cast<double>(amountAboveCutOff) >= 0.33) << std::endl;
 			}
+#endif
 			std::set<std::string> headsGoingToMiss;
 			std::set<std::string> tailsGoingToMiss;
 			for(const auto & head : n->headEdges_){
@@ -726,7 +739,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				for (const auto & head : headsToTails) {
 					for (const auto & tail : head.second) {
 						std::shared_ptr<KmerPathwayGraph::node> newNode = std::make_shared<KmerPathwayGraph::node>(n->k_, n->cnt_, n->kLen_);
-						if (debug_  || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << njh::bashCT::cyan << "Creating new node for the following head and tail \n\t" << newNode->uid_ << "\n\t" << newNode->k_ <<
@@ -735,6 +749,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							std::cout << "\t" << njh::bashCT::blue << "tail: " << tail << njh::bashCT::reset << std::endl;
 
 						}
+#endif
 						std::unordered_set<uint32_t> namesForInternal;
 						std::unordered_set<uint32_t> namesForEdges;
 						uint32_t appearsInOtherHeadsCounts = 0;
@@ -787,7 +802,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								if (other.first != tail && njh::in(name, other.second)) {
 									appearsInOtherTails = true;
 									++appearsInOtherTailsCounts;
-									if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+									{
 										if (appearsInTails) {
 											std::stringstream errorStream;
 											errorStream << __FILE__ << " " << __LINE__ << " " << __PRETTY_FUNCTION__ << std::endl;
@@ -807,6 +823,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 											//throw std::runtime_error {errorStream.str() };
 										}
 									}
+#endif
 								}
 							}
 							for(const auto & other : incoming){
@@ -814,7 +831,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 										njh::in(name, other.second)){
 									appearsInOtherHeads = true;
 									++appearsInOtherHeadsCounts;
-									if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+									{
 										if(appearsInHeads){
 											std::stringstream errorStream;
 											errorStream << __FILE__ << " " << __LINE__ << " " << __PRETTY_FUNCTION__ << std::endl;
@@ -829,6 +847,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 											//throw std::runtime_error { errorStream.str() };
 										}
 									}
+#endif
 								}
 							}
 							//if(!appearsInOtherTails && !appearsInOtherHeads && appearsInTails && appearsInHeads){
@@ -852,9 +871,11 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							throw std::runtime_error{errorStream.str()};
 						}
 						newNode->inReadNamesIdx_ = namesForInternal;
-						if (debug_  || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << "\tNew node read size: " << newNode->inReadNamesIdx_.size() << std::endl;
 						}
+#endif
 						//add edges and modifying head and tail nodes
 						for (auto & headEdge : n->headEdges_) {
 							if(!headEdge->on_){
@@ -882,9 +903,11 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								auto addingEdge = std::make_shared<KmerPathwayGraph::edge>(
 										headEdge->head_.lock(), newNode, edgeNames.size(), edgeNames);
 								newNode->headEdges_.push_back(addingEdge);
-								if (debug_  || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									std::cout << "\tNew node head " << head.first << " read size: " << addingEdge->inReadNamesIdx_.size() << std::endl;
 								}
+#endif
 								//doing this in one area so it's cleaerer what's being marked, see below
 								//headEdge->head_.lock()->visitCount_ += 1;
 								headEdge->head_.lock()->tailEdges_.push_back(addingEdge);
@@ -928,9 +951,11 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								auto addingEdge = std::make_shared<KmerPathwayGraph::edge>(newNode,
 										tailEdge->tail_.lock(), edgeNames.size(), edgeNames);
 								newNode->tailEdges_.push_back(addingEdge);
-								if (debug_  || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									std::cout << "\tNew node tail " << tail << " read size: " << addingEdge->inReadNamesIdx_.size() << std::endl;
 								}
+#endif
 								//doing this in one area so it's cleaerer what's being marked, see below
 								//tailEdge->tail_.lock()->visitCount_ += 1;
 								tailEdge->tail_.lock()->headEdges_.push_back(addingEdge);
@@ -941,7 +966,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 						nodesSplit = true;
 //						nodes_.push_back(newNode);
 						newNode->uid_ = njh::pasteAsStr(newNode->uid_, newNodes.size());
-						if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << "New node before adding to new nodes: " << std::endl;
@@ -950,14 +976,15 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							std::cout << "\ttail: " << newNode->getFirstOnTailEdge()->tail_.lock()->uid_ << std::endl;
 
 						}
+#endif
 						newNodes.emplace_back(newNode);
 						/*
 						 *
 						printVector(n->readNames_);
 						printVector(newNode->readNames_	);
 						*/
-
-						if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << "Current new nodes size: " << newNodes.size() << std::endl;
@@ -975,8 +1002,10 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								++possibleNewNodePos;
 							}
 						}
+#endif
 
-						if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << njh::bashCT::cyan << "Adding new node " << newNode->uid_ << " " << newNode->k_ <<
@@ -992,6 +1021,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							}
 							std::cout <<njh::bashCT::reset << std::endl;
 						}
+#endif
 					}
 				}
 //				for (const auto & newNode : newNodes) {
@@ -1007,12 +1037,14 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					}
 					if(!njh::in(headEdge->head_.lock()->uid_, addedHeads)){
 						didntAdd = true;
-						if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << njh::bashCT::flashing;
 							std::cout << "Didn't add head: " << headEdge->head_.lock()->k_ << std::endl;
 							std::cout << "read names size: " << headEdge->inReadNamesIdx_.size()<< std::endl;
 							std::cout << njh::bashCT::reset;
 						}
+#endif
 					}else{
 						headEdge->on_ = false;
 					}
@@ -1024,17 +1056,20 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					}
 					if(!njh::in(tailEdge->tail_.lock()->uid_, addedTails)){
 						didntAdd = true;
-						if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << njh::bashCT::flashing;
 							std::cout << "Didn't add tail: " << tailEdge->tail_.lock()->k_ << std::endl;
 							std::cout << "read names size: " << tailEdge->inReadNamesIdx_.size()  << std::endl;
 							std::cout << njh::bashCT::reset;
 						}
+#endif
 					}else{
 						tailEdge->on_ = false;
 					}
 				}
-				if (debug_ || printInfo) {
+#if defined(PATHWEAVERSUPERDEBUG)
+				{
 					std::cout << "Added heads: " << std::endl;
 					for(const auto & addedHead : addedHeads){
 						std::cout << "\thead:" << addedHead << std::endl;
@@ -1075,19 +1110,23 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 						std::cout << std::endl;
 					}
 				}
+#endif
 				//handling a very specific situation here brought on by tandem repeats normally
 				//what should be done is checking how many times through the loop or if reads span the whole thing
 				if (newNodes.size() == 2) {
-					if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 						std::cout << "\tnewNodes.front()->tailCount(): " << newNodes.front()->tailCount() << std::endl;
 						std::cout << "\tnewNodes.front()->headCount(): " << newNodes.front()->headCount() << std::endl;
 						std::cout << "\tnewNodes.back()->tailCount(): " << newNodes.back()->tailCount() << std::endl;
 						std::cout << "\tnewNodes.back()->headCount(): " << newNodes.back()->headCount() << std::endl;
 					}
+#endif
 					if((1 == newNodes.front()->tailCount() && 1 == newNodes.front()->headCount()) &&
 						 (1 == newNodes.back()->tailCount()  && 1 == newNodes.back()->headCount())){
-						if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 							std::cout << "Checking for possible loop nodes" << std::endl;
 							uint32_t possibleNewNodePos = 0;
@@ -1104,19 +1143,24 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								++possibleNewNodePos;
 							}
 						}
+#endif
 						if(newNodes.front()->getFirstOnTailEdge()->tail_.lock()->uid_ == newNodes.back()->getFirstOnHeadEdge()->head_.lock()->uid_ &&
 							 newNodes.front()->getFirstOnHeadEdge()->head_.lock()->uid_ == newNodes.back()->getFirstOnTailEdge()->tail_.lock()->uid_){
 							{
 								//tail break
-								if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 								}
+#endif
 								auto loopNode = newNodes.front()->getFirstOnTailEdge()->tail_.lock();
 								if(1 == loopNode->tailCount()  && 1 == loopNode->headCount()){
-									if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+									{
 										std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 										std::cout << "Found loop node: " << loopNode->uid_ << std::endl;
 									}
+#endif
 									//old node will keep head, new node will have tail
 									std::shared_ptr<KmerPathwayGraph::node> newLoopNode = std::make_shared<KmerPathwayGraph::node>(loopNode->k_, loopNode->cnt_, loopNode->kLen_);
 									newLoopNode->inReadNamesIdx_ = loopNode->inReadNamesIdx_;
@@ -1138,19 +1182,25 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							}
 							{
 								//head break
-								if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 								}
+#endif
 								auto loopNode = newNodes.front()->getFirstOnHeadEdge()->head_.lock();
-								if(debug_ || printInfo ){
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									std::cout << "\tloopNode->tailCount(): " << loopNode->tailCount() << std::endl;
 									std::cout << "\tloopNode->headCount(): " << loopNode->headCount() << std::endl;
 								}
+#endif
 								if(1 == loopNode->tailCount()  && 1 == loopNode->headCount()){
-									if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+									{
 										std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 										std::cout << "Found loop node: " << loopNode->uid_ << std::endl;
 									}
+#endif
 									//old node will keep head, new node will have tail
 									std::shared_ptr<KmerPathwayGraph::node> newLoopNode = std::make_shared<KmerPathwayGraph::node>(loopNode->k_, loopNode->cnt_, loopNode->kLen_);
 									newLoopNode->inReadNamesIdx_ = loopNode->inReadNamesIdx_;
@@ -1172,12 +1222,12 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							}
 						}
 //						if(newNodes.front()->getFirstOnTailEdge()->tail_.lock()->uid_ == newNodes.back()->getFirstOnHeadEdge()->head_.lock()->uid_){
-//							if(debug_ || printInfo){
+//							if(debug_){
 //								std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 //							}
 //							auto loopNode = newNodes.front()->getFirstOnTailEdge()->tail_.lock();
 //							if(1 == loopNode->tailCount()  && 1 == loopNode->headCount()){
-//								if(debug_ || printInfo){
+//								if(debug_){
 //									std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 //									std::cout << "Found loop node: " << loopNode->uid_ << std::endl;
 //								}
@@ -1200,16 +1250,16 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 //								newNodes.emplace_back(newLoopNode);
 //							}
 //						} else if (newNodes.front()->getFirstOnHeadEdge()->head_.lock()->uid_ == newNodes.back()->getFirstOnTailEdge()->tail_.lock()->uid_){
-//							if(debug_ || printInfo){
+//							if(debug_){
 //								std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 //							}
 //							auto loopNode = newNodes.front()->getFirstOnHeadEdge()->head_.lock();
-//							if(debug_ || printInfo ){
+//							if(debug_ ){
 //								std::cout << "\tloopNode->tailCount(): " << loopNode->tailCount() << std::endl;
 //								std::cout << "\tloopNode->headCount(): " << loopNode->headCount() << std::endl;
 //							}
 //							if(1 == loopNode->tailCount()  && 1 == loopNode->headCount()){
-//								if(debug_ || printInfo){
+//								if(debug_){
 //									std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 //									std::cout << "Found loop node: " << loopNode->uid_ << std::endl;
 //								}
@@ -1236,7 +1286,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				}
 				std::unordered_set<uint32_t> readNamesInEdgesOfNewNodes;
 				for (auto & newNode : newNodes) {
-					if(debug_ || printInfo){
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						if(newNode->headCount() == 1 && newNode->tailCount() == 1){
 							std::cout<< "New node has one head and one tail uid: " << newNode->uid_ << " k_:" << newNode->k_ << std::endl;
 							auto headNodeTailCount = newNode->getFirstOnHeadEdge()->head_.lock()->tailCount();
@@ -1245,6 +1296,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							std::cout << "\tit's single tail has a head count of " << tailNodeHeadCount << std::endl;
 						}
 					}
+#endif
 					//mark the new nodes's tails and heads as visited
 					newNode->visitCount_ += 1;
 					for(const auto & tail : newNode->tailEdges_){
@@ -1310,7 +1362,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					}
 
 					if(readNamesKeepNotInOtherHeadToTailCons.empty()){
-						if(verbose_){
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							for(const auto & name : n->inReadNamesIdx_){
 								for(const auto & kh : keptHeadsEdges){
 									if(njh::in(name,kh->inReadNamesIdx_ )){
@@ -1328,6 +1381,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								}
 							}
 						}
+#endif
 						std::stringstream errorStream;
 						errorStream << __FILE__ << " " << __LINE__ << " " << __PRETTY_FUNCTION__ << std::endl;
 						errorStream << "Error, readNamesKeep is empty: " << n->k_ << std::endl;
@@ -1350,16 +1404,21 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							keptTail.emplace_back(tail);
 						}
 					}
-					if (debug_ || printInfo) {//if (debug_) { //if (debug_){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+					{//if (debug_) { //if (debug_) {// || true ) {
 						std::cout << "node read names after size: " << n->inReadNamesIdx_.size()  << std::endl;
 						//throw std::runtime_error{"stopping"};
 					}
-					if (debug_ || printInfo) { //if (debug_){// || true ) {
+#endif
+
+#if defined(PATHWEAVERSUPERDEBUG)
+					{ //if (debug_) {// || true ) {
 						std::cout << "\tkeptTail.size(): " << keptTail.size() << std::endl;
 						std::cout << "\tn->tailCount(): " << n->tailCount() << ", n->tailEdges_.size(): " << n->tailEdges_.size() << std::endl;
 						std::cout << "\tkeptHead.size(): " << keptHead.size() << std::endl;
 						std::cout << "\tn->headCount(): " << n->headCount() << ", n->headEdges_.size(): " << n->headEdges_.size() << std::endl;
 					}
+#endif
 
 					//check to see if an artificial connection was created due to losing some edges due to low coverage
 					if (1 == n->tailCount() && 1 == n->headCount()) {
@@ -1375,7 +1434,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 						std::set_intersection(readsEntering.begin(), readsEntering.end(),
 								readsLeaving.begin(), readsLeaving.end(),
 								std::back_inserter(readsThatEnteredLeaving));
-						if (debug_ || printInfo) {//if (debug_) { //if (debug_){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{//if (debug_) { //if (debug_) {// || true ) {
 							std::cout << "Checking For uid: " << n->uid_ << std::endl;
 							std::cout << "\tReadsEnteringNumber    : "
 									<< readsEntering.size() << std::endl;
@@ -1385,13 +1445,14 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 									<< readsThatEnteredLeaving.size() << std::endl;
 							std::cout << std::endl;
 						}
+#endif
 						if (readsThatEnteredLeaving.size()
 								!= std::min(readsEntering.size(), readsLeaving.size()) &&
 						//					readsThatEnteredLeaving.size() < 2){
 								readsThatEnteredLeaving.size() <= connectorCutOff) {
 							//readsThatEnteredLeaving.size() <= occurenceCutOff_) {
-
-							if (debug_ || printInfo) {//if (debug_) { //if (debug_){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+							{//if (debug_) { //if (debug_) {// || true ) {
 								std::cout << njh::bashCT::flashing;
 								std::cout << "Breaking For uid: " << n->uid_ << std::endl;
 								std::cout << "\t\tReadsEnteringNumber    : "
@@ -1403,6 +1464,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								std::cout << std::endl;
 								std::cout << njh::bashCT::reset;
 							}
+#endif
 //							//create new node, this will be the node with the tails, old node will have the heads
 //							std::shared_ptr<KmerPathwayGraph::node> newNode =
 //									std::make_shared<KmerPathwayGraph::node>(n->k_, n->cnt_, n->kLen_);
@@ -1497,7 +1559,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								readsEntering.begin(), readsEntering.end(),
 								readsLeaving.begin(),  readsLeaving.end(),
 								std::back_inserter(readsThatEnteredLeaving));
-						if (debug_ || printInfo) { //if (debug_){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{ //if (debug_) {// || true ) {
 							std::cout << "Checking For tail count 1 uid: " << n->uid_ << std::endl;
 							std::cout << "\tReadsEnteringNumber    : "
 									<< readsEntering.size() << std::endl;
@@ -1508,6 +1571,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							std::cout << njh::bashCT::red << "Breaking, only 1 tailed and no headed" << njh::bashCT::reset << std::endl;
 							std::cout << std::endl;
 						}
+#endif
 						//breaking for one tailed
 						auto tail = n->getFirstOnTailEdge();
 						tail->on_ = false;
@@ -1557,7 +1621,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 								readsEntering.begin(), readsEntering.end(),
 								readsLeaving.begin(),  readsLeaving.end(),
 								std::back_inserter(readsThatEnteredLeaving));
-						if (debug_ || printInfo) { //if (debug_){// || true ) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{ //if (debug_) {// || true ) {
 							std::cout << "Checking For head count 1 uid: " << n->uid_ << std::endl;
 							std::cout << "\tReadsEnteringNumber    : "
 									<< readsEntering.size() << std::endl;
@@ -1568,6 +1633,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							std::cout << njh::bashCT::red << "Breaking, only 1 headed and no tailed" << njh::bashCT::reset << std::endl;
 							std::cout << std::endl;
 						}
+#endif
 						//breaking for one headed, not sufficient evidence that these two belong together, if we had bridging to a next node then we would have evidence but
 						//without that we don't know if this is just connected because of low coverage in a multicopy sample
 						auto head = n->getFirstOnHeadEdge();
@@ -1607,11 +1673,6 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 					n->on_ = false;
 				}
 			}
-//			if("AAGAGACAAATGAATTCATATTTTAAAGAAATTAATAATTTATTTTTTGATATAAAAGATATTTATGA" == n->k_){
-//				verbose_ = !verbose_;
-//				debug_ = !debug_;
-//			}
-
 		}
 		//remove off nodes;
 		removeOffNodes();
@@ -1619,9 +1680,6 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 		turnOffEdgesBelowCutOff(connectorCutOff);
 		removeOffEdges();
 
-		if(printInfo){
-//			exit(1);
-		}
 	} //for (const auto & n : nodesToProcess)
 	if(nodesSplit){
 		resetNodePositions();

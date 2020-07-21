@@ -129,12 +129,15 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 			return ret.tandemsCounts[str1] > ret.tandemsCounts[str2];
 		}
 	});
-	if (extractionPars.debug) {
+#if defined(PATHWEAVERDEBUG)
+	{
 		std::cout << "Tandem Counts" << std::endl;
 		for (const auto & t : tandemSeqs) {
 			std::cout << t << ": " << ret.tandemsCounts[t] << std::endl;
 		}
 	}
+#endif
+
 //	for (const auto & t : tandemSeqs) {
 //		std::cout << t << ": " << tandemsCounts[t] << std::endl;
 //	}
@@ -159,7 +162,8 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 		}
 	}
 	//filter final tandems based on final adjusted tandems
-	if (extractionPars.debug) {
+#if defined(PATHWEAVERDEBUG)
+	{
 		std::cout << std::endl;
 		std::cout << "final " << std::endl;
 		for(const auto & t : ret.finalTandemSeqs){
@@ -170,6 +174,7 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 			std::cout << t << ": " << ret.tandemsCountsAdjusted[t] << std::endl;
 		}
 	}
+#endif
 	if(!extractionPars.collapseFinalDeterminedTandems_){
 		ret.finalTandemSeqs.clear();
 		for(const auto & tan : ret.tandemsCountsAdjusted){
@@ -178,7 +183,8 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 			}
 		}
 	}
-	if (extractionPars.debug) {
+#if defined(PATHWEAVERDEBUG)
+	{
 		std::cout << "After occurence filter"<< std::endl;
 		std::cout << "final " << std::endl;
 		for(const auto & t : ret.finalTandemSeqs){
@@ -189,6 +195,7 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 			std::cout << t << ": " << ret.tandemsCountsAdjusted[t] << std::endl;
 		}
 	}
+#endif
 
 	if(extractionPars.collapseFinalDeterminedTandems_){
 		VecStr toBeFinalTandems;
@@ -268,7 +275,8 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 				return str1.size() < str2.size();
 			}
 		});
-		if (extractionPars.debug) {
+#if defined(PATHWEAVERDEBUG)
+		{
 			std::cout << std::endl;
 			std::cout << "final after collapse " << std::endl;
 			for(const auto & t : ret.finalTandemSeqs){
@@ -280,6 +288,7 @@ ProcessedDeterminedTandemRepeatsResults processGlobalTandems(
 				std::cout << t << ": " << ret.tandemsCountsAdjustedAfterCollapse[t] << std::endl;
 			}
 		}
+#endif
 		//exit(1);
 	}
 

@@ -49,8 +49,8 @@ public:
 	double homopolymerIndelCollapseFreqMultiplier_{3};
 	comparison allowableErrorForHPIndexCollapse_;
 
-	bool debug_ = false;
-	bool verbose_ = false;
+	//bool debug_ = false;
+	//bool verbose_ = false;
 
 	double bridgingCutOff_ = .00;
 

@@ -49,7 +49,7 @@ public:
 		bool trimEndsByCoverage = false;
 
 		bool verbose = false;
-		bool debug = false;
+		//bool debug = false;
 		bool exitOnException_ = false;
 
 		bool writeNodeCounts_{false};

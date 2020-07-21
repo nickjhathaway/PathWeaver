@@ -88,6 +88,14 @@ struct OptimizationReconResult {
 	Json::Value toJson() const;
 
 
+	//captured output instead of written
+	std::vector<seqInfo> finalFilteredOutSeqs_;
+	std::unordered_set<std::string> keepSeqNames_;
+	std::shared_ptr<std::stringstream> finalDot_;
+
+	//
+
+
 	static std::function<
 			bool(const OptimizationReconResult&, const OptimizationReconResult&)> sortFunc;
 

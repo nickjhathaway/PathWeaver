@@ -179,7 +179,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 
 	masterPars.pFinderPars_.verbose = setUp.pars_.verbose_;
-	masterPars.pFinderPars_.debug = setUp.pars_.debug_;
+	//masterPars.pFinderPars_.debug = setUp.pars_.debug_;
 
 	auto regions = gatherRegions(bedFile.string(), "", setUp.pars_.verbose_);
 	masterPars.region_ = regions.front();

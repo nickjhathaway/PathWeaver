@@ -145,13 +145,15 @@ bool KmerPathwayGraph::breakSingleHeadSingleTailNodesLowCoverage(){
 			if(readsThatEnteredLeaving.size() != std::min(firstHeadEdge->inReadNamesIdx_.size(), firstTailEdge->inReadNamesIdx_.size()) &&
 //					readsThatEnteredLeaving.size() < 2){
 				readsThatEnteredLeaving.size() <= occurenceCutOff_){
-				if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+				{
 					std::cout << "For next uid: " << n->uid_ << std::endl;
 					std::cout << "\tReadsEnteringNumber    : " << firstHeadEdge->inReadNamesIdx_.size() << std::endl;
 					std::cout << "\tReadsLeavingNumber     : " << firstTailEdge->inReadNamesIdx_.size() << std::endl;
 					std::cout << "\tReadsLeavingThatEntered: " << readsThatEnteredLeaving.size() << std::endl;
 					std::cout << std::endl;
 				}
+#endif
 				//create new node, this will be the node with the tails, old node will have the heads
 				std::shared_ptr<KmerPathwayGraph::node> newNode = std::make_shared<
 											KmerPathwayGraph::node>(n->k_, n->cnt_, n->kLen_);
@@ -919,12 +921,14 @@ void KmerPathwayGraph::collapseSingleLinkedPaths(bool initialCollapse){
 			}
 		}
 	}
-	if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+	{
 		for(auto & n : nodesToProcess){
 			std::cout << "Need to process " << n->k_ << ", tailCount: " << n->tailCount() << ", headCount: " << n->headCount() << std::endl;
 		}
 	}
-	if(!initialCollapse && debug_){
+
+	if(!initialCollapse){
 		for(const auto & n : nodesToProcess){
 			if(n->headCount() == 1 && n->tailCount() == 1){
 				//next should only have a head count of 1 for it to be here
@@ -949,7 +953,7 @@ void KmerPathwayGraph::collapseSingleLinkedPaths(bool initialCollapse){
 			}
 		}
 	}
-
+#endif
 
 
 
@@ -1268,7 +1272,8 @@ bool KmerPathwayGraph::removeShortTips(uint32_t shortNumber, uint32_t cntCutOff)
 	bool removedTips = false;
 	for (const auto & n : nodes_) {
 		if (n->headless() && !n->tailless()) {
-			if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << njh::bashCT::red;
 				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::cout << "end tip:              " << n->uid_ << std::endl;
@@ -1279,13 +1284,15 @@ bool KmerPathwayGraph::removeShortTips(uint32_t shortNumber, uint32_t cntCutOff)
 				std::cout << njh::bashCT::reset;
 				std::cout << std::endl;
 			}
+#endif
 			//if(n->k_.size() - klen_ < shortNumber && n->cnt_ < cntCutOff){
 			if(n->k_.size() - klen_ < shortNumber && n->inReadNamesIdx_.size() < cntCutOff){
 				for(auto & e : n->tailEdges_){
 					e->on_ = false;
 					removedTips = true;
 				}
-				if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+				{
 					std::cout << njh::bashCT::cyan;
 					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 					std::cout << "end tip:              " << n->uid_ << std::endl;
@@ -1296,9 +1303,11 @@ bool KmerPathwayGraph::removeShortTips(uint32_t shortNumber, uint32_t cntCutOff)
 					std::cout << njh::bashCT::reset;
 					std::cout << std::endl;
 				}
+#endif
 			}
 		} else if (!n->headless() && n->tailless()) {
-			if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << njh::bashCT::red;
 				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::cout << "end tip:              " << n->uid_ << std::endl;
@@ -1309,13 +1318,15 @@ bool KmerPathwayGraph::removeShortTips(uint32_t shortNumber, uint32_t cntCutOff)
 				std::cout << njh::bashCT::reset;
 				std::cout << std::endl;
 			}
+#endif
 			//if(n->k_.size() - klen_ < shortNumber && n->cnt_ < cntCutOff){
 			if(n->k_.size() - klen_ < shortNumber && n->inReadNamesIdx_.size() < cntCutOff){
 				for(auto & e : n->headEdges_){
 					e->on_ = false;
 					removedTips = true;
 				}
-				if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+				{
 					std::cout << njh::bashCT::cyan;
 					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 					std::cout << "end tip:              " << n->uid_ << std::endl;
@@ -1326,6 +1337,7 @@ bool KmerPathwayGraph::removeShortTips(uint32_t shortNumber, uint32_t cntCutOff)
 					std::cout << njh::bashCT::reset;
 					std::cout << std::endl;
 				}
+#endif
 			}
 		}
 	}
@@ -1422,16 +1434,20 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 	if (nodesToProcess.empty()) {
 		return false;
 	}
-	if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+	{
 		std::cout << "There are " << nodesToProcess.size() << " nodes to process" << std::endl;
 	}
+#endif
 	bool nodesSplit = false;
 	for (const auto & n : nodesToProcess) {
 		if (n->tailCount() > 1) {
-			if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << n->uid_ << std::endl;
 			}
+#endif
 			{
 				//split tails;
 				std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > outgoing;
@@ -1444,12 +1460,14 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 						++outgoing[tailNode->k_][readName];
 					}
 				}
-				if(debug_){
+#if defined(PATHWEAVERSUPERDEBUG)
+				{
 					table outgoingTab(outgoing, VecStr { "head", "readNames", "count" });
 					outgoingTab.addColumn(VecStr { "outgoing" }, "direction");
 					std::ofstream outOut("outgoing.tab.txt");
 					outgoingTab.outPutContents(outOut, "\t");
 				}
+#endif
 				if (!outgoing.empty()) {
 					nodesSplit = true;
 					auto tails = getVectorOfMapKeys(outgoing);
@@ -1469,7 +1487,8 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 							for (const auto & other : outgoing) {
 								if (other.first != tail && njh::in(name, other.second)) {
 									appearsInOtherTails = true;
-									if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+									{
 										if (appearsInTails) {
 											std::cout << name << " appears in other tails"
 													<< std::endl;
@@ -1486,6 +1505,7 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 											throw std::runtime_error { "stopping" };
 										}
 									}
+#endif
 								}
 							}
 							if (!appearsInOtherTails && appearsInTails) {
@@ -1517,7 +1537,8 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 						nodes_.push_back(newNode);
 						//printVector(n->readNames_);
 						//printVector(newNode->readNames_	);
-						if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << njh::bashCT::cyan << "Adding new node "
@@ -1538,6 +1559,7 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 										<< newNode->k_ << std::endl;
 							}
 						}
+#endif
 					}
 					//throw std::runtime_error{"stopping"};
 					//turn off node and edges
@@ -1559,19 +1581,23 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 						++incoming[headNode->k_][readName];
 					}
 				}
-				if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+				{
 					table incommingTab(incoming, VecStr { "head", "readNames", "count" });
 					incommingTab.addColumn(VecStr { "incomming" }, "direction");
 					std::ofstream outOut("incomming.tab.txt");
 					incommingTab.outPutContents(outOut, "\t");
 				}
+#endif
 				if (!incoming.empty()) {
 					nodesSplit = true;
 					auto heads = getVectorOfMapKeys(incoming);
 					for (const auto & head : heads) {
-						if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << "head: " << head << std::endl;
 						}
+#endif
 						std::shared_ptr<KmerPathwayGraph::node> newNode = std::make_shared<
 								KmerPathwayGraph::node>(n->k_, n->cnt_, n->kLen_);
 						std::unordered_set<uint32_t> names;
@@ -1587,7 +1613,8 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 							for (const auto & other : incoming) {
 								if (other.first != head && njh::in(name, other.second)) {
 									appearsInOtherHeads = true;
-									if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+									{
 										if (appearsInHeads) {
 											std::cout << name << " appears in other heads" << std::endl;
 											std::cout << "other.first != head "
@@ -1603,6 +1630,7 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 											throw std::runtime_error { "stopping" };
 										}
 									}
+#endif
 								}
 							}
 							if (!appearsInOtherHeads && appearsInHeads) {
@@ -1637,7 +1665,8 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 						 printVector(n->readNames_);
 						 printVector(newNode->readNames_	);
 						 */
-						if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << njh::bashCT::cyan << "Adding new node "
@@ -1658,6 +1687,7 @@ bool KmerPathwayGraph::splitMultitailedNodes() {
 										<< newNode->k_ << std::endl;
 							}
 						}
+#endif
 					}
 					//throw std::runtime_error{"stopping"};
 					//turn off node and edges
@@ -1689,16 +1719,20 @@ bool KmerPathwayGraph::splitEndNodes() {
 	if (nodesToProcess.empty()) {
 		return false;
 	}
-	if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+	{
 		std::cout << "There are " << nodesToProcess.size() << " nodes to process" << std::endl;
 	}
+#endif
 	bool nodesSplit = false;
 	for (const auto & n : nodesToProcess) {
 		if (n->headless() && n->tailCount() > 1) {
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << n->uid_ << std::endl;
 			}
+#endif
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > outgoing;
 			for (const auto & tail : n->tailEdges_) {
 				if(!tail->on_){
@@ -1709,12 +1743,14 @@ bool KmerPathwayGraph::splitEndNodes() {
 					++outgoing[tailNode->uid_][readName];
 				}
 			}
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				table outgoingTab(outgoing, VecStr { "head", "readNames", "count" });
 				outgoingTab.addColumn(VecStr { "outgoing" }, "direction");
 				std::ofstream outOut("outgoing.tab.txt");
 				outgoingTab.outPutContents(outOut, "\t");
 			}
+#endif
 			if (!outgoing.empty()) {
 				nodesSplit = true;
 				auto tails = getVectorOfMapKeys(outgoing);
@@ -1734,7 +1770,8 @@ bool KmerPathwayGraph::splitEndNodes() {
 						for (const auto & other : outgoing) {
 							if (other.first != tail && njh::in(name, other.second)) {
 								appearsInOtherTails = true;
-								if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									if (appearsInTails) {
 										std::cout << name << " appears in other tails" << std::endl;
 										std::cout << "other.first != tail "
@@ -1750,6 +1787,7 @@ bool KmerPathwayGraph::splitEndNodes() {
 										throw std::runtime_error { "stopping" };
 									}
 								}
+#endif
 							}
 						}
 						if (!appearsInOtherTails && appearsInTails) {
@@ -1781,7 +1819,8 @@ bool KmerPathwayGraph::splitEndNodes() {
 						nodes_.push_back(newNode);
 						//printVector(n->readNames_);
 						//printVector(newNode->readNames_	);
-						if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << njh::bashCT::cyan << "Adding new node " << newNode->k_
@@ -1801,6 +1840,7 @@ bool KmerPathwayGraph::splitEndNodes() {
 										<< std::endl;
 							}
 						}
+#endif
 				}
 				//throw std::runtime_error{"stopping"};
 				//turn off node and edges
@@ -1813,10 +1853,12 @@ bool KmerPathwayGraph::splitEndNodes() {
 				n->on_ = false;
 			}
 		} else if (n->tailless() && n->headCount() > 1) {
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << n->uid_ << std::endl;
 			}
+#endif
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > incoming;
 			for (const auto & head : n->headEdges_) {
 				if(!head->on_){
@@ -1827,19 +1869,23 @@ bool KmerPathwayGraph::splitEndNodes() {
 					++incoming[headNode->uid_][readName];
 				}
 			}
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				table incommingTab(incoming, VecStr { "head", "readNames", "count" });
 				incommingTab.addColumn(VecStr { "incomming" }, "direction");
 				std::ofstream outOut("incomming.tab.txt");
 				incommingTab.outPutContents(outOut, "\t");
 			}
+#endif
 			if (!incoming.empty()) {
 				nodesSplit = true;
 				auto heads = getVectorOfMapKeys(incoming);
 				for (const auto & head : heads) {
-					if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						std::cout << "head: " << head << std::endl;
 					}
+#endif
 					std::shared_ptr<KmerPathwayGraph::node> newNode = std::make_shared<
 							KmerPathwayGraph::node>(n->k_, n->cnt_, n->kLen_);
 					std::unordered_set<uint32_t> names;
@@ -1855,7 +1901,8 @@ bool KmerPathwayGraph::splitEndNodes() {
 						for (const auto & other : incoming) {
 							if (other.first != head && njh::in(name, other.second)) {
 								appearsInOtherHeads = true;
-								if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									if (appearsInHeads) {
 										std::cout << name << " appears in other heads" << std::endl;
 										std::cout << "other.first != head "
@@ -1871,6 +1918,7 @@ bool KmerPathwayGraph::splitEndNodes() {
 										throw std::runtime_error { "stopping" };
 									}
 								}
+#endif
 							}
 						}
 						if (!appearsInOtherHeads && appearsInHeads) {
@@ -1905,7 +1953,8 @@ bool KmerPathwayGraph::splitEndNodes() {
 					 printVector(n->readNames_);
 					 printVector(newNode->readNames_	);
 					 */
-					if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						std::cout << __PRETTY_FUNCTION__ << std::endl;
 						std::cout << njh::bashCT::cyan << "Adding new node " << newNode->k_
@@ -1925,6 +1974,7 @@ bool KmerPathwayGraph::splitEndNodes() {
 									<< std::endl;
 						}
 					}
+#endif
 				}
 				//throw std::runtime_error{"stopping"};
 				//turn off node and edges
@@ -1964,16 +2014,20 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 	if (nodesToProcess.empty()) {
 		return false;
 	}
-	if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+	{
 		std::cout << "There are " << nodesToProcess.size() << " nodes to process" << std::endl;
 	}
+#endif
 	bool nodesSplit = false;
 	for (const auto & n : nodesToProcess) {
 		if (n->headless() && n->tailCount() > 1) {
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << n->uid_ << std::endl;
 			}
+#endif
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > outgoing;
 			for (const auto & tail : n->tailEdges_) {
 				if(!tail->on_){
@@ -1984,12 +2038,14 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 					++outgoing[tailNode->uid_][readName];
 				}
 			}
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				table outgoingTab(outgoing, VecStr { "head", "readNames", "count" });
 				outgoingTab.addColumn(VecStr { "outgoing" }, "direction");
 				std::ofstream outOut("outgoing.tab.txt");
 				outgoingTab.outPutContents(outOut, "\t");
 			}
+#endif
 			if (!outgoing.empty()) {
 				nodesSplit = true;
 				auto tails = getVectorOfMapKeys(outgoing);
@@ -2009,7 +2065,8 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 						for (const auto & other : outgoing) {
 							if (other.first != tail && njh::in(name, other.second)) {
 								appearsInOtherTails = true;
-								if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									if (appearsInTails) {
 										std::cout << name << " appears in other tails" << std::endl;
 										std::cout << "other.first != tail "
@@ -2025,6 +2082,7 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 										throw std::runtime_error { "stopping" };
 									}
 								}
+#endif
 							}
 						}
 						if (!appearsInOtherTails && appearsInTails) {
@@ -2056,7 +2114,8 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 						nodes_.push_back(newNode);
 						//printVector(n->readNames_);
 						//printVector(newNode->readNames_	);
-						if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << __PRETTY_FUNCTION__ << std::endl;
 							std::cout << njh::bashCT::cyan << "Adding new node " << newNode->k_
@@ -2076,6 +2135,7 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 										<< std::endl;
 							}
 						}
+#endif
 				}
 				//throw std::runtime_error{"stopping"};
 				//turn off node and edges
@@ -2088,10 +2148,12 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 				n->on_ = false;
 			}
 		} else if (n->tailless() && n->headCount() > 1) {
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				std::cout << std::endl;
 				std::cout << n->uid_ << std::endl;
 			}
+#endif
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t> > incoming;
 			for (const auto & head : n->headEdges_) {
 				if(!head->on_){
@@ -2102,19 +2164,23 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 					++incoming[headNode->uid_][readName];
 				}
 			}
-			if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+			{
 				table incommingTab(incoming, VecStr { "head", "readNames", "count" });
 				incommingTab.addColumn(VecStr { "incomming" }, "direction");
 				std::ofstream outOut("incomming.tab.txt");
 				incommingTab.outPutContents(outOut, "\t");
 			}
+#endif
 			if (!incoming.empty()) {
 				nodesSplit = true;
 				auto heads = getVectorOfMapKeys(incoming);
 				for (const auto & head : heads) {
-					if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						std::cout << "head: " << head << std::endl;
 					}
+#endif
 					std::shared_ptr<KmerPathwayGraph::node> newNode = std::make_shared<
 							KmerPathwayGraph::node>(n->k_, n->cnt_, n->kLen_);
 					std::unordered_set<uint32_t> names;
@@ -2130,7 +2196,8 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 						for (const auto & other : incoming) {
 							if (other.first != head && njh::in(name, other.second)) {
 								appearsInOtherHeads = true;
-								if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+								{
 									if (appearsInHeads) {
 										std::cout << name << " appears in other heads" << std::endl;
 										std::cout << "other.first != head "
@@ -2146,6 +2213,7 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 										throw std::runtime_error { "stopping" };
 									}
 								}
+#endif
 							}
 						}
 						if (!appearsInOtherHeads && appearsInHeads) {
@@ -2180,7 +2248,8 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 					 printVector(n->readNames_);
 					 printVector(newNode->readNames_	);
 					 */
-					if (debug_) {
+#if defined(PATHWEAVERSUPERDEBUG)
+					{
 						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						std::cout << __PRETTY_FUNCTION__ << std::endl;
 						std::cout << njh::bashCT::cyan << "Adding new node " << newNode->k_
@@ -2200,6 +2269,7 @@ bool KmerPathwayGraph::splitEndNodes(uint32_t maxLen) {
 									<< std::endl;
 						}
 					}
+#endif
 				}
 				//throw std::runtime_error{"stopping"};
 				//turn off node and edges
