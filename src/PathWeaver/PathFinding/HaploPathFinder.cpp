@@ -114,10 +114,10 @@ void HaploPathFinder::PathFinderCorePars::setOptimizationParameters(seqSetUp & s
 	setUp.setOption(estimatorKlen, "--estimatorKlen", "K-mer length to estimate coverage");
 
 	//kmer length and optimization
-	optKLenStart = 35;
-	optKLenStop = 45;
+	optKLenStart = 31;
+	optKLenStop = 41;
 	optKLenStep = 10;
-	kmerLengths = {35, 45};
+	kmerLengths = {31, 41};
 	bool optKLenStartSet = setUp.setOption(optKLenStart,"--optKLenStart","Optimize k-mer Length Start");
 	bool optKLenStopSet =  setUp.setOption(optKLenStop, "--optKLenStop", "Optimize k-mer Length Stop");
 	bool optKLenStepSet =  setUp.setOption(optKLenStep, "--optKLenStep", "Optimize k-mer Length Step");

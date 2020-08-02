@@ -177,10 +177,10 @@ public:
 
 		Muscler::TrimWithMusclePars mtPars;
 
-		uint32_t optKLenStart = 35;
-		uint32_t optKLenStop = 45;
+		uint32_t optKLenStart = 31;
+		uint32_t optKLenStop = 41;
 		uint32_t optKLenStep = 10;
-		std::vector<uint32_t> kmerLengths{35, 45};
+		std::vector<uint32_t> kmerLengths{31, 41};
 		std::vector<uint32_t> originalKmerLengths;
 		std::vector<uint32_t> initialKmerLengths;
 
