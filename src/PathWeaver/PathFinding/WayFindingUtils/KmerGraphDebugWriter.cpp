@@ -38,27 +38,22 @@ KmerGraphDebugWriter::KmerGraphDebugWriter(const bfs::path &currentDir,
 
 void KmerGraphDebugWriter::writeOutDotsAndSeqs(
 		const std::string & nameStub) {
-
 	OutputStream rectDotOut(
 			njh::files::make_path(currentDir_,
 					leftPadNumStr<uint32_t>(rectGraphCount_, 9999) + "-" + nameStub
 							+ "-rect.dot"));
 	mainGraph_.writeRectangleWithEstimatedCovDot(rectDotOut, covEstimatorGraph_);
-
 	OutputStream rectDotNoLabelsOut(
 			njh::files::make_path(currentDir_,
 					leftPadNumStr<uint32_t>(rectGraphCount_, 9999) + "-" + nameStub
 							+ "-rect-noLabels.dot"));
 	mainGraph_.writeRectangleWithEstimatedCovDot(rectDotNoLabelsOut,
 			covEstimatorGraph_, true);
-
-
 	auto outSeqsOpts = SeqIOOptions::genFastaOut(
 			njh::files::make_path(currentDir_,
 					leftPadNumStr<uint32_t>(rectGraphCount_, 9999) + "-" + nameStub
 							+ "-seqs.fasta"));
 	SeqOutput::write(mainGraph_.nodesToSeqs(false), outSeqsOpts);
-
 	auto outSeqsWithHeadsAndTailsOpts = SeqIOOptions::genFastaOut(
 			njh::files::make_path(currentDir_,
 					leftPadNumStr<uint32_t>(rectGraphCount_, 9999) + "-" + nameStub

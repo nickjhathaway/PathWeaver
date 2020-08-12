@@ -2288,12 +2288,15 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					std::vector<seqInfo> outSeqs;
 					currentGraph->sortNodesBySize();
 #if defined(PATHWEAVERDEBUG)
-					{
+					std::unique_ptr<OutputStream> outInfoNamesFilePtr;
 					OutOptions outInfoOpts(njh::files::make_path(currentShortTipNumberDir, "outputInfo.tab.txt"));
+
 					OutputStream outInfoFile(outInfoOpts);
+					{
+
 					outInfoFile << "name\treadCount\tfraction" << "\n";
 					OutOptions outInfoNamesOpts(njh::files::make_path(currentShortTipNumberDir, "inputNames.tab.txt"));
-					std::unique_ptr<OutputStream> outInfoNamesFilePtr;
+
 
 						outInfoNamesFilePtr = std::make_unique<OutputStream>(outInfoNamesOpts);
 						(*outInfoNamesFilePtr) << "name\treadNames" << "\n";

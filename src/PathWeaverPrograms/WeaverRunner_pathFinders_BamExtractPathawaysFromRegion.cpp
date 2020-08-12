@@ -161,7 +161,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	setUp.setOption(lzPars.coverage, "--lastzCoverage", "Coverage used for lastz when getting reference sequences");
 	setUp.setOption(bedFile, "--bed", "Bed file of multiple regions to process", true);
 	//setUp.setOption(refDir, "--refDir", "Reference directory created by PathWeaver extractRefSeqsFromGenomes", true);
-	setUp.setOption(refDir, "--refDir", "Reference directory created by elucidator extractRefSeqsFromGenomes", true);
+	setUp.setOption(refDir, "--refDir", "Reference directory created by elucidator extractRefSeqsFromGenomes", false);
 
 	setUp.processDefaultReader( { "--bam" }, true);
 	setUp.processDirectoryOutputName(true);

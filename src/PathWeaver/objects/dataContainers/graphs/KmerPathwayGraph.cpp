@@ -2786,7 +2786,6 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 //	double widthNormalizer = 25; // per base coverage of 25 will equate 1 inch
 	//double penWidthNormalizer = 50; // 50 will equate 1 inch
 	double maxPenWidth = 12.5; // 50 will equate 1 inch
-
 	std::unordered_map<std::string, std::string> nodeLabels;
 	uint64_t nodePos = 0;
 	for(const auto & node : nodes_){
@@ -2822,8 +2821,10 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 			estimatedCoverages[node->uid_] = estCov.minCov_.avgCov_;
 		}
 	}
-	auto maxCov = *std::max_element(estBaseCoverages.begin(), estBaseCoverages.end());
-
+	double maxCov = 0.0;
+	if(!estBaseCoverages.empty()){
+		maxCov = *std::max_element(estBaseCoverages.begin(), estBaseCoverages.end());
+	}
 	uint32_t maxColorGroup = 0;
 	for (const auto &node : nodes_) {
 		uint32_t colorGroup = 0;
@@ -2926,7 +2927,6 @@ void KmerPathwayGraph::writeRectangleWithEstimatedCovDot(std::ostream & out,
 	}
 
 	scale<double> edgePenWidthScale(std::make_pair(0,maxTailCnt), std::make_pair(0,maxPenWidth));
-
 	for (const auto & node : nodes_){
 		if(!node->on_){
 			continue;

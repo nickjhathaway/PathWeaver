@@ -44,8 +44,14 @@ int CarmenServerRunner::runCarmen(const njh::progutils::CmdArgs & inputCommands)
 	SeqAppCorePars seqServerCorePars;
 	seqServerCorePars.name_ = "carmen0";
 	seqServerCorePars.port_ = 10000;
+#if defined(PATHWEAVERDEBUG)
+	bfs::path resourceDirName = njh::files::make_path(PathWeaverDebug_INSTALLDIR,
+			"etc/serverResources");
+#else
 	bfs::path resourceDirName = njh::files::make_path(PathWeaver_INSTALLDIR,
 			"etc/serverResources");
+#endif
+
 	seqSetUp setUp(inputCommands);
 	setUp.processVerbose();
 	setUp.processDebug();
