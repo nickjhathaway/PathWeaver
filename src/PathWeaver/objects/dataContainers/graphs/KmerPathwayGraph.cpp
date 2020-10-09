@@ -308,7 +308,7 @@ void KmerPathwayGraph::breakSingleLinkedPathsReadThreading(){
 			pathLength.emplace_back(path.lastNode_ + 1 - path.firstNode_);
 //			outPaths << pathNumber << "\t";
 			std::vector<uint32_t> allNodePositionsForRead(nexts.size() + 1, 0);
-			for(const auto & pos : iter::range(path.firstNode_, path.lastNode_ + 1)){
+			for(const auto pos : iter::range(path.firstNode_, path.lastNode_ + 1)){
 				allNodePositionsForRead[pos] = 1;
 			}
 //			outPaths << njh::conToStr(allNodePositionsForRead, "\t") << std::endl;
@@ -619,7 +619,7 @@ void KmerPathwayGraph::breakSingleLinkedPathsReadThreading(){
 							}
 						}
 					}
-					for(const auto & nodePos : iter::range<uint32_t>(nextNodePos, nexts.size() - 1)){
+					for(const auto nodePos : iter::range<uint32_t>(nextNodePos, nexts.size() - 1)){
 						nexts[nodePos]->on_ = false;
 					}
 					//
@@ -1114,7 +1114,7 @@ void KmerPathwayGraph::removeOffEdges(){
 		{
 			//remove tails
 			std::vector<uint32_t> toErase;
-			for( const auto & tailPos : iter::range(n->tailEdges_.size())){
+			for( const auto tailPos : iter::range(n->tailEdges_.size())){
 				if(!n->tailEdges_[tailPos]->on_){
 					toErase.emplace_back(tailPos);
 				}
@@ -1127,7 +1127,7 @@ void KmerPathwayGraph::removeOffEdges(){
 		{
 			//remove heads
 			std::vector<uint32_t> toErase;
-			for( const auto & headPos : iter::range(n->headEdges_.size())){
+			for( const auto headPos : iter::range(n->headEdges_.size())){
 				if(!n->headEdges_[headPos]->on_){
 					toErase.emplace_back(headPos);
 				}
@@ -1201,7 +1201,7 @@ void KmerPathwayGraph::edgeSanityCheckThrow() const {
 }
 void KmerPathwayGraph::removeNullNodes(){
 	std::vector<uint32_t> toRemove;
-	for(const auto & nodePos : iter::range(nodes_.size())){
+	for(const auto nodePos : iter::range(nodes_.size())){
 		if(nullptr == nodes_[nodePos]){
 			toRemove.emplace_back(nodePos);
 		}
@@ -1351,7 +1351,7 @@ void KmerPathwayGraph::removeOffNodes(){
 	std::vector<uint32_t> toRemove;
 	//njh::stopWatch watch;
 	//watch.setLapName(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps(), 100) + " - find off nodes");
-	for(const auto & nodePos : iter::range(nodes_.size())){
+	for(const auto nodePos : iter::range(nodes_.size())){
 		const auto & n = nodes_[nodePos];
 		if(!n->on_){
 			toRemove.emplace_back(nodePos);
@@ -1387,7 +1387,7 @@ bool KmerPathwayGraph::removeHeadlessTaillessNodes(){
 
 bool KmerPathwayGraph::removeHeadlessTaillessNodes(uint32_t lenCutOff){
 	std::vector<uint32_t> toRemove;
-	for(const auto & nodePos : iter::range(nodes_.size())){
+	for(const auto nodePos : iter::range(nodes_.size())){
 		const auto & n = nodes_[nodePos];
 		if(n->headless() && n->tailless() && n->k_.length() <=lenCutOff){
 			toRemove.emplace_back(nodePos);

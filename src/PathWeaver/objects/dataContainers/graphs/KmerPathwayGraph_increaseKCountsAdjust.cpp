@@ -107,7 +107,7 @@ void KmerPathwayGraph::increaseKCountsAdjust(const std::string & seq,
 		}
 
 		//connect the positions
-		for(const auto & pos : iter::range<uint32_t>(processedPositions.size() - 1)){
+		for(const auto pos : iter::range<uint32_t>(processedPositions.size() - 1)){
 			if(pos > 0){
 				uint32_t start = processedPositions[pos].start_;
 				uint32_t stop = processedPositions[pos].end_;
@@ -351,7 +351,7 @@ std::unordered_map<std::string, uint32_t> KmerPathwayGraph::threadThroughSequenc
 		}
 
 		//connect the positions
-		for(const auto & pos : iter::range<uint32_t>(processedPositions.size() - 1)){
+		for(const auto pos : iter::range<uint32_t>(processedPositions.size() - 1)){
 			if(pos > 0){
 				uint32_t start = processedPositions[pos].start_;
 				uint32_t stop = processedPositions[pos].end_;
@@ -658,7 +658,7 @@ std::unordered_map<std::string, uint32_t> KmerPathwayGraph::threadThroughSequenc
 		}
 
 		//connect the positions
-		for(const auto & pos : iter::range<uint32_t>(processedPositions.size() - 1)){
+		for(const auto pos : iter::range<uint32_t>(processedPositions.size() - 1)){
 			if(pos > 0){
 				uint32_t start = processedPositions[pos].start_;
 				uint32_t stop = processedPositions[pos].end_;

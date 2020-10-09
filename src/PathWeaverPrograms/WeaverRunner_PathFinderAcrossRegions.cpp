@@ -1612,11 +1612,11 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			aligner alignerObj(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix(2,-2), false);
 
 			std::vector<refVariants> refVariationInfo;
-			for (const auto & refPos : iter::range(finalSeqs.size())) {
+			for (const auto refPos : iter::range(finalSeqs.size())) {
 				refVariationInfo.emplace_back(finalSeqs[refPos].seqBase_);
 			}
-			for (const auto & refPos : iter::range(finalSeqs.size())) {
-				for (const auto & refSubPos : iter::range(finalSeqs.size())) {
+			for (const auto refPos : iter::range(finalSeqs.size())) {
+				for (const auto refSubPos : iter::range(finalSeqs.size())) {
 					if (refPos == refSubPos) {
 						continue;
 					}
@@ -1655,7 +1655,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				uint32_t subSize = len(reMapSeq) * mapAllowableErrors.distances_.query_.coverage_;
 
 
-				for (const auto & refPos : iter::range(finalSeqs.size())) {
+				for (const auto refPos : iter::range(finalSeqs.size())) {
 					if(reMappingSeqInfo.compareKmers(refInfos[refPos]).second < matchingKmerCutOff &&
 						 reMappingSeqInfo.compareSubKmersToFull(refInfos[refPos], 0, subSize).second < matchingKmerCutOff &&
 						 reMappingSeqInfo.compareSubKmersToFull(refInfos[refPos], len(reMapSeq) - subSize, subSize).second < matchingKmerCutOff) {

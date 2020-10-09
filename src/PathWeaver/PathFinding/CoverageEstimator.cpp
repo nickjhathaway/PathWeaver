@@ -87,10 +87,10 @@ CoverageEstimator::CoverageEstimatedResult CoverageEstimator::estimateCov(const 
 		auto currentStopAdjust  = (tailless && !tailTrimStatus) ? estimatingGraph.klen_     : 0;
 		if (ret.allCounts_.size() > currentStartAdjust + currentStopAdjust) {
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-			for(const auto & pos : iter::range<uint64_t>(currentStartAdjust, ret.allCounts_.size() - currentStopAdjust)){
+			for(const auto pos : iter::range<uint64_t>(currentStartAdjust, ret.allCounts_.size() - currentStopAdjust)){
 				CovInfoPerPos minSd;
 				uint64_t startSurroundPos = pos + 1 > estimatingGraph.klen_ ? pos + 1 - estimatingGraph.klen_: 0;
-				for(const auto & surPos : iter::range(startSurroundPos, pos + 1)){
+				for(const auto surPos : iter::range(startSurroundPos, pos + 1)){
 					auto subSet = getSubVector(ret.allCounts_, surPos, std::min<uint32_t>(pos + 1,std::min<uint32_t>(estimatingGraph.klen_, ret.allCounts_.size() - surPos)));
 					double currentSd = vectorStandardDeviationPop(subSet);
 					if(currentSd < minSd.sdCov_){

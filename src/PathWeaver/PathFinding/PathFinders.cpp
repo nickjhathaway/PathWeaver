@@ -3347,10 +3347,10 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				for(const auto & outSeq : outSeqs){
 					outSeqsKInfos.emplace_back(outSeq.seq_, extractionPars.outlierKLen, false);
 				}
-				for(const auto & finalSeqPos : iter::range(outSeqs.size())){
+				for(const auto finalSeqPos : iter::range(outSeqs.size())){
 					const auto & finalSeq = outSeqs[finalSeqPos];
 					bool pass = true;
-					for(const auto & otherPos : iter::range(finalFilteredSeqs.size())){
+					for(const auto otherPos : iter::range(finalFilteredSeqs.size())){
 						if(outSeqsKInfos[finalSeqPos].compareKmers(finalFilteredSeqsKInfos[otherPos]).second < .80){
 							continue;
 						}
@@ -3386,10 +3386,10 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				//alignerObj.processAlnInfoOutputNoCheck(njh::files::make_path(workingDir, "trimAlnCache").string(), extractionPars.verbose);
 			} else {
 				if(!extractionPars.doNotCollapseIdenticalContigs_){
-					for (const auto & finalSeqPos : iter::range(outSeqs.size())) {
+					for (const auto finalSeqPos : iter::range(outSeqs.size())) {
 						const auto & finalSeq = outSeqs[finalSeqPos];
 						bool pass = true;
-						for (const auto & otherPos : iter::range(finalFilteredSeqs.size())) {
+						for (const auto otherPos : iter::range(finalFilteredSeqs.size())) {
 							const auto & other = finalFilteredSeqs[otherPos];
 							if (other.seq_ == finalSeq.seq_) {
 								pass = false;

@@ -106,7 +106,7 @@ void ContigsCompareGraph::resetNodeVisitCounts() {
 
 void ContigsCompareGraph::removeOffNodesOffEdgesAndReset(){
 	std::vector<uint32_t> toRemove;
-	for(const auto & nodePos : iter::range(nodes_.size())){
+	for(const auto nodePos : iter::range(nodes_.size())){
 		const auto & n = nodes_[nodePos];
 		if(!n->on_){
 			toRemove.emplace_back(nodePos);
@@ -148,7 +148,7 @@ void ContigsCompareGraph::removeOffEdges(){
 		{
 			//remove tails
 			std::vector<uint32_t> toErase;
-			for( const auto & tailPos : iter::range(n->tailEdges_.size())){
+			for( const auto tailPos : iter::range(n->tailEdges_.size())){
 				if(!n->tailEdges_[tailPos]->on_){
 					toErase.emplace_back(tailPos);
 				}
@@ -161,7 +161,7 @@ void ContigsCompareGraph::removeOffEdges(){
 		{
 			//remove heads
 			std::vector<uint32_t> toErase;
-			for( const auto & headPos : iter::range(n->headEdges_.size())){
+			for( const auto headPos : iter::range(n->headEdges_.size())){
 				if(!n->headEdges_[headPos]->on_){
 					toErase.emplace_back(headPos);
 				}
@@ -179,17 +179,17 @@ bool ContigsCompareGraph::splitNodesWithRedundantKmers(){
 	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	resetNodeVisitCounts();
 	std::vector<uint32_t> nodesToProcess;
-	for(const auto & nodePos : iter::range(nodes_.size())){
+	for(const auto nodePos : iter::range(nodes_.size())){
 		const auto & node = *nodes_[nodePos];
 		if(node.headCount() > 1 && node.tailCount() > 1){
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t>> readNameCountsHeads;
 			std::unordered_map<std::string, std::unordered_map<uint32_t, uint32_t>> readNameCountsTails;
-			for(const auto & headPos : iter::range(node.headEdges_.size())){
+			for(const auto headPos : iter::range(node.headEdges_.size())){
 				for(const auto & con : node.headEdges_[headPos]->connectorInfos_){
 					++readNameCountsHeads[con.readName_][headPos];
 				}
 			}
-			for(const auto & tailPos : iter::range(node.tailEdges_.size())){
+			for(const auto tailPos : iter::range(node.tailEdges_.size())){
 				for(const auto & con : node.tailEdges_[tailPos]->connectorInfos_){
 					++readNameCountsTails[con.readName_][tailPos];
 				}
@@ -788,7 +788,7 @@ void ContigsCompareGraph::writeRectangleDot(std::ostream & out, bool noLabels) c
 
 void ContigsCompareGraph::collapseSingleLinkedPaths(){
 	std::vector<uint32_t> nodePositionsToProcess;
-	for (const auto & nPos : iter::range(nodes_.size())) {
+	for (const auto nPos : iter::range(nodes_.size())) {
 		if (1 == nodes_[nPos]->tailCount()) {
 			nodePositionsToProcess.push_back(nPos);
 		}
@@ -854,7 +854,7 @@ void ContigsCompareGraph::collapseSingleLinkedPaths(){
 
 void ContigsCompareGraph::collapseSingleLinkedPathsSameReads(){
 	std::vector<uint32_t> nodePositionsToProcess;
-	for (const auto & nPos : iter::range(nodes_.size())) {
+	for (const auto nPos : iter::range(nodes_.size())) {
 		if (1 == nodes_[nPos]->tailCount()) {
 			nodePositionsToProcess.push_back(nPos);
 		}
@@ -939,7 +939,7 @@ void ContigsCompareGraph::collapseSingleLinkedPathsSameReads(){
 
 void ContigsCompareGraph::removeNullNodes(){
 	std::vector<uint32_t> toRemove;
-	for(const auto & nodePos : iter::range(nodes_.size())){
+	for(const auto nodePos : iter::range(nodes_.size())){
 		if(nullptr == nodes_[nodePos]){
 			toRemove.emplace_back(nodePos);
 		}

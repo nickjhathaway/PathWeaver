@@ -401,11 +401,11 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 
 										std::vector<refVariants> refVariationInfo;
-										for (const auto & refPos : iter::range(finalSeqsOnClusters.size())) {
+										for (const auto refPos : iter::range(finalSeqsOnClusters.size())) {
 											refVariationInfo.emplace_back(finalSeqsOnClusters[refPos].seqBase_);
 										}
-										for (const auto & refPos : iter::range(finalSeqsOnClusters.size())) {
-											for (const auto & refSubPos : iter::range(finalSeqsOnClusters.size())) {
+										for (const auto refPos : iter::range(finalSeqsOnClusters.size())) {
+											for (const auto refSubPos : iter::range(finalSeqsOnClusters.size())) {
 												if (refPos == refSubPos) {
 													continue;
 												}
@@ -451,7 +451,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 											kmerInfo reMappingSeqInfo(reMapSeq.seq_, matchingKmerLen, false);
 											std::vector<uint64_t> bestRefs;
 											uint32_t subSize = len(reMapSeq) * allowableErrors.distances_.query_.coverage_;
-											for (const auto & refPos : iter::range(finalSeqsOnClusters.size())) {
+											for (const auto refPos : iter::range(finalSeqsOnClusters.size())) {
 	//											if(reMappingSeqInfo.compareSubKmersToFull(refInfos[refPos],
 	//															0,
 	//															subSize).second < matchingKmerCutOff &&
@@ -774,7 +774,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 											auto finalSeqBellowMeanBaseCovOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalInfoRegionDir,"seqBelowCoverageCutOff.fasta"));
 											SeqOutput cutOffWriter(finalSeqBellowMeanBaseCovOpts);
 											std::vector<uint32_t> toBeRemoved;
-											for(const auto & seqPos : iter::range(finalSeqsOnClusters.size())){
+											for(const auto seqPos : iter::range(finalSeqsOnClusters.size())){
 												const auto & seq = finalSeqsOnClusters[seqPos];
 												if(!seq.seqBase_.on_){
 													cutOffWriter.openWrite(seq);

@@ -96,7 +96,7 @@ void HaplotypeLocator::collapseInputSeqs() {
 	alternateUids_.clear();
 	hapLocCounters_.clear();
 	collapsingSeqs_.clear();
-	for (const auto seq : *inputSeqs_) {
+	for (const auto & seq : *inputSeqs_) {
 		auto search = collapsingSeqs_.find(seq.seq_);
 		if (collapsingSeqs_.end() != search) {
 			collapsingSeqs_.at(seq.seq_).seqs_.emplace_back(seq);
