@@ -25,8 +25,9 @@
  //
  //
 
-
 #include <njhseq/GenomeUtils.h>
+#include <njhseq/programUtils/seqSetUp.hpp>
+#include <njhseq/BamToolsUtils.h>
 #include <SeekDeep/objects/IlluminaUtils/PairedReadProcessor.hpp>
 
 

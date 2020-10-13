@@ -29,7 +29,7 @@
 
 
 #include "TandemRepeatUtils.hpp"
-
+#include <njhseq/objects/dataContainers/tables/TableReader.hpp>
 
 namespace njhseq {
 

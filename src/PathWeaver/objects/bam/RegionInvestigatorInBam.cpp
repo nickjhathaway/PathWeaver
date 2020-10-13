@@ -27,6 +27,8 @@
 
 
 #include "RegionInvestigatorInBam.hpp"
+#include <njhseq/concurrency/pools/BamReaderPool.hpp>
+#include <njhseq/readVectorManipulation/readVectorHelpers/readVecTrimmer.hpp>
 
 namespace njhseq {
 

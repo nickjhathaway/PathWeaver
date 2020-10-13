@@ -25,7 +25,6 @@
  //
 
 #include "WeaverRunner.hpp"
-#include <TwoBit.h>
 
 #include <njhseq/BamToolsUtils.h>
 #include <njhseq/objects/BioDataObject.h>
@@ -33,6 +32,7 @@
 
 #include <njhcpp/concurrency/LockableJsonLog.hpp>
 #include <njhseq/objects/seqContainers.h>
+#include <njhseq/objects/seqObjects/Clusters/cluster.hpp>
 
 #include "PathWeaver/objects/bam/RegionInvestigatorInBam.hpp"
 #include "PathWeaver/objects/Meta/CountryMetaData.hpp"

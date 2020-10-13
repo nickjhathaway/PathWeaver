@@ -26,7 +26,7 @@
  //
 
 #include <njhcpp/progutils.h>
-#include <njhseq.h>
+#include <njhseq/common.h>
 
 
 namespace njhseq {

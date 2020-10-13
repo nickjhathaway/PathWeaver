@@ -29,7 +29,8 @@
 
 #include "PathWeaver/PathFinding/HaploPathFinder.hpp"
 
-
+#include <njhseq/objects/helperObjects/motif.hpp>
+#include <njhseq/objects/helperObjects/tandemRepeat.hpp>
 
 namespace njhseq {
 

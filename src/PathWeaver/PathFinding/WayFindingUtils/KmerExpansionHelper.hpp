@@ -30,6 +30,7 @@
 #include "PathWeaver/PathFinding/WayFindingUtils/TandemRepeatUtils.hpp"
 
 #include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraph.hpp"
+#include <njhseq/objects/helperObjects/motif.hpp>
 
 namespace njhseq {
 
