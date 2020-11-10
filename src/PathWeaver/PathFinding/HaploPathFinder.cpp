@@ -73,6 +73,8 @@ void HaploPathFinder::ExtractParams::setGenomeOpts(seqSetUp & setUp, bool genome
 		setGenomeFnp();
 	}
 	setUp.setOption(selectedGenomes, "--selectedGenomes", "Name of the other genomes in --genomeDir to be read in, leave blank to just do all fastas");
+
+
 }
 
 
@@ -415,6 +417,9 @@ void HaploPathFinder::PathFinderCorePars::setRunningOpts(seqSetUp & setUp){
 	setUp.setOption(exitOnException_, "--exitOnException", "Exit On Exception");
 	setUp.setOption(numThreads, "--numThreads", "Number of CPUs to utilize");
 	setUp.setOption(writeNodeCounts_, "--writeNodeCounts", "write Node Counts");
+
+	setUp.setOption(rawInputSeqs, "--rawInputSeqs", "By Default the input seqs are automatically made upper case, use this flag to keep the input as it was");
+
 }
 
 void HaploPathFinder::PathFinderCorePars::setPossibleHapsOpts(seqSetUp & setUp){

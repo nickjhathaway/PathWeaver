@@ -268,6 +268,9 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 					if(!noTrim){
 						if(bfs::exists(refSeqsFnp)){
 							auto refSeqsOpts = SeqIOOptions::genFastaIn(refSeqsFnp);
+							if(!parsForRegion.pFinderPars_.rawInputSeqs){
+								refSeqsOpts.lowerCaseBases_ = "upper";
+							}
 							parsForRegion.pFinderPars_.inputSeqs = SeqInput::getSeqVec<seqInfo>(refSeqsOpts, maxLen);
 							parsForRegion.pFinderPars_.trimToInputSeqs = true;
 							SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
@@ -275,6 +278,9 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 											njh::files::make_path(regionDir, "allRefs.fasta")));
 						} else {
 							parsForRegion.pFinderPars_.inputSeqs = {region.extractSeq(tReader)};
+							if(!parsForRegion.pFinderPars_.rawInputSeqs){
+								readVec::handelLowerCaseBases(parsForRegion.pFinderPars_.inputSeqs, "upper");
+							}
 							parsForRegion.pFinderPars_.trimToInputSeqs = true;
 							SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
 									SeqIOOptions::genFastaOut(

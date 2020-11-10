@@ -163,7 +163,7 @@ public:
 				PairedReadProcessor::ReadPairOverLapStatus::R1ENDSINR2,
 				PairedReadProcessor::ReadPairOverLapStatus::PERFECTOVERLAP };
 
-
+		bool rawInputSeqs=false;
 		std::vector<seqInfo> inputSeqs;
 		std::vector<seqInfo> trimSeqs;
 

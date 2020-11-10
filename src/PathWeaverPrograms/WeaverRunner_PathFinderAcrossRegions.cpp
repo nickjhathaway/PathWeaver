@@ -575,6 +575,9 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		auto inputRefSeqs  = njh::files::make_path(refSeqExtractsDir, inputRegions.front().createUidFromCoordsStrand(), "allRefs.fasta");
 		if(bfs::exists(inputRefSeqs)){
 			auto refSeqsOpts = SeqIOOptions::genFastaIn(inputRefSeqs);
+			if(!pars.pFinderPars_.rawInputSeqs){
+				refSeqsOpts.lowerCaseBases_ = "upper";
+			}
 			SeqInput reader(refSeqsOpts);
 			pars.pFinderPars_.inputSeqs = reader.readAllReads<seqInfo>();
 		}else{
@@ -596,12 +599,18 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			uint64_t maxLen = inputRegions.front().getLen();
 			aligner alignerObj(maxLen, gapScoringParameters(5,1,0,0,0,0));
 			pars.pFinderPars_.inputSeqs = gMapper->getRefSeqsWithPrimaryGenome(inputRegions.front(), refAlignsDir, extractPars, alignerObj);
+			if(!pars.pFinderPars_.rawInputSeqs){
+				readVec::handelLowerCaseBases(pars.pFinderPars_.inputSeqs, "upper");
+			}
 		}
 	} else {
 		for (const auto & region : inputRegions) {
 			TwoBit::TwoBitFile tReader(
 					hFinder.gMapper_->genomes_.at(hFinder.pars_.primaryGenome)->fnpTwoBit_);
 			pars.pFinderPars_.inputSeqs.emplace_back(region.extractSeq(tReader));
+		}
+		if(!pars.pFinderPars_.rawInputSeqs){
+			readVec::handelLowerCaseBases(pars.pFinderPars_.inputSeqs, "upper");
 		}
 	}
 
@@ -611,6 +620,9 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			TwoBit::TwoBitFile tReader(
 					hFinder.gMapper_->genomes_.at(hFinder.pars_.primaryGenome)->fnpTwoBit_);
 			pars.pFinderPars_.trimSeqs.emplace_back(region.extractSeq(tReader));
+		}
+		if(!pars.pFinderPars_.rawInputSeqs){
+			readVec::handelLowerCaseBases(pars.pFinderPars_.trimSeqs, "upper");
 		}
 		auto trimInputRegionsSeqsOpts = SeqIOOptions::genFastaOut(njh::files::make_path(setUp.pars_.directoryName_, "trimInputRegions.fasta"));
 		SeqOutput::write(pars.pFinderPars_.trimSeqs, trimInputRegionsSeqsOpts);
