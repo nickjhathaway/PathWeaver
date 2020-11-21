@@ -34,10 +34,11 @@ class WeaverRunner : public njh::progutils::ProgramRunner {
  public:
 	WeaverRunner();
 
-	static int BamExtractPathawaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
 	static int SeqsExtractPathaways(const njh::progutils::CmdArgs & inputCommands);
+	static int BamExtractPathawaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
 	static int ExtractPathWaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands);
 
+	static int runProcessClustersOnRecon(const njh::progutils::CmdArgs & inputCommands);
 };
 
 } /* namespace njhseq */

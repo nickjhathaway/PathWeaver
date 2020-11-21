@@ -3293,7 +3293,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						}
 						OutputStream seqCovCountsDetailedOut(OutOptions(njh::files::make_path(bestResult.runDirs_.klenDir_, seq.name_ + "_coverageDetailed.txt")));
 						seqCovCountsDetailedOut << "pos\tcoverage\tminPos\tsdCov\tavgCov\tstart\tend\tallCounts.size()" << "\n";
-						for(const auto & estCovPos : iter::range(estCov.coverageInfos_.size())){
+						for(const auto  estCovPos : iter::range(estCov.coverageInfos_.size())){
 							auto pos = estCov.coverageInfos_[estCovPos].pos_;
 							seqCovCountsDetailedOut << pos
 									<< "\t" << estCov.allCounts_[pos]
