@@ -568,7 +568,8 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				if(extractionPars.kmerKOcurrenceCutOffs.size() > 1 && extractionPars.autoDetermineKCutsOnNodeCount && (nodeCountForAutoCutOff > 100 || extractionPars.forceDetermineKCuts)){
 					used_kmerKOcurrenceCutOffs.clear();
 					for(const auto & perc : extractionPars.autoDetermineKCutsPercentages){
-						used_kmerKOcurrenceCutOffs.emplace_back(std::round(perc * nodeCountForAutoCutOff));
+						used_kmerKOcurrenceCutOffs.emplace_back(std::ceil(perc * nodeCountForAutoCutOff));
+						//used_kmerKOcurrenceCutOffs.emplace_back(std::round(perc * nodeCountForAutoCutOff));
 					}
 				}
 			} else if (extractionPars.autoDetermineKCutsOnTotalBaseCount && !extractionPars.inputSeqs.empty()) {
@@ -585,7 +586,8 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				if(extractionPars.kmerKOcurrenceCutOffs.size() > 1 && (perBaseCoverage > 100 || extractionPars.forceDetermineKCuts)){
 					used_kmerKOcurrenceCutOffs.clear();
 					for(const auto & perc : extractionPars.autoDetermineKCutsPercentages){
-						used_kmerKOcurrenceCutOffs.emplace_back(std::round(perc * perBaseCoverage));
+						used_kmerKOcurrenceCutOffs.emplace_back(std::ceil(perc * perBaseCoverage));
+						//used_kmerKOcurrenceCutOffs.emplace_back(std::round(perc * perBaseCoverage));
 					}
 				}
 			}
