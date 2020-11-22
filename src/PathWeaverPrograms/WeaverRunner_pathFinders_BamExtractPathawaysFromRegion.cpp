@@ -397,7 +397,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 										getMaxLenFromFile(r2Fnp);
 										getMaxLenFromFile(singlesFnp);
 										bool countEndGaps = true;
-										aligner alignerObj(maxLen, gapScoringParameters(5,1,5,1,5,1), substituteMatrix(1,-1), countEndGaps);
+										aligner alignerObj(maxLen, gapScoringParameters(5,1,5,1,5,1), substituteMatrix(2,-2), countEndGaps);
 										alignerObj.weighHomopolymers_ = true;
 										comparison allowableErrors;
 										allowableErrors.oneBaseIndel_ = 0.2;

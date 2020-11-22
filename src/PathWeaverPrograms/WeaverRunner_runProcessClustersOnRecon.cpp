@@ -927,7 +927,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			{
 				//snps
 				OutputStream outSnpDepthPerSample(njh::files::make_path(variantInfoDir, njh::pasteAsStr("snpDepthPerSample.tab.txt")));
-				outSnpDepthPerSample << "AnalysisName\tsample\tchromosome\tposition\trefBAse\tbase\treadDepth" ;
+				outSnpDepthPerSample << "AnalysisName\tsample\tchromosome\tposition\trefBase\tbase\treadDepth" ;
 				VecStr metaLevels;
 				if(nullptr != sampColl.groupMetaData_){
 					metaLevels = getVectorOfMapKeys(sampColl.groupMetaData_->groupData_);
