@@ -961,6 +961,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 			//output to called calledTableOut
 			regInfosByUID[regUID]->uniqHaps_ = 0;
 			regInfosByUID[regUID]->infoCalled_ = false;
+			++coiCounts[0];
 		}
 	}
 
