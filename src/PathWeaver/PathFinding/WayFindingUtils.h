@@ -26,6 +26,8 @@
  //
  //
 
+//#define PATHWEAVERDEBUG
+
 
 #include "PathWeaver/PathFinding/WayFindingUtils/WayFindingUtils.hpp"
 #include "PathWeaver/PathFinding/WayFindingUtils/WayFindingPreFilteringUtils.hpp"

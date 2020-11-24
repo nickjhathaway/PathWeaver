@@ -27,7 +27,7 @@
 #include "PathFinders.hpp"
 #include "PathWeaver/PathFinding/CoverageEstimator.hpp"
 
-//#define PATHWEAVERDEBUG
+
 
 namespace njhseq {
 

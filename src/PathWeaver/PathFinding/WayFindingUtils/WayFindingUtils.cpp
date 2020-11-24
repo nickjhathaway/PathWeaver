@@ -132,6 +132,19 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 					uint32_t currentOptCount = useFullOptimalCount ? optResTest.optimalCount_ : optResTest.optimalCountBelowLen_;
 					//uint32_t currentInternalCountBelowCount = useFullOptimalCount ? 1 : optResTest.internalNodesCountBelowLen_;
 					uint32_t currentInternalCountBelowCount = optResTest.internalNodesCountBelowLen_;
+//					std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//					std::cout << "\t" << "bestOptResults.size(): " << bestOptResults.size() << std::endl;
+//					std::cout << "\t" <<  njh::json::writeAsOneLine(optResTest.runParams_.toJson()) << std::endl;
+//					std::cout << "\t" << "currentInternalCountBelowCount: " << currentInternalCountBelowCount << std::endl;
+//					std::cout << "\t" << "internalCount: " << internalCount << std::endl;
+//					std::cout << "\t" << "optimalCount: " <<optimalCount << std::endl;
+//					std::cout << "\t" << "optResTest.numberOfFinalFilteredSeqs_: " << optResTest.numberOfFinalFilteredSeqs_ << std::endl;
+//					if(bestOptResults.size() >0){
+//						std::cout << "\t" << "bestOptResults.front().numberOfFinalFilteredSeqs_: " << bestOptResults.front().numberOfFinalFilteredSeqs_ << std::endl;
+//					}else{
+//						std::cout << "\t" << "bestOptResults.front().numberOfFinalFilteredSeqs_: " <<  "NA"<< std::endl;
+//
+//					}
 //					std::cout << '\t' << "currentOptCount: " << currentOptCount << " currentInternalCountBelowCount: " << currentInternalCountBelowCount << std::endl;
 					if(bestOptResults.empty()){
 //						std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -146,7 +159,9 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 							optimalCount = currentOptCount;
 							internalCount = currentInternalCountBelowCount;
 						}else if(currentOptCount == optimalCount){
+//							std::cout << njh::bashCT::red << njh::bashCT::bold;
 //							std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//							std::cout << njh::bashCT::reset;
 //							std::cout << "\t" << "currentInternalCountBelowCount: " << currentInternalCountBelowCount << std::endl;
 //							std::cout << "\t" << "internalCount: " << internalCount << std::endl;
 //							std::cout << "\t" << "currentInternalCountBelowCount < internalCount: " << njh::colorBool(currentInternalCountBelowCount < internalCount) << std::endl;
@@ -157,8 +172,34 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 								optimalCount = currentOptCount;
 								internalCount = currentInternalCountBelowCount;
 							}else if(currentInternalCountBelowCount == internalCount){
+								//if opt count is less than 4, then take the best run with fewer number of finalFilteredSeqs,
+								//it has been observed that often times when opt count is 3 or less, the optimal results are the ones with fewer filtered seqs
+								//this is normally in the setting of a smaller region and in lower complex samples (especially monoclonal samples)
+//								std::cout << njh::bashCT::blue << njh::bashCT::bold;
 //								std::cout << __FILE__ << " " << __LINE__ << std::endl;
-								bestOptResults.emplace_back(optResTest);
+//								std::cout << "optimalCount: " << optimalCount << std::endl;
+//								std::cout << "optResTest.numberOfFinalFilteredSeqs_: " << optResTest.numberOfFinalFilteredSeqs_ << std::endl;
+//								std::cout << "\t" <<  njh::json::writeAsOneLine(bestOptResults.front().runParams_.toJson()) << std::endl;
+//								std::cout << "bestOptResults.front().numberOfFinalFilteredSeqs_: " << bestOptResults.front().numberOfFinalFilteredSeqs_ << std::endl;
+//								std::cout << "optResTest.numberOfFinalFilteredSeqs_ < bestOptResults.front().numberOfFinalFilteredSeqs_: " << njh::colorBool(optResTest.numberOfFinalFilteredSeqs_ < bestOptResults.front().numberOfFinalFilteredSeqs_) << std::endl;
+//
+//								std::cout << njh::bashCT::reset;
+								if(optimalCount < 4){
+									if(optResTest.numberOfFinalFilteredSeqs_ < bestOptResults.front().numberOfFinalFilteredSeqs_){
+									bestOptResults.clear();
+									bestOptResults.emplace_back(optResTest);
+									optimalCount = currentOptCount;
+									internalCount = currentInternalCountBelowCount;
+//									std::cout << njh::bashCT::cyan << njh::bashCT::bold;
+//									std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//									std::cout << njh::bashCT::reset;
+									}else if(optResTest.numberOfFinalFilteredSeqs_ == bestOptResults.front().numberOfFinalFilteredSeqs_){
+										bestOptResults.emplace_back(optResTest);
+									}
+								} else {
+									bestOptResults.emplace_back(optResTest);
+								}
+//								std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							}
 						}
 					}
