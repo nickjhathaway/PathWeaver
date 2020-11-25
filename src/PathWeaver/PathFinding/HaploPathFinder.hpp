@@ -192,7 +192,7 @@ public:
 		uint32_t optKcutStep = 1;
 		//std::vector<uint32_t> kmerKOcurrenceCutOffs{2,3,4,5,6,7,8,9,10,12,14,16,18,20,25,30,35,40}; kmerKOcurrenceCutOffs =
 		//std::vector<uint32_t> kmerKOcurrenceCutOffs{2,3,4,5};
-		std::vector<uint32_t> kmerKOcurrenceCutOffs{2,3,4};
+		std::vector<uint32_t> kmerKOcurrenceCutOffs{2,3,4,5};
 		std::vector<uint32_t> initialKmerKOcurrenceCutOffs;
 		bool autoDetermineKCutsOnNodeCount = false;
 		bool autoDetermineKCutsOnTotalBaseCount = false;
@@ -200,7 +200,7 @@ public:
 		bool forceDetermineKCuts = false;
 		//std::set<double> autoDetermineKCutsPercentages{0.05,0.06,0.07,0.08,0.09,0.1,0.15,0.20};
 		//std::set<double> autoDetermineKCutsPercentages{0.02,0.03,0.04,0.05};
-		std::set<double> autoDetermineKCutsPercentages{0.01,0.02,0.03};
+		std::set<double> autoDetermineKCutsPercentages{0.01,0.02,0.03,0.05};
 		std::set<double> initialAutoDetermineKCutsPercentages;
 
 

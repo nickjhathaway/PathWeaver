@@ -140,11 +140,11 @@ void HaploPathFinder::PathFinderCorePars::setOptimizationParameters(seqSetUp & s
 	//kmer occurrence cut off and optimization
 	optKcutStart = 2;
 	//optKcutStop = 5;
-	optKcutStop = 4;
+	optKcutStop = 5;
 	optKcutStep = 1;
 	//kmerKOcurrenceCutOffs = {2,3,4,5,6,7,8,9,10,12,14,16,18,20,25,30,35,40};
 	//kmerKOcurrenceCutOffs = {2,3,4,5};
-	kmerKOcurrenceCutOffs = {2,3,4};
+	kmerKOcurrenceCutOffs = {2,3,4, 5};
 	bool optKcutStartSet = setUp.setOption(optKcutStart,"--optKcutStart", "Optimize k-mer occurrence cut off start");
 	bool optKcutStopSet =  setUp.setOption(optKcutStop, "--optKcutStop",  "Optimize k-mer occurrence cut off stop");
 	bool optKcutStepSet =  setUp.setOption(optKcutStep, "--optKcutStep",  "Optimize k-mer occurrence cut off step");
