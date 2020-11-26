@@ -54,6 +54,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	bfs::path outputDir;
 	bfs::path refDir = "";
 
+	bool keepRawCoverageFile = false;
 	bool keepTemporaryFiles = false;
 	bool writeOutBaseCoveragePerSeq = false;
 	bool reDetermineReadCounts = false;
@@ -152,6 +153,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	setUp.setOption(reDetermineReadCounts, "--reDetermineReadCounts", "Re-determine Read Counts by mapping the recruited sequences back to final sequences");
 	setUp.setOption(writeOutBaseCoveragePerSeq, "--writeOutBaseCoveragePerSeq", "Write Out Base Coverage Per Seq");
 	setUp.setOption(keepTemporaryFiles, "--keepTemporaryFiles", "Keep Temporary Files, by default only the final calls are kept");
+	setUp.setOption(keepRawCoverageFile, "--keepRawCoverageFile", "Keep Raw Coverage File");
+
 
 
 	setUp.setOption(brInvestPars.mapQualityCutOffForMultiMap_, "--mapQualityCutOffForMultiMapForCovInfo", "map Quality Cut Off For Coverage");
@@ -181,9 +184,9 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	masterPars.pFinderPars_.verbose = setUp.pars_.verbose_;
 	//masterPars.pFinderPars_.debug = setUp.pars_.debug_;
 
-	auto regions = gatherRegions(bedFile.string(), "", setUp.pars_.verbose_);
-	masterPars.region_ = regions.front();
-	sortGRegionsByStart(regions);
+	auto inputRegions = gatherRegions(bedFile.string(), "", setUp.pars_.verbose_);
+	masterPars.region_ = inputRegions.front();
+	sortGRegionsByStart(inputRegions);
 
 
 	std::unique_ptr<MultipleGroupMetaData> meta;
@@ -201,7 +204,6 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	auto genomeFnp2bit = masterPars.genomeFnp;
 	genomeFnp2bit.replace_extension(".2bit");
 
-	njh::concurrent::LockableQueue<GenomicRegion> regionsQueue(regions);
 
 	njh::LockableJsonLog jLog(njh::files::make_path(setUp.pars_.directoryName_, "extractionLog.json"));
 
@@ -209,12 +211,12 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	bool regionFailed = false;
 	std::stringstream ss;
 	ss << __PRETTY_FUNCTION__ << ", error, couldn't find ref seqs for the following directories: " << "\n";
-	for(const auto & region : regions){
+	for(const auto & region : inputRegions){
 		auto refSeqs = njh::files::make_path(refDir, region.createUidFromCoordsStrand(), "allRefs.fasta");
 		if(!bfs::exists(refSeqs)){
 			ss << 	region.createUidFromCoordsStrand() << "\n";
 		}
-	}
+	}//lol this currently isn't doing anything, maybe change that up?
 	if(regionFailed){
 		throw std::runtime_error{ss.str()};
 	}
@@ -231,15 +233,20 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	brInvestPars.countDups_ = masterPars.bamExtractPars_.keepMarkedDuplicate_;
 	BamRegionInvestigator brInvestor(brInvestPars);
 	auto regInfos = brInvestor.getCoverageAndFullSpanningReads(
-			setUp.pars_.ioOptions_.firstName_, regions, spanningReadsPar, genomeFnp2bit);
+			setUp.pars_.ioOptions_.firstName_, inputRegions, spanningReadsPar, genomeFnp2bit);
 
 	brInvestor.writeBasicInfo(regInfos, sampName, OutOptions(njh::files::make_path(finalDirectory, "perBaseCoveragePerRegion.bed")));
 
 	std::unordered_map<std::string,
-			std::shared_ptr<BamRegionInvestigator::RegionInfo>> regInfosByUID;
-	for (const auto & p : regInfos) {
-		regInfosByUID[p->region_.createUidFromCoordsStrand()] = p;
+			std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> >regInfosByUID;
+	for (const auto & regInfo : regInfos) {
+		regInfosByUID[regInfo->region_.uid_].emplace_back(regInfo);
 	}
+
+	auto regionNames = getVectorOfMapKeys(regInfosByUID);
+	njh::concurrent::LockableQueue<std::string> regionsQueue(regionNames);
+
+
 
 	std::function<void(HaploPathFinder::ExtractParams)> extractPathway =
 			[&meta,&regionsQueue,&jLog,&refDir,
@@ -249,44 +256,46 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 			 &ignoreFailedTrim, &partialDirectory,&genomeFnp2bit,
 			 &writeOutLogs,&expandEndRegions,&expandRegionBy,
 			 &regInfosByUID,&noTrim,&subNumThreads](HaploPathFinder::ExtractParams inputPars) {
-				GenomicRegion region;
+				std::string regionName;
 				BamExtractor bExtractor(setUp.pars_.verbose_);
 				bExtractor.debug_ = setUp.pars_.debug_;
 				const bfs::path bamFnp = setUp.pars_.ioOptions_.firstName_;
 				TwoBit::TwoBitFile tReader(genomeFnp2bit);
-				while(regionsQueue.getVal(region)) {
+				while(regionsQueue.getVal(regionName)) {
 					HaploPathFinder::ExtractParams parsForRegion = inputPars;
 					parsForRegion.pFinderPars_.numThreads = subNumThreads;
 					//region.setUidWtihCoords();
 					auto regionDir = njh::files::makeDir(parsForRegion.outputDir,
-							njh::files::MkdirPar(region.createUidFromCoordsStrand()));
+							njh::files::MkdirPar(regionName));
 //					auto refAlignsDir = njh::files::makeDir(regionDir,
 //							njh::files::MkdirPar("refAlignments"));
 					uint64_t maxLen = 350;
-
-					auto refSeqsFnp = njh::files::make_path(refDir, region.createUidFromCoordsStrand(), "allRefs.fasta");
+					const auto & regInfo = regInfosByUID.at(regionName);
 					if(!noTrim){
-						if(bfs::exists(refSeqsFnp)){
-							auto refSeqsOpts = SeqIOOptions::genFastaIn(refSeqsFnp);
-							if(!parsForRegion.pFinderPars_.rawInputSeqs){
-								refSeqsOpts.lowerCaseBases_ = "upper";
+						parsForRegion.pFinderPars_.inputSeqs.clear();
+						for(const auto & reg : regInfo){
+							auto refSeqsFnp = njh::files::make_path(refDir, reg->region_.createUidFromCoordsStrand(), "allRefs.fasta");
+
+							if(bfs::exists(refSeqsFnp)){
+								auto refSeqsOpts = SeqIOOptions::genFastaIn(refSeqsFnp);
+								if(!parsForRegion.pFinderPars_.rawInputSeqs){
+									refSeqsOpts.lowerCaseBases_ = "upper";
+								}
+								addOtherVec(parsForRegion.pFinderPars_.inputSeqs, SeqInput::getSeqVec<seqInfo>(refSeqsOpts, maxLen));
+								parsForRegion.pFinderPars_.trimToInputSeqs = true;
+							} else {
+								parsForRegion.pFinderPars_.inputSeqs.emplace_back(reg->region_.extractSeq(tReader));
+								if(!parsForRegion.pFinderPars_.rawInputSeqs){
+									readVec::handelLowerCaseBases(parsForRegion.pFinderPars_.inputSeqs, "upper");
+								}
+								parsForRegion.pFinderPars_.trimToInputSeqs = true;
 							}
-							parsForRegion.pFinderPars_.inputSeqs = SeqInput::getSeqVec<seqInfo>(refSeqsOpts, maxLen);
-							parsForRegion.pFinderPars_.trimToInputSeqs = true;
-							SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
-									SeqIOOptions::genFastaOut(
-											njh::files::make_path(regionDir, "allRefs.fasta")));
-						} else {
-							parsForRegion.pFinderPars_.inputSeqs = {region.extractSeq(tReader)};
-							if(!parsForRegion.pFinderPars_.rawInputSeqs){
-								readVec::handelLowerCaseBases(parsForRegion.pFinderPars_.inputSeqs, "upper");
-							}
-							parsForRegion.pFinderPars_.trimToInputSeqs = true;
-							SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
-									SeqIOOptions::genFastaOut(
-											njh::files::make_path(regionDir, "allRefs.fasta")));
-							readVec::getMaxLength(parsForRegion.pFinderPars_.inputSeqs, maxLen);
 						}
+						//write out the allRefsFile
+						SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
+								SeqIOOptions::genFastaOut(
+										njh::files::make_path(regionDir, "allRefs.fasta")));
+						readVec::getMaxLength(parsForRegion.pFinderPars_.inputSeqs, maxLen);
 					} else {
 						parsForRegion.pFinderPars_.trimToInputSeqs = false;
 					}
@@ -297,13 +306,20 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 					try {
 						auto extractedOpts = setUp.pars_.ioOptions_;
 						extractedOpts.out_.outFilename_ = njh::files::make_path(extractionDir, "extracted");
-						auto regionUsed = region;
-						if(expandEndRegions){
-							regionUsed.start_ = regionUsed.start_ > expandRegionBy ? regionUsed.start_ - expandRegionBy : 0;
-							regionUsed.end_ +=  expandRegionBy;
+
+						std::vector<GenomicRegion> regionsUsed;
+						for(const auto & reg : regInfo){
+							regionsUsed.emplace_back(reg->region_);
 						}
+						for( auto & regionUsed : regionsUsed){
+							if(expandEndRegions){
+								regionUsed.start_ = regionUsed.start_ > expandRegionBy ? regionUsed.start_ - expandRegionBy : 0;
+								regionUsed.end_ +=  expandRegionBy;
+							}
+						}
+
 						auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(
-								extractedOpts, {regionUsed}, parsForRegion.bamExtractPars_);
+								extractedOpts, regionsUsed, parsForRegion.bamExtractPars_);
 						{
 							OutOptions extractedReadsStatsFileOpts(njh::files::make_path(extractionDir, "extractedReadsStats.tab.txt"));
 							OutputStream extractedReadsStatsFileOut(extractedReadsStatsFileOpts);
@@ -311,7 +327,13 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 						}
 
 						if(parsForRegion.pFinderPars_.autoDetermineKCuts){
-							auto perBaseCoverage = regInfosByUID.at(region.createUidFromCoordsStrand())->getPerBaseCov();
+							uint64_t bases  = 0;
+							uint32_t lenSum = 0;
+							for(const auto & reg : regInfo){
+								bases += reg->coverage_;
+								lenSum += reg->region_.getLen();
+							}
+							auto perBaseCoverage = bases/static_cast<double>(lenSum);
 							if(perBaseCoverage > 100 || parsForRegion.pFinderPars_.forceDetermineKCuts){
 								parsForRegion.pFinderPars_.kmerKOcurrenceCutOffs.clear();
 								for(const auto & perc : parsForRegion.pFinderPars_.autoDetermineKCutsPercentages){
@@ -326,7 +348,10 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 						if(outputOpts.inExists()){
 							if(logValue.isMember("bestTotalInputReads")){
-								regInfosByUID.at(region.createUidFromCoordsStrand())->totalFinalReads_ = logValue["bestTotalInputReads"].asUInt();
+								//this is gonna get complicated
+								for(auto & reg : regInfo){
+									reg->totalFinalReads_ = logValue["bestTotalInputReads"].asUInt();;
+								}
 							}
 							SeqInput reader(outputOpts);
 							if(!reader.isFirstEmpty()){
@@ -361,12 +386,16 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 									failFilters = outputSeqs.empty();
 								}
 
-
+								VecStr uidCoords;
+								for(const auto & reg : regInfo){
+									uidCoords.emplace_back(reg->region_.createUidFromCoordsStrand());
+								}
 								//add region meta info
 								for(auto & seq : outputSeqs){
 									MetaDataInName seqMeta(seq->name_);
-									seqMeta.addMeta("regionUID", region.uid_);
-									seqMeta.addMeta("regionCoords", region.createUidFromCoordsStrand());
+
+									seqMeta.addMeta("regionUID", regionName);
+									seqMeta.addMeta("regionCoords", njh::conToStr(uidCoords, ","));
 									seqMeta.resetMetaInName(seq->name_);
 								}
 
@@ -376,7 +405,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 									auto finalKeptSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(regionDir, sampName, "finalKeptTrimedSeqs.fasta"));
 									SeqOutput::write(finalSeqsOnClusters, finalKeptSeqOpts);
 									auto finalInfoRegionDir = njh::files::makeDir(finalDirectory,
-																njh::files::MkdirPar(region.createUidFromCoordsStrand()));
+																njh::files::MkdirPar(regionName));
 									if(reDetermineReadCounts){
 										readVec::getMaxLength(finalSeqsOnClusters, maxLen);
 
@@ -807,7 +836,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 									for(auto & clus : finalSeqsOnClusters){
 										MetaDataInName metaName(clus.seqBase_.name_);
 										metaName.addMeta("length", len(clus), true);
-										clus.seqBase_.name_ = region.uid_ + "." + leftPadNumStr<uint32_t>(count, finalSeqsOnClusters.size()) + metaName.createMetaName();
+										clus.seqBase_.name_ = regionName + "." + leftPadNumStr<uint32_t>(count, finalSeqsOnClusters.size()) + metaName.createMetaName();
 										clus.updateName();
 										outFinalInfo << clus.seqBase_.name_
 												<< "\t" << clus.seqBase_.cnt_
@@ -823,7 +852,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 									//std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 								}else{
 									auto partialInfoRegionDir = njh::files::makeDir(partialDirectory,
-											njh::files::MkdirPar(region.createUidFromCoordsStrand()));
+											njh::files::MkdirPar(regionName));
 									SeqInput originalSeqReader(outputOpts);
 									SeqOutput originalWriter(SeqIOOptions::genFastaOut(njh::files::make_path(partialInfoRegionDir, "output.fasta")));
 									seqInfo seq;
@@ -832,8 +861,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 									while(originalSeqReader.readNextRead(seq)){
 										MetaDataInName seqMeta(seq.name_);
-										seqMeta.addMeta("regionUID", region.uid_);
-										seqMeta.addMeta("regionCoords", region.createUidFromCoordsStrand());
+										seqMeta.addMeta("regionUID", regionName);
+										seqMeta.addMeta("regionCoords", njh::conToStr(uidCoords, ","));
 										seqMeta.resetMetaInName(seq.name_);
 										originalWriter.write(seq);
 									}
@@ -843,18 +872,18 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 					} catch (std::exception & e) {
 						try {
 							auto finalInfoRegionDir = njh::files::make_path(finalDirectory,
-														region.createUidFromCoordsStrand());
+														regionName);
 							if(bfs::exists(finalInfoRegionDir)){
 								njh::files::rmDirForce(finalInfoRegionDir);
 							}
 						} catch (std::exception & e2) {
-							logValue["exception-" + region.createUidFromCoordsStrand()] = e.what() + std::string("\n")+ e2.what();
+							logValue["exception-" + regionName] = e.what() + std::string("\n")+ e2.what();
 						}
-						logValue["exception-" + region.createUidFromCoordsStrand()] = e.what();
+						logValue["exception-" + regionName] = e.what();
 					}
 
 					if(writeOutLogs){
-						jLog.addToLog(region.createUidFromCoordsStrand(), logValue);
+						jLog.addToLog(regionName, logValue);
 					}
 				}
 			};
@@ -893,8 +922,9 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	//collect meta fields
 	std::set<std::string> metaFields;
 	std::vector<uint32_t> readTotals;
-	for(const auto & reg : regions){
-		auto finalOutputSeqFnp = njh::files::make_path(finalDirectory, reg.createUidFromCoordsStrand(), "finalOutput.fasta");
+
+	for(const auto & regionName : regionNames){
+		auto finalOutputSeqFnp = njh::files::make_path(finalDirectory, regionName, "finalOutput.fasta");
 		if(bfs::exists(finalOutputSeqFnp)){
 			SeqInput finalReader(SeqIOOptions::genFastaIn(finalOutputSeqFnp));
 			finalReader.openIn();
@@ -902,7 +932,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 				allFinalWriter.write(seq);
 			}
 		}
-		auto partialOutputSeqFnp = njh::files::make_path(partialDirectory, reg.createUidFromCoordsStrand(), "output.fasta");
+		auto partialOutputSeqFnp = njh::files::make_path(partialDirectory, regionName, "output.fasta");
 		if(bfs::exists(partialOutputSeqFnp)){
 			SeqInput partialReader(SeqIOOptions::genFastaIn(partialOutputSeqFnp));
 			partialReader.openIn();
@@ -910,7 +940,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 				allPartialWriter.write(seq);
 			}
 		}
-		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, reg.createUidFromCoordsStrand(), "finalOutputInfo.tab.txt");
+		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regionName, "finalOutputInfo.tab.txt");
 		if(bfs::exists(finalOutputInfoFnp)){
 			table finalInfoTab(finalOutputInfoFnp, "\t", true);
 			uint32_t readTotal = 0;
@@ -933,10 +963,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 
 	finalTableOut << "ReadName\treadCount\treadFraction\tlength\t" << coverageField << "\tfractionByCoverage\t" << njh::conToStr(metaFields, "\t") << "\n";
-
-	for(const auto & reg : regions){
-		auto regUID = reg.createUidFromCoordsStrand();
-		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regUID, "finalOutputInfo.tab.txt");
+	for(const auto & regionName : regionNames){
+		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regionName, "finalOutputInfo.tab.txt");
 		if(bfs::exists(finalOutputInfoFnp)){
 			table finalInfoTab(finalOutputInfoFnp, "\t", true);
 			//add to coi count
@@ -954,14 +982,47 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 				finalTableOut << std::endl;
 			}
 			//output to called calledTableOut
-			regInfosByUID[regUID]->uniqHaps_ = finalInfoTab.nRow();
-			regInfosByUID[regUID]->infoCalled_ = true;
+			for(auto & regInfo : regInfosByUID.at(regionName)){
+				regInfo->uniqHaps_ = finalInfoTab.nRow();
+				regInfo->infoCalled_ = true;
+			}
+
 		}else{
 			//output to bed coi file
 			//output to called calledTableOut
-			regInfosByUID[regUID]->uniqHaps_ = 0;
-			regInfosByUID[regUID]->infoCalled_ = false;
+			for(auto & regInfo : regInfosByUID.at(regionName)){
+				regInfo->uniqHaps_ = 0;
+				regInfo->infoCalled_ = false;
+			}
 			++coiCounts[0];
+		}
+
+		//adjust per base coverage etc, probably not be the best way to do this
+
+		uint32_t coverage{0};
+		uint32_t multiMapCoverage{0};
+		uint32_t totalReads{0};
+		uint32_t totalFullySpanningReads{0};
+		uint32_t totalPairedReads{0};
+		uint32_t totalProperPairedReads{0};
+		uint32_t totalOneMateUnmappedImproperPairs{0};
+		for(const auto & regInfo : regInfosByUID.at(regionName)){
+			coverage += regInfo->coverage_;
+			multiMapCoverage += regInfo->multiMapCoverage_;
+			totalReads += regInfo->totalReads_;
+			totalFullySpanningReads += regInfo->totalFullySpanningReads_;
+			totalPairedReads += regInfo->totalPairedReads_;
+			totalProperPairedReads += regInfo->totalProperPairedReads_;
+			totalOneMateUnmappedImproperPairs += regInfo->totalOneMateUnmappedImproperPairs_;
+		}
+		for(auto & regInfo : regInfosByUID.at(regionName)){
+			regInfo->coverage_ = coverage;
+			regInfo->multiMapCoverage_ = multiMapCoverage;
+			regInfo->totalReads_ = totalReads;
+			regInfo->totalFullySpanningReads_ = totalFullySpanningReads;
+			regInfo->totalPairedReads_ = totalPairedReads;
+			regInfo->totalProperPairedReads_ = totalProperPairedReads;
+			regInfo->totalOneMateUnmappedImproperPairs_ = totalOneMateUnmappedImproperPairs;
 		}
 	}
 
@@ -973,24 +1034,27 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	coiCountsTab.outPutContents(coiTableOut, "\t");
 
 	if(!keepTemporaryFiles){
-		auto perBaseCovFnp = njh::files::make_path(finalDirectory, "perBaseCoveragePerRegion.bed");
-		if(bfs::exists(perBaseCovFnp)){
-			bfs::remove(perBaseCovFnp);
+		if(!keepRawCoverageFile){
+			auto perBaseCovFnp = njh::files::make_path(finalDirectory, "perBaseCoveragePerRegion.bed");
+			if(bfs::exists(perBaseCovFnp)){
+				bfs::remove(perBaseCovFnp);
+			}
 		}
-		for(const auto & region : regions){
-			auto regionDir = njh::files::make_path(finalDirectory,region.createUidFromCoordsStrand());
+
+		for(const auto & regionName : regionNames){
+			auto regionDir = njh::files::make_path(finalDirectory,regionName);
 			if(bfs::exists(regionDir)){
 				njh::files::rmDirForce(regionDir);
 			}
 		}
-		for(const auto & region : regions){
-			auto regionDir = njh::files::make_path(partialDirectory,region.createUidFromCoordsStrand());
+		for(const auto & regionName : regionNames){
+			auto regionDir = njh::files::make_path(partialDirectory,regionName);
 			if(bfs::exists(regionDir)){
 				njh::files::rmDirForce(regionDir);
 			}
 		}
-		for(const auto & region : regions){
-			auto regionDir = njh::files::make_path(masterPars.outputDir,region.createUidFromCoordsStrand());
+		for(const auto & regionName : regionNames){
+			auto regionDir = njh::files::make_path(masterPars.outputDir,regionName);
 			if(bfs::exists(regionDir)){
 				njh::files::rmDirForce(regionDir);
 			}

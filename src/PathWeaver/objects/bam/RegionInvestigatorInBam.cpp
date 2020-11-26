@@ -760,6 +760,10 @@ void BamRegionInvestigator::writeBasicInfoWithHapRes(
 		regionInfoOut << "\textraField"<<t;
 	}
 	regionInfoOut << "\n";
+	std::unordered_map<std::string, double> regionLengthSumByUid;
+	for(const auto & p : pairs){
+		regionLengthSumByUid[p->region_.uid_] += p->region_.getLen();
+	}
 	for(const auto & p : pairs){
 		auto bedOut = p->region_.genBedRecordCore();
 		regionInfoOut << bedOut.toDelimStr();
@@ -768,9 +772,9 @@ void BamRegionInvestigator::writeBasicInfoWithHapRes(
 		regionInfoOut << "\t" << p->totalReads_;
 		regionInfoOut << "\t" << p->totalFinalReads_;
 		regionInfoOut << "\t" << p->totalFullySpanningReads_;
-		regionInfoOut << "\t" << p->coverage_/static_cast<double>(p->region_.getLen());
+		regionInfoOut << "\t" << p->coverage_/static_cast<double>(regionLengthSumByUid[p->region_.uid_] );
 		if(pars_.mapQualityCutOffForMultiMap_  > pars_.mapQualityCutOff_){
-			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(p->region_.getLen());
+			regionInfoOut << "\t" << p->multiMapCoverage_/static_cast<double>(regionLengthSumByUid[p->region_.uid_] );
 		}
 		regionInfoOut << "\t" << p->totalPairedReads_
 				<< '\t' << p->totalProperPairedReads_
