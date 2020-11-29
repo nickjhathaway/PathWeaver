@@ -244,6 +244,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	}
 
 	auto regionNames = getVectorOfMapKeys(regInfosByUID);
+	njh::sort(regionNames);
 	njh::concurrent::LockableQueue<std::string> regionsQueue(regionNames);
 
 
