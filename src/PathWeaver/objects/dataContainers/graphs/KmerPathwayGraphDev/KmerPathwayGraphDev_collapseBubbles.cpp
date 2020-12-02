@@ -1,5 +1,5 @@
 /*
- * KmerPathwayGraph_collapseBubbles.cpp
+ * KmerPathwayGraphDev_collapseBubbles.cpp
  *
  *  Created on: Feb 27, 2020
  *      Author: nicholashathaway
@@ -27,14 +27,14 @@
 
 
 
-#include "KmerPathwayGraph.hpp"
+#include "KmerPathwayGraphDev.hpp"
 #include "PathWeaver/PathFinding/CoverageEstimator.hpp"
 
 
 namespace njhseq {
 
 
-bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllowed, double freqMultiCutOff){
+bool KmerPathwayGraphDev::collapseBubbleNodesWithError(const comparison & errorAllowed, double freqMultiCutOff){
 
 	//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	//frequency of the second node needs to be this multipler times it's own coverage less than the higher node
@@ -43,19 +43,19 @@ bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllo
 	std::map<std::string, std::vector<std::shared_ptr<node>>> groupedNodes;
 	//gather together the nodes that have the same heads and tails and are also singlely linked forward and backwards
 	for(const auto & n : nodes_){
-		VecStr tailConnectorNames;
-		VecStr headConnectorNames;
+		std::vector<uint32_t> tailConnectorNames;
+		std::vector<uint32_t> headConnectorNames;
 		if(( 1 == n->headCount() && 1== n->tailCount() ) ||
 				(1 == n->headCount() && n->tailless() )      ||
 				(n->headless()       && 1== n->tailCount() ) ){
 			for(const auto & h : n->headEdges_){
 				if(h->on_){
-					headConnectorNames.emplace_back(h->head_.lock()->uid_);
+					headConnectorNames.emplace_back(h->head_.lock()->nodeUid_);
 				}
 			}
 			for(const auto & t : n->tailEdges_){
 				if(t->on_){
-					tailConnectorNames.emplace_back(t->tail_.lock()->uid_);
+					tailConnectorNames.emplace_back(t->tail_.lock()->nodeUid_);
 				}
 			}
 		}
@@ -263,7 +263,7 @@ bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllo
 
 
 
-bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingCovGraph){
+bool KmerPathwayGraphDev::collapseOneBaseIndelsNodes(KmerPathwayGraphDev & estimatingCovGraph){
 //	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	//frequency of the second node needs to be this multipler times it's own coverage less than the higher node
 	//collapse single base errors in homopolymer runs
@@ -271,19 +271,19 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingC
 	std::map<std::string, std::vector<std::shared_ptr<node>>> groupedNodes;
   //gather together the nodes that have the same heads and tails and are also singlely linked forward and backwards
 	for(const auto & n : nodes_){
-		VecStr tailConnectorNames;
-		VecStr headConnectorNames;
+		std::vector<uint32_t> tailConnectorNames;
+		std::vector<uint32_t> headConnectorNames;
 		if(( 1 == n->headCount() && 1== n->tailCount() ) ||
 				(1 == n->headCount() && n->tailless() )      ||
 				(n->headless()       && 1== n->tailCount() ) ){
 			for(const auto & h : n->headEdges_){
 				if(h->on_){
-					headConnectorNames.emplace_back(h->head_.lock()->uid_);
+					headConnectorNames.emplace_back(h->head_.lock()->nodeUid_);
 				}
 			}
 			for(const auto & t : n->tailEdges_){
 				if(t->on_){
-					tailConnectorNames.emplace_back(t->tail_.lock()->uid_);
+					tailConnectorNames.emplace_back(t->tail_.lock()->nodeUid_);
 				}
 			}
 		}
@@ -492,7 +492,7 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingC
 	return false;
 }
 
-//bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingCovGraph){
+//bool KmerPathwayGraphDev::collapseOneBaseIndelsNodes(KmerPathwayGraphDev & estimatingCovGraph){
 ////	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 //	//frequency of the second node needs to be this multipler times it's own coverage less than the higher node
 //	//collapse single base errors in homopolymer runs
@@ -712,7 +712,7 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingC
 //
 
 
-bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
+bool KmerPathwayGraphDev::collapseOneBaseIndelsNodesComplex(){
 		removeOffNodes();
 		removeOffEdges();
 		resetNodePositions();
@@ -734,12 +734,12 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 						1 == firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->headCount() &&
 						1 == lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->headCount() &&
 						1 == lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->headCount() ){
-					std::vector<std::string> tailsFront;
-					tailsFront.emplace_back(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-					tailsFront.emplace_back(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-					std::vector<std::string> tailsBack;
-					tailsBack.emplace_back(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-					tailsBack.emplace_back(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
+					std::vector<uint32_t> tailsFront;
+					tailsFront.emplace_back(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+					tailsFront.emplace_back(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+					std::vector<uint32_t> tailsBack;
+					tailsBack.emplace_back(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+					tailsBack.emplace_back(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
 					njh::sort(tailsFront);
 					njh::sort(tailsBack);
 					if(std::equal(tailsFront.begin(), tailsFront.end(), tailsBack.begin())){
@@ -750,19 +750,19 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 		}
 	}
 	if(!nodesToProcess.empty()){
-		std::set<std::string> uidsModified;
+		std::set<uint32_t> uidsModified;
 		for(const auto & n : nodesToProcess){
 			auto firstTailEdge = n->getFirstOnTailEdge();
 			auto lastTailEdge = n->getLastOnTailEdge();
-			if(!njh::in(n->uid_, uidsModified) &&
-					!njh::in(firstTailEdge->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(lastTailEdge->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_, uidsModified) &&
-					!njh::in(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_, uidsModified)  ){
+			if(!njh::in(n->nodeUid_, uidsModified) &&
+					!njh::in(firstTailEdge->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(lastTailEdge->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_, uidsModified) &&
+					!njh::in(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_, uidsModified)  ){
 
 				std::shared_ptr<node> node1;
 				std::shared_ptr<node> node2;
@@ -806,14 +806,14 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 	//					alignerObj.alignObjectA_.seqBase_.outPutSeqAnsi(std::cout);
 	//					alignerObj.alignObjectB_.seqBase_.outPutSeqAnsi(std::cout);
 						if(allowableErrorForHPIndexCollapse_.passErrorProfile(alignerObj.comp_)){
-							std::vector<std::string> tailsFront;
-							tailsFront.emplace_back(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-							tailsFront.emplace_back(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-							std::unordered_map<std::string, std::vector<std::shared_ptr<node>>> groupedNodes;
-							groupedNodes[firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_].emplace_back(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock());
-							groupedNodes[firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_].emplace_back(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock());
-							groupedNodes[lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_].emplace_back(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock());
-							groupedNodes[lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_].emplace_back(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock());
+							std::vector<uint32_t> tailsFront;
+							tailsFront.emplace_back(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+							tailsFront.emplace_back(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+							std::unordered_map<uint32_t, std::vector<std::shared_ptr<node>>> groupedNodes;
+							groupedNodes[firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_].emplace_back(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock());
+							groupedNodes[firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_].emplace_back(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock());
+							groupedNodes[lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_].emplace_back(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock());
+							groupedNodes[lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_].emplace_back(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock());
 							if(2 == groupedNodes.size()){
 								if(2 == groupedNodes[tailsFront.front()].size() &&
 									 2 == groupedNodes[tailsFront.back()].size()){
@@ -876,15 +876,15 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 											}
 										}
 										if(beginPass && endPass){
-											uidsModified.emplace(n->uid_);
-											uidsModified.emplace(firstTailEdge->tail_.lock()->uid_);
-											uidsModified.emplace(lastTailEdge->tail_.lock()->uid_);
-											uidsModified.emplace(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-											uidsModified.emplace(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->uid_);
-											uidsModified.emplace(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-											uidsModified.emplace(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->uid_);
-											uidsModified.emplace(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
-											uidsModified.emplace(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_);
+											uidsModified.emplace(n->nodeUid_);
+											uidsModified.emplace(firstTailEdge->tail_.lock()->nodeUid_);
+											uidsModified.emplace(lastTailEdge->tail_.lock()->nodeUid_);
+											uidsModified.emplace(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+											uidsModified.emplace(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->nodeUid_);
+											uidsModified.emplace(lastTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+											uidsModified.emplace(lastTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->nodeUid_);
+											uidsModified.emplace(firstTailEdge->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
+											uidsModified.emplace(firstTailEdge->tail_.lock()->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_);
 											modifiedNodes = true;
 											//add in the other node's read names
 											node1->inReadNamesIdx_.insert(
@@ -895,27 +895,27 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodesComplex(){
 												node2->getFirstOnHeadEdge()->inReadNamesIdx_.begin(),
 												node2->getFirstOnHeadEdge()->inReadNamesIdx_.end()
 											);
-											std::unordered_map<std::string, std::shared_ptr<node>> node1Tails;
-											node1Tails[node1->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_] = node1->getFirstOnTailEdge()->tail_.lock();
-											node1Tails[node1->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_] = node1->getLastOnTailEdge()->tail_.lock();
+											std::unordered_map<uint32_t, std::shared_ptr<node>> node1Tails;
+											node1Tails[node1->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_] = node1->getFirstOnTailEdge()->tail_.lock();
+											node1Tails[node1->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_] = node1->getLastOnTailEdge()->tail_.lock();
 											{
 												//add first
 												//add node names
-												node1Tails[node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_]->inReadNamesIdx_.insert(node2->getFirstOnTailEdge()->tail_.lock()->inReadNamesIdx_.begin(), node2->getFirstOnTailEdge()->tail_.lock()->inReadNamesIdx_.end());
+												node1Tails[node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_]->inReadNamesIdx_.insert(node2->getFirstOnTailEdge()->tail_.lock()->inReadNamesIdx_.begin(), node2->getFirstOnTailEdge()->tail_.lock()->inReadNamesIdx_.end());
 												//add head edge names
-												node1Tails[node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_]->getFirstOnHeadEdge()->inReadNamesIdx_.insert(node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.begin(), node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.end());
+												node1Tails[node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_]->getFirstOnHeadEdge()->inReadNamesIdx_.insert(node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.begin(), node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.end());
 												//add tail edge names
-												node1Tails[node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_]->getFirstOnTailEdge()->inReadNamesIdx_.insert(node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.begin(), node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.end());
+												node1Tails[node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_]->getFirstOnTailEdge()->inReadNamesIdx_.insert(node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.begin(), node2->getFirstOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.end());
 												//turn of edge and head and self
 											}
 											{
 												//add second
 												//add node names
-												node1Tails[node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_]->inReadNamesIdx_.insert(node2->getLastOnTailEdge()->tail_.lock()->inReadNamesIdx_.begin(), node2->getLastOnTailEdge()->tail_.lock()->inReadNamesIdx_.end());
+												node1Tails[node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_]->inReadNamesIdx_.insert(node2->getLastOnTailEdge()->tail_.lock()->inReadNamesIdx_.begin(), node2->getLastOnTailEdge()->tail_.lock()->inReadNamesIdx_.end());
 												//add head edge names
-												node1Tails[node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_]->getFirstOnHeadEdge()->inReadNamesIdx_.insert(node2->getLastOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.begin(), node2->getLastOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.end());
+												node1Tails[node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_]->getFirstOnHeadEdge()->inReadNamesIdx_.insert(node2->getLastOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.begin(), node2->getLastOnTailEdge()->tail_.lock()->getFirstOnHeadEdge()->inReadNamesIdx_.end());
 												//add tail edge names
-												node1Tails[node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->uid_]->getFirstOnTailEdge()->inReadNamesIdx_.insert(node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.begin(), node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.end());
+												node1Tails[node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->tail_.lock()->nodeUid_]->getFirstOnTailEdge()->inReadNamesIdx_.insert(node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.begin(), node2->getLastOnTailEdge()->tail_.lock()->getFirstOnTailEdge()->inReadNamesIdx_.end());
 												//turn of edge and head and self
 											}
 											// consider adding the count of the other node

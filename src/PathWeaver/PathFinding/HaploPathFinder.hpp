@@ -30,8 +30,14 @@
 #include <njhseq/BamToolsUtils.h>
 #include <SeekDeep/objects/IlluminaUtils/PairedReadProcessor.hpp>
 
+//#define PATHWEAVERSUPERDEBUG
+//#define PATHWEAVERDEBUG
 
 namespace njhseq {
+
+//utils
+uint32_t countEndHomopolymerLength(const std::string & seq);
+
 
 class HaploPathFinder {
 public:

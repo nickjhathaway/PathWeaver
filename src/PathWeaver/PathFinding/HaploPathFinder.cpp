@@ -28,6 +28,20 @@
 
 namespace njhseq {
 
+uint32_t countEndHomopolymerLength(const std::string & seq){
+	uint32_t ret = 1;
+	if(seq.size() > 1){
+		uint32_t pos = seq.size() - 1;
+		while(pos > 0 && seq[pos - 1] == seq.back()){
+			++ret;
+			--pos;
+		}
+	}
+	return ret;
+}
+
+
+
 Json::Value HaploPathFinder::toJson() const{
 	Json::Value ret;
 	ret["class"] = njh::getTypeName(*this);

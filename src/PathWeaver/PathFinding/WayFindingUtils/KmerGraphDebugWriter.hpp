@@ -28,6 +28,7 @@
 
 
 #include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraph.hpp"
+#include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraphDev/KmerPathwayGraphDev.hpp"
 
 
 namespace njhseq {
@@ -44,6 +45,22 @@ public:
 
 	const KmerPathwayGraph & mainGraph_;
 	KmerPathwayGraph & covEstimatorGraph_;
+
+	void writeOutDotsAndSeqs(const std::string & nameStub);
+};
+
+class KmerGraphDebugWriterDev {
+public:
+
+	KmerGraphDebugWriterDev(const bfs::path &currentDir,
+			const KmerPathwayGraphDev & mainGraph, KmerPathwayGraphDev & covEstimatorGraph);
+
+	uint32_t rectGraphCount_ = 0;
+	bool writeEdgeInfo_ = false;
+	bfs::path currentDir_;
+
+	const KmerPathwayGraphDev & mainGraph_;
+	KmerPathwayGraphDev & covEstimatorGraph_;
 
 	void writeOutDotsAndSeqs(const std::string & nameStub);
 };

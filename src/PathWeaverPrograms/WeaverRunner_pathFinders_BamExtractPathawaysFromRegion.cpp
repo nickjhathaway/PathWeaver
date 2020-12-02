@@ -343,7 +343,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 							}
 						}
 
-						auto PWRes = PathFinderFromSeqs(regionExtracted, regionDir, sampName, parsForRegion.pFinderPars_, meta);
+						auto PWRes = PathFinderFromSeqsDev(regionExtracted, regionDir, sampName, parsForRegion.pFinderPars_, meta);
 						logValue = PWRes.log_;
 						auto outputOpts = SeqIOOptions::genFastaIn(njh::files::make_path(regionDir, sampName, "output_aboveCutOff.fasta"), true);
 

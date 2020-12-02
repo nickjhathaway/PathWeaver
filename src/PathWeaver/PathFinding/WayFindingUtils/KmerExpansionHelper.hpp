@@ -30,6 +30,8 @@
 #include "PathWeaver/PathFinding/WayFindingUtils/TandemRepeatUtils.hpp"
 
 #include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraph.hpp"
+#include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraphDev/KmerPathwayGraphDev.hpp"
+
 #include <njhseq/objects/helperObjects/motif.hpp>
 
 namespace njhseq {
@@ -94,6 +96,64 @@ public:
 
 };
 
+
+
+class KmerExpansionHelperDev {
+public:
+
+
+	class CondensedSeq {
+	public:
+		CondensedSeq(const std::string & seq);
+
+	  std::vector<char> base_;
+	  std::vector<uint32_t> count_;
+
+	};
+
+	KmerExpansionHelperDev(const std::unordered_map<std::string, motif>& tandemMots,
+			const std::unordered_map<std::string, std::unordered_map<std::string, motif>> & tandemsAltMots,
+			const uint32_t klength);
+
+	KmerExpansionHelperDev(const std::unordered_map<std::string, motif>& tandemMots,
+			const std::unordered_map<std::string, std::unordered_map<std::string, motif>> & tandemsAltMots,
+			const uint32_t klength,
+			bool keepPositionsSmallerThanKlen);
+
+	std::unordered_map<std::string, motif> tandemMots_;
+	std::unordered_map<std::string, std::unordered_map<std::string, motif>> tandemsAltMots_;
+	const uint32_t klength_;
+	bool keepPositionsSmallerThanKlen_{false};
+
+	static uint32_t tandemMismatchCutOff; // as it stands with the current method this cannot be not 0, especially for say dinucleotide repeats, even allowing 1 wouldn't work
+	static uint32_t tandemRepeatNumbercutOff;
+	static void addToTandemLocs(const std::string & seq,
+			const std::unordered_map<std::string, motif>& tandemMots,
+			std::unordered_map<std::string, std::unordered_map<std::string, motif>> & tandemsAltMots,
+			uint32_t klength,
+			std::unordered_map<std::string, std::vector<StartStopTanPos>> & tandemLocations);
+
+	static void addToGlobalTandems(const std::string & seq,
+			uint32_t klength,
+			std::vector<TandemRepeatPlusAdjustedSize> & currentTandems);
+
+	static std::unordered_map<std::string, std::vector<StartStopTanPos>> processForTandems(
+			const std::string & seq,
+			const std::unordered_map<std::string, motif>& tandemMots,
+			std::unordered_map<std::string, std::unordered_map<std::string, motif>> & tandemsAltMots,
+			uint32_t klength);
+
+	static std::vector<KmerPathwayGraphDev::StartEndPos> processTandemLocsIntoPositions(
+			const std::string & seq,
+			std::unordered_map<std::string, std::vector<StartStopTanPos>> tandemLocations);
+
+	static std::vector<KmerPathwayGraphDev::StartEndPos> getPositionsForHomopolymers(
+			const std::string & seq, const uint32_t klength);
+
+	std::vector<KmerPathwayGraphDev::StartEndPos> getExpansionPositions(
+			const std::string & seq);
+
+};
 
 
 

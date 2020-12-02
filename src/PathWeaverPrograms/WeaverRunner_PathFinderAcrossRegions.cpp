@@ -156,7 +156,7 @@ int WeaverRunner::SeqsExtractPathaways(const njh::progutils::CmdArgs & inputComm
 		pars.pFinderPars_.inputSeqs = SeqInput::getSeqVec<seqInfo>(setUp.pars_.refIoOptions_);
 	}
 	Json::Value currentLog;
-	auto PWRes = PathFinderFromSeqs(inputOpts, setUp.pars_.directoryName_, sampName, pars.pFinderPars_, meta);
+	auto PWRes = PathFinderFromSeqsDev(inputOpts, setUp.pars_.directoryName_, sampName, pars.pFinderPars_, meta);
 	currentLog[sampName] = PWRes.log_;
 	OutOptions logOutOpts(njh::files::make_path(setUp.pars_.directoryName_, "extractionLog.json"));
 	auto logFilePtr = logOutOpts.openFile();
@@ -741,7 +741,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	}
 
 
-	auto initialPwRes = PathFinderFromSeqs(regionExtracted, setUp.pars_.directoryName_, initialSampleName, pars.pFinderPars_, meta);
+	auto initialPwRes = PathFinderFromSeqsDev(regionExtracted, setUp.pars_.directoryName_, initialSampleName, pars.pFinderPars_, meta);
 
 	std::vector<bfs::path> iterationDirectories;
 	iterationDirectories.emplace_back(njh::files::make_path(setUp.pars_.directoryName_, initialSampleName));
@@ -791,7 +791,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		BamExtractor::ExtractedFilesOpts iterationOpts;
 		iterationOpts.inPairs_ = lastIteractionPaired;
 		iterationOpts.inUnpaired_ = lastIteractionSingles;
-		auto currentPwRes = PathFinderFromSeqs(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
+		auto currentPwRes = PathFinderFromSeqsDev(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
 		iterationDirectories.emplace_back(njh::files::make_path(setUp.pars_.directoryName_, currentIterationSampleName));
 		bestKmerCut = currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
 		bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
@@ -1353,7 +1353,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 
 
 
-		auto currentPwRes = PathFinderFromSeqs(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
+		auto currentPwRes = PathFinderFromSeqsDev(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
 		iterationDirectories.emplace_back(njh::files::make_path(setUp.pars_.directoryName_, currentIterationSampleName));
 		bestKmerCut = currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
 		bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
@@ -1413,7 +1413,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				BamExtractor::ExtractedFilesOpts iterationOpts;
 				iterationOpts.inPairs_ = lastIteractionPaired;
 				iterationOpts.inUnpaired_ = lastIteractionSingles;
-				auto currentPwRes = PathFinderFromSeqs(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
+				auto currentPwRes = PathFinderFromSeqsDev(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
 				iterationDirectories.emplace_back(njh::files::make_path(setUp.pars_.directoryName_, currentIterationSampleName));
 				bestKmerCut = currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
 				bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
@@ -1504,13 +1504,13 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 																									     njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, "filteredExtractedPairs_R2.fastq"));
 	iterationOpts.inUnpaired_ = SeqIOOptions::genFastqIn(njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, "filteredSingles.fastq"));
 
-	//auto currentLog = PathFinderFromSeqs(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars, meta);
+	//auto currentLog = PathFinderFromSeqsDev(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars, meta);
 	if(trimFinalEnds){
 		pars.pFinderPars_.trimEnds = true;
 		pars.pFinderPars_.trimEndsBy = trimFinalEndsBy;
 	}
 	pars.pFinderPars_.headlessTailessLenCutOff = finalHeadlessTaillessCutOff;
-	auto currentPwRes = PathFinderFromSeqs(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
+	auto currentPwRes = PathFinderFromSeqsDev(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
 	auto finalPassDir = njh::files::make_path(setUp.pars_.directoryName_, currentIterationSampleName);
 	fullLog[currentIterationSampleName] = currentPwRes.log_;
 

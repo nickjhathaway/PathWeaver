@@ -28,6 +28,7 @@
 
 
 #include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraph.hpp"
+#include "PathWeaver/objects/dataContainers/graphs/KmerPathwayGraphDev/KmerPathwayGraphDev.hpp"
 
 
 namespace njhseq {
@@ -54,6 +55,12 @@ public:
 
 	static CoverageEstimatedResult estimateCov(const std::string & seq,
 			const MetaDataInName & meta, KmerPathwayGraph & estimatingGraph);
+
+	static CoverageEstimatedResult estimateCov(const seqInfo & seq,
+			 KmerPathwayGraphDev & estimatingGraph);
+
+	static CoverageEstimatedResult estimateCov(const std::string & seq,
+			const MetaDataInName & meta, KmerPathwayGraphDev & estimatingGraph);
 
 
 

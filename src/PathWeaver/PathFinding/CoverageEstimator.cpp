@@ -116,4 +116,82 @@ CoverageEstimator::CoverageEstimatedResult CoverageEstimator::estimateCov(const 
 	return ret;
 }
 
+
+CoverageEstimator::CoverageEstimatedResult CoverageEstimator::estimateCov(
+		const seqInfo & seq,  KmerPathwayGraphDev & estimatingGraph) {
+	CoverageEstimatedResult ret;
+	MetaDataInName meta;
+	if (MetaDataInName::nameHasMetaData(seq.name_)) {
+		meta = MetaDataInName(seq.name_);
+	}
+	return estimateCov(seq.seq_, meta, estimatingGraph);
+}
+
+CoverageEstimator::CoverageEstimatedResult CoverageEstimator::estimateCov(const std::string & seq, const MetaDataInName & meta,  KmerPathwayGraphDev & estimatingGraph){
+	CoverageEstimatedResult ret;
+	if(seq.length() >= estimatingGraph.klen_){
+		for(const auto pos : iter::range(seq.length() - estimatingGraph.klen_ + 1)){
+//			//this is terrible, because it could fail
+//			if(estimatingGraph.kCounts_.end() == estimatingGraph.kCounts_.find(seq.substr(pos, estimatingGraph.klen_))){
+//				std::cout << "seq:     " << seq << std::endl;
+//				std::cout << "seqsize: " << seq.size() << std::endl;
+//				std::cout << "pos:     " << pos << std::endl;
+//				std::cout << "klen:    " << estimatingGraph.klen_ << std::endl;
+//				std::cout << "kmer:    " << seq.substr(pos, estimatingGraph.klen_) << std::endl;
+//				//exit(1);
+//			}
+//			ret.allCounts_.emplace_back(estimatingGraph.kCounts_.at(seq.substr(pos, estimatingGraph.klen_)));
+			ret.allCounts_.emplace_back(estimatingGraph.kCounts_[seq.substr(pos, estimatingGraph.klen_)]);
+		}
+		bool headTrimStatus = false;
+		bool tailTrimStatus = false;
+		if (meta.containsMeta("headTrimStatus") && meta.containsMeta("tailTrimStatus")) {
+			headTrimStatus = meta.getMeta<bool>("headTrimStatus");
+			tailTrimStatus = meta.getMeta<bool>("tailTrimStatus");
+		} else if (meta.containsMeta("trimStatus")) {
+			headTrimStatus = meta.getMeta<bool>("trimStatus");
+			tailTrimStatus = meta.getMeta<bool>("trimStatus");
+		}
+
+		bool headless = false;
+		if(meta.containsMeta("headless")){
+			headless = meta.getMeta<bool>("headless");
+		}
+		bool tailless = false;
+		if(meta.containsMeta("tailless")){
+			tailless = meta.getMeta<bool>("tailless");
+		}
+		auto currentStartAdjust = (headless && !headTrimStatus) ? estimatingGraph.klen_ - 1 : 0;
+		auto currentStopAdjust  = (tailless && !tailTrimStatus) ? estimatingGraph.klen_     : 0;
+		if (ret.allCounts_.size() > currentStartAdjust + currentStopAdjust) {
+			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			for(const auto pos : iter::range<uint64_t>(currentStartAdjust, ret.allCounts_.size() - currentStopAdjust)){
+				CovInfoPerPos minSd;
+				uint64_t startSurroundPos = pos + 1 > estimatingGraph.klen_ ? pos + 1 - estimatingGraph.klen_: 0;
+				for(const auto surPos : iter::range(startSurroundPos, pos + 1)){
+					auto subSet = getSubVector(ret.allCounts_, surPos, std::min<uint32_t>(pos + 1,std::min<uint32_t>(estimatingGraph.klen_, ret.allCounts_.size() - surPos)));
+					double currentSd = vectorStandardDeviationPop(subSet);
+					if(currentSd < minSd.sdCov_){
+						minSd = CovInfoPerPos(pos, surPos, currentSd, vectorMean(subSet));
+					}
+				}
+				ret.coverageInfos_.emplace_back(minSd);
+			}
+
+			for(const auto & cInfo : ret.coverageInfos_){
+				if(cInfo.avgCov_ < ret.minCov_.avgCov_){
+					ret.minCov_ = cInfo;
+				}
+			}
+			//meta.addMeta("estimatedPerBaseCoverage", minAvg, true);
+		} else {
+			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			ret.minCov_.avgCov_ = vectorMean(ret.allCounts_);
+			//meta.addMeta("estimatedPerBaseCoverage", vectorMean(allCounts), true);
+		}
+		//meta.resetMetaInName(seq.name_);
+	}
+	return ret;
+}
+
 }  // namespace njhseq
