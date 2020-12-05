@@ -1,39 +1,21 @@
 /*
- * PathFinders.cpp
+ * PathFinders_dev.cpp
  *
- *  Created on: May 19, 2018
+ *  Created on: Dec 4, 2020
  *      Author: nick
  */
- // PathWeaver - A library for running local haplotype assembly
- // Copyright (C) 2012-2020 Nicholas Hathaway <nickjhathaway@gmail.com>,
- //
- // This file is part of PathWeaver.
- //
- // PathWeaver is free software: you can redistribute it and/or modify
- // it under the terms of the GNU General Public License as published by
- // the Free Software Foundation, either version 3 of the License, or
- // (at your option) any later version.
- //
- // PathWeaver is distributed in the hope that it will be useful,
- // but WITHOUT ANY WARRANTY; without even the implied warranty of
- // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- // GNU General Public License for more details.
- //
- // You should have received a copy of the GNU General Public License
- // along with PathWeaver.  If not, see <http://www.gnu.org/licenses/>.
- //
- //
+
 
 #include "PathFinders.hpp"
 #include "PathWeaver/PathFinding/CoverageEstimator.hpp"
 
 
 
+
 namespace njhseq {
 
 
-
-PathFinderFromSeqsRes PathFinderFromSeqs(
+PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		const BamExtractor::ExtractedFilesOpts & inOpts,
 		const bfs::path & workingDir,
 		const std::string & sampName,
@@ -149,8 +131,8 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				pairedReader.openIn();
 				while (pairedReader.readNextRead(pSeq)) {
 
-					bool firstSkipped = KmerPathwayGraph::skipInputSeqForKCount(pSeq.seqBase_.seq_, currentKLen);
-					bool secondSkipped = KmerPathwayGraph::skipInputSeqForKCount(pSeq.mateSeqBase_.seq_, currentKLen);
+					bool firstSkipped = KmerPathwayGraphDev::skipInputSeqForKCount(pSeq.seqBase_.seq_, currentKLen);
+					bool secondSkipped = KmerPathwayGraphDev::skipInputSeqForKCount(pSeq.mateSeqBase_.seq_, currentKLen);
 					if(extractionPars.trimSeqsWithNs_){
 						auto breaksFirst = readVecTrimmer::breakUpSeqOnPat(pSeq.seqBase_, pFinder);
 						{
@@ -205,7 +187,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				SeqInput singleReader(findTanStitchPars.usedFilteredSinglesOpts);
 				singleReader.openIn();
 				while (singleReader.readNextRead(seq)) {
-					bool skip = KmerPathwayGraph::skipInputSeqForKCount(seq.seq_,
+					bool skip = KmerPathwayGraphDev::skipInputSeqForKCount(seq.seq_,
 							currentKLen);
 
 					auto breaksFirst = readVecTrimmer::breakUpSeqOnPat(seq, pFinder);
@@ -262,7 +244,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				"klen_", currentKLen,
 				"- Processing Sequences For Tandems - Finding Tandems In Seqs" ) );
 		//files for processed tandems
-		KmerExpansionHelper expansionHelperInitial(processedTandems.tandemMots,
+		KmerExpansionHelperDev expansionHelperInitial(processedTandems.tandemMots,
 				processedTandems.tandemsAltMots, currentKLen,
 				extractionPars.useSmallerThanKlenExpandedPositions_);
 		uint32_t seqsWithTandems = 0;
@@ -369,7 +351,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 		auto medReadLeng = vectorMedianRef(readLengths);
 		klenLog["readLengthAverage"] = njh::json::toJson(vectorMean(readLengths));
 		klenLog["readLengthMedian"] = njh::json::toJson(medReadLeng);
-		KmerPathwayGraph debugEstimatingGraph(std::min(extractionPars.estimatorKlen, *std::min_element(extractionPars.kmerLengths.begin(),extractionPars.kmerLengths.end() )));
+		KmerPathwayGraphDev debugEstimatingGraph(std::min(extractionPars.estimatorKlen, *std::min_element(extractionPars.kmerLengths.begin(),extractionPars.kmerLengths.end() )));
 
 #if defined(PATHWEAVERDEBUG)
 		if(true){
@@ -427,7 +409,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 		//StitchResForKLen klenRes(currentKLen, topCurrentDir);
 		uint32_t totalInputBases = 0;
 		uint32_t totalInputSequences = 0;
-		std::shared_ptr<KmerPathwayGraph> firstGraph=std::make_shared<KmerPathwayGraph>(currentKLen);
+		std::shared_ptr<KmerPathwayGraphDev> firstGraph=std::make_shared<KmerPathwayGraphDev>(currentKLen);
 		firstGraph->setOccurenceCutOff(extractionPars.kmerKOcurrenceCutOffs.front());
 //		firstGraph->debug_ = extractionPars.graphDebug_;
 //		firstGraph->verbose_ = extractionPars.graphVerbose_;
@@ -768,7 +750,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				try {
 					watch.startNewLap(
 							njh::pasteAsStr(genPrefixForWatchLapName(), "- Copy Graph"));
-					std::shared_ptr<KmerPathwayGraph> currentGraph;
+					std::shared_ptr<KmerPathwayGraphDev> currentGraph;
 					//copy graph so the entire setup doesn't have to be done again
 					if(kmerOccurenceCutOff == maxKCut &&
 							shortTipNumberIter == maxShortTip &&
@@ -777,7 +759,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						currentGraph = firstGraph;
 					}else{
 						//copy the graph
-						currentGraph = std::make_shared<KmerPathwayGraph>(firstGraph->copyGraph());
+						currentGraph = std::make_shared<KmerPathwayGraphDev>(firstGraph->copyGraph());
 					}
 					if (extractionPars.verbose) {
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(), "- Getting Stats"));
@@ -798,7 +780,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 #endif
 
 #if defined(PATHWEAVERDEBUG)
-					KmerGraphDebugWriter graphWriter(currentShortTipNumberDir, *currentGraph, debugEstimatingGraph);
+					KmerGraphDebugWriterDev graphWriter(currentShortTipNumberDir, *currentGraph, debugEstimatingGraph);
 					graphWriter.writeEdgeInfo_ = extractionPars.debugWriteEdgeInfo_;
 #endif
 
@@ -946,7 +928,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					if(extractionPars.startDisentanglementConservative_){
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes Conservative"));
 						uint32_t disentagleCount = 0;
-						KmerPathwayGraph::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
+						KmerPathwayGraphDev::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 						while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -1032,7 +1014,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					}
 					watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes"));
 					uint32_t disentagleCount = 0;
-					KmerPathwayGraph::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
+					KmerPathwayGraphDev::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 					while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
 						{
@@ -1287,7 +1269,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 							if(extractionPars.startDisentanglementConservative_){
 								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes Conservative After tip removal"));
 								uint32_t disentagleCount = 0;
-								KmerPathwayGraph::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
+								KmerPathwayGraphDev::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 								while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1372,7 +1354,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 							watch.startNewLap(
 									njh::pasteAsStr(genPrefixForWatchLapName(),
 					    "- Connecting easy adjacent bubbles after tip removal"));
-							KmerPathwayGraph::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
+							KmerPathwayGraphDev::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 							while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -1589,7 +1571,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 							if(extractionPars.startDisentanglementConservative_){
 								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes Conservative After tip removal"));
 								uint32_t disentagleCount = 0;
-								KmerPathwayGraph::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
+								KmerPathwayGraphDev::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 								while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1638,7 +1620,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 							watch.startNewLap(
 									njh::pasteAsStr(genPrefixForWatchLapName(),
 					    "- Connecting easy adjacent bubbles after tip removal"));
-							KmerPathwayGraph::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
+							KmerPathwayGraphDev::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 							while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -2002,7 +1984,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 #if defined(PATHWEAVERSUPERDEBUG)
 							{
 								double failCount = 0;
-								std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
+								std::vector<std::shared_ptr<KmerPathwayGraphDev::node>> nodesToProcess;
 								for (const auto & n : currentGraph->nodes_) {
 									if (1 == n->tailCount() && 1 == n->headCount()) {
 										nodesToProcess.push_back(n);
@@ -2025,7 +2007,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 										if (readsThatEnteredLeaving.size()
 												!= std::min(readsEntering.size(), readsLeaving.size())
 												&& readsThatEnteredLeaving.size() < currentGraph->occurenceCutOff_) {
-											std::cout << "For next uid: " << n->uid_ << std::endl;
+											std::cout << "For next uid: " << n->nodeUid_ << " " << n->nameUid_ << std::endl;
 											std::cout << "\tReadsEnteringNumber    : " << readsEntering.size()
 													<< std::endl;
 											std::cout << "\tReadsLeavingNumber     : " << readsLeaving.size()
@@ -2178,7 +2160,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					}
 #endif
 					if(extractionPars.writeOutFinalConnections_){
-//						std::vector<std::shared_ptr<KmerPathwayGraph::node>> nodesToProcess;
+//						std::vector<std::shared_ptr<KmerPathwayGraphDev::node>> nodesToProcess;
 //						for(const auto & n : currentGraph->nodes_){
 //							if(!n->tailless() && !n->headless() && (n->tailCount() > 1 || n->headCount() > 1)){
 //								nodesToProcess.emplace_back(n);
@@ -2403,9 +2385,9 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 						meta.resetMetaInName(seq.name_, seq.name_.find("_t"));
 						outSeqs.emplace_back(seq);
 #if defined(PATHWEAVERDEBUG)
-							if(true){
+						if(true){
 #else
-							if(extractionPars.filterOffOutlierInputSeqs){
+						if(extractionPars.filterOffOutlierInputSeqs){
 #endif
 							std::unordered_set<std::string> readNamesForSeq;
 							for(const auto & nameIdx : node->inReadNamesIdx_){
@@ -2642,15 +2624,21 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 #if defined(PATHWEAVERDEBUG)
 								outliersWriter.openWrite(possibleOutlier);
 #endif
+//								std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//								std::cout << "extractionPars.filterOffOutlierInputSeqs: " << njh::colorBool(extractionPars.filterOffOutlierInputSeqs) << std::endl;
 								if(extractionPars.filterOffOutlierInputSeqs){
 									//not updating final read name counts because it would seem like the run did even worse
 									//std::unordered_set<std::string> keepSeqNames;
+//									std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//									std::cout << "outSeqNamesToReadNames.size(): " << outSeqNamesToReadNames.size() << std::endl;
 									for(const auto & seq : outSeqs){
 										for(const auto & name : outSeqNamesToReadNames[seq.name_]){
 											optRunRes.keepSeqNames_.emplace(njh::replaceString(name, "_mate", ""));
 										}
 										//keepSeqNames.insert(outSeqNamesToReadNames[seq.name_].begin(), outSeqNamesToReadNames[seq.name_].end());
 									}
+//									std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//									std::cout << "optRunRes.keepSeqNames_.size(): " << optRunRes.keepSeqNames_.size() << std::endl;
 #if defined(PATHWEAVERDEBUG)
 									OutputStream keepSeqNamesOut(njh::files::make_path(currentShortTipNumberDir, "keepSeqNames_fromOutlierFilter.txt"));
 									keepSeqNamesOut << njh::conToStr(optRunRes.keepSeqNames_, "\n") << std::endl;
@@ -2658,6 +2646,7 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 								}
 							}
 						}
+
 #if defined(PATHWEAVERDEBUG)
 						{
 							writeOutDebugSeqs(outSeqs, "_passKmerComp");
@@ -3008,12 +2997,20 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 //	}
 //	std::cout << "extractionPars.percentOfInputReadsUsedForOptimization: " << extractionPars.percentOfInputReadsUsedForOptimization << std::endl;
 //	std::cout << "allOptRunResults.size(): " << allOptRunResults.size() << std::endl;
+//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	std::cout << "all allOptRunResults" << std::endl;
+//	for(const auto & opt : allOptRunResults){
+//		std::cout << "\t" << njh::json::writeAsOneLine(opt.runParams_.toJson()) << " keepNames.size(): " << opt.keepSeqNames_.size() << std::endl;
+//	}
 	auto bestOptResults = OptimizationReconResult::getBestResults(
 			allOptRunResults,
 			extractionPars.percentOfInputReadsUsedForOptimization,
 			extractionPars.percentOfInputReadsUsedForOptimizationStepDown,
 			extractionPars.useFullOptimalCount_);
-
+//	std::cout << "best allOptRunResults" << std::endl;
+//	for(const auto & opt : bestOptResults){
+//		std::cout << "\t" << njh::json::writeAsOneLine(opt.runParams_.toJson()) << " keepNames.size(): " << opt.keepSeqNames_.size() << std::endl;
+//	}
 //	std::cout << "bestOptResults.empty(): " << njh::boolToStr(bestOptResults.empty()) << std::endl;
 
 	if(!bestOptResults.empty()){
@@ -3034,8 +3031,8 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 		bestOptAllInfoOut << njh::json::toJson(allOptRunResults)<< std::endl;
 		{
 			watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": Getting Estimate Counts") );
-			//KmerPathwayGraph estimatingGraph(bestResult.runParams_.klen_);
-			KmerPathwayGraph estimatingGraph(std::min(extractionPars.estimatorKlen, *std::min_element(extractionPars.kmerLengths.begin(),extractionPars.kmerLengths.end() )));
+			//KmerPathwayGraphDev estimatingGraph(bestResult.runParams_.klen_);
+			KmerPathwayGraphDev estimatingGraph(std::min(extractionPars.estimatorKlen, *std::min_element(extractionPars.kmerLengths.begin(),extractionPars.kmerLengths.end() )));
 
 			{
 				estimatingGraph.setOccurenceCutOff(bestResult.runParams_.kcut_);
@@ -3119,7 +3116,6 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 //			auto outSeqs = SeqInput::getSeqVec<seqInfo>(finalSeqOpts);
 
 			std::vector<seqInfo> outSeqs = bestResult.finalFilteredOutSeqs_;
-
 			//sort by length
 			njh::sort(outSeqs, [](const seqInfo & seq1, const seqInfo & seq2){
 				return len(seq1) == len(seq2) ? seq1.cnt_ > seq2.cnt_ : len(seq1) > len(seq2);
@@ -3278,7 +3274,6 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 					}
 				}
 			}
-
 			std::unordered_map<std::string, double> coverageForReadSorting;
 			for(auto & seq : outSeqs){
 				auto estCov = CoverageEstimator::estimateCov(seq, estimatingGraph);
@@ -3317,10 +3312,8 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				coverageForReadSorting[seq.name_] = covForSorting;
 			}
 
-
 			uint32_t finalTotalCountAbove = 0;
 			std::vector<seqInfo> finalFilteredSeqs;
-
 			if(extractionPars.collapseFinalClusters_){
 				//sort by coverage and then tie break with read counts
 				//this is mostly being done for collapsing on homopolymer indels and especially in SWGA if there is insertions having reads sorted by length
@@ -3413,7 +3406,6 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 			}
 
 
-
 			auto outSeqOptsAboveFrac = SeqIOOptions::genFastaOut(njh::files::make_path(bestResult.runDirs_.klenDir_, "output_aboveCutOff.fasta"));
 			OutOptions outInfoAboveFracOpts(njh::files::make_path(bestResult.runDirs_.klenDir_, "outputInfo_aboveCutOff.tab.txt"));
 			std::ofstream outInfoAboveFracFile;
@@ -3426,7 +3418,6 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				aboveWriter.write(seq);
 			}
 		}
-
 		auto filesToMoveTop = njh::files::filesInFolder(bestResult.runDirs_.klenDir_);
 		for(const auto & fnp : filesToMoveTop){
 			if(bfs::is_regular_file(fnp)){
@@ -3462,15 +3453,19 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 				}
 			}
 		}
+//#endif
 #else
+		//these are copied from the directories when debuging which writes more each optimization round
 		//if final dot
 		if(extractionPars.writeOutFinalDot_){
 			OutputStream rectDotOut(njh::files::make_path(finalCurrentDir,"output_final.dot"));
 			rectDotOut << bestResult.finalDot_->str();
 		}
 		//if filter off
-		if (extractionPars.filterOffOutlierInputSeqs) {
+		if (extractionPars.filterOffOutlierInputSeqs && !bestResult.keepSeqNames_.empty()) {
 			OutputStream keepSeqNamesOut(njh::files::make_path(finalCurrentDir, "keepSeqNames_fromOutlierFilter.txt"));
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			std::cout << "bestResult.keepSeqNames_.size(): " << bestResult.keepSeqNames_.size() << std::endl;
 			keepSeqNamesOut << njh::conToStr(bestResult.keepSeqNames_, "\n") << std::endl;
 		}
 		//always write output.fasta
@@ -3561,10 +3556,5 @@ PathFinderFromSeqsRes PathFinderFromSeqs(
 	ret.log_["time"] = njh::json::toJson(watch);
 	return ret;
 }
-
-
-
-
-
 
 }  // namespace njhseq

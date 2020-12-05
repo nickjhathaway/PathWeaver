@@ -456,11 +456,13 @@ void HaploPathFinder::PathFinderCorePars::setAddingGroupInfoOpts(seqSetUp & setU
 void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & setUp){
 	if (trimToInputSeqs) {
 		bool noTrimToInputSeqs = false;
-		setUp.setOption(trimToInputSeqs, "--noTrimEachIteration", "Do not trim to the input references after each iteration");
+		setUp.setOption(noTrimToInputSeqs, "--noTrimEachIteration", "Do not trim to the input references after each iteration");
 		trimToInputSeqs = !noTrimToInputSeqs;
+
 	} else {
 		setUp.setOption(trimToInputSeqs, "--trimEachIteration", "Trim to the input references after each iteration");
 	}
+
 	bool noTrimWithGlobalAln = false;
 	setUp.setOption(noTrimWithGlobalAln, "--noTrimWithGlobalAln", "Trim to the input references with global alignment to input seqs rather than with muscle");
 	trimWithGlobalAln = !noTrimWithGlobalAln;

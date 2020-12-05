@@ -184,7 +184,7 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 //								std::cout << "optResTest.numberOfFinalFilteredSeqs_ < bestOptResults.front().numberOfFinalFilteredSeqs_: " << njh::colorBool(optResTest.numberOfFinalFilteredSeqs_ < bestOptResults.front().numberOfFinalFilteredSeqs_) << std::endl;
 //
 //								std::cout << njh::bashCT::reset;
-								if(optimalCount < 4){
+								if(optimalCount < 2){
 									if(optResTest.numberOfFinalFilteredSeqs_ < bestOptResults.front().numberOfFinalFilteredSeqs_){
 									bestOptResults.clear();
 									bestOptResults.emplace_back(optResTest);
