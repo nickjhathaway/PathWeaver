@@ -80,6 +80,9 @@ public:
 		uint32_t qualTrim_ = 2;
 		bool trimOnQual_ = false;
 
+//		uint32_t trimLeft_ = 0;
+//		uint32_t trimRight_ = 0;
+
 		double qualCheckCutOff_  = 0.5;
 		uint32_t qualCheck_ = 30;
 		bool preFilterReadsOnEntropy_{true};

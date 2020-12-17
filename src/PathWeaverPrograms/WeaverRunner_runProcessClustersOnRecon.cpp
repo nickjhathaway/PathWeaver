@@ -24,6 +24,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	bfs::path inputDirectory = "./";
 	std::string pat = "";
 	std::string countField =  "estimatedPerBaseCoverage";
+	bool addPartial = false;
 	bool keepCommonSeqsWhenFiltering = false;
 
 	SeekDeepSetUp setUp(inputCommands);
@@ -42,6 +43,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
 	setUp.setOption(samples, "--samples", "Process input from only these samples");
 	setUp.setOption(targets, "--targets", "Process input for only these targets");
+	setUp.setOption(addPartial, "--addPartial", "Add Partial");
 
 	setUp.setOption(countField, "--countField", "counts field (set equal to \"reads\" to use the total reads for a hap");
 	setUp.processDirectoryOutputName(pat+ "_populationClustering", true);
@@ -278,7 +280,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 																				 &allSeqsByTarget, &allMetaFields, &allSeqsByTargetMut,
 																				 &sampleField, &targetField,
 																				 &missingOutput, &countField, &targets,
-																				 &meta](){
+																				 &meta,&addPartial](){
 			bfs::path inputDir;
 			VecStr currentMissingOutput;
 			std::unordered_map<std::string, std::vector<seqInfo>> currentAllSeqsByTarget;
@@ -306,27 +308,52 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						currentMissingOutput.emplace_back(inputDir.string());
 					}else{
 						std::unordered_map<std::string, std::vector<seqInfo>> seqsByTarget;
-						auto inputOpts = SeqIOOptions::genFastaIn(finalSeqFnp);
-						inputOpts.processed_ = true;
-						SeqInput reader(inputOpts);
-						reader.openIn();
-						seqInfo seq;
-						std::set<std::string> samples;
-						while(reader.readNextRead(seq)){
-							MetaDataInName seqMeta(seq.name_);
-							auto rawTarName = seqMeta.getMeta(targetField);
-							if(!targets.empty() && !njh::in(rawTarName, targets)){
-								continue;
+						std::set<std::string> samplesInPrcoessFiles;
+						{
+							auto inputOpts = SeqIOOptions::genFastaIn(finalSeqFnp);
+							inputOpts.processed_ = true;
+							SeqInput reader(inputOpts);
+							reader.openIn();
+							seqInfo seq;
+							while(reader.readNextRead(seq)){
+								MetaDataInName seqMeta(seq.name_);
+								auto rawTarName = seqMeta.getMeta(targetField);
+								if(!targets.empty() && !njh::in(rawTarName, targets)){
+									continue;
+								}
+								auto tarName = njh::replaceString(rawTarName, ".", "-");
+								//targetKey[tarName] = rawTarName;
+								seqsByTarget[tarName].emplace_back(seq);
+								samplesInPrcoessFiles.emplace(seqMeta.getMeta(sampleField));
 							}
-							std::cout << __FILE__ << " " << __LINE__ << std::endl;
-							auto tarName = njh::replaceString(rawTarName, ".", "-");
-							//targetKey[tarName] = rawTarName;
-							seqsByTarget[tarName].emplace_back(seq);
-							samples.emplace(seqMeta.getMeta(sampleField));
 						}
-						if(1 != samples.size()){
+						if(addPartial){
+							auto partialSeqFnp = njh::files::make_path(inputDir,"partial", "allPartial.fasta");
+							if(bfs::exists(partialSeqFnp) && 0 != bfs::file_size(partialSeqFnp)){
+								auto inputOpts = SeqIOOptions::genFastaIn(partialSeqFnp);
+								inputOpts.processed_ = true;
+								SeqInput reader(inputOpts);
+								reader.openIn();
+								seqInfo seq;
+
+								while(reader.readNextRead(seq)){
+									MetaDataInName seqMeta(seq.name_);
+									auto rawTarName = seqMeta.getMeta(targetField);
+									if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
+										if(!targets.empty() && !njh::in(rawTarName, targets)){
+											continue;
+										}
+										auto tarName = njh::replaceString(rawTarName, ".", "-");
+										//targetKey[tarName] = rawTarName;
+										seqsByTarget[tarName].emplace_back(seq);
+										samplesInPrcoessFiles.emplace(seqMeta.getMeta(sampleField));
+									}
+								}
+							}
+						}
+						if(1 != samplesInPrcoessFiles.size()){
 							std::stringstream ss;
-							ss << __PRETTY_FUNCTION__ << ", error " << " found more than 1 sample name in " << inputDir << ", found: " << njh::conToStr(samples, ",")<< "\n";
+							ss << __PRETTY_FUNCTION__ << ", error " << " found more than 1 sample name in " << inputDir << ", found: " << njh::conToStr(samplesInPrcoessFiles, ",")<< "\n";
 							throw std::runtime_error{ss.str()};
 						}
 						for( auto & tar : seqsByTarget){
@@ -394,7 +421,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			}
 		}
 
-		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if(!missingOutput.empty()){
 			OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
 			missingOut << njh::conToStr(missingOutput, "\n") << std::endl;
@@ -405,7 +431,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				&& njh::in("BiologicalSample", allMetaFields)
 				&& njh::in("sample", allMetaFields)) {
 			std::unordered_map<std::string,std::unordered_map<std::string, VecStr>> failedToCombine;
-			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			for(auto & tar : allSeqsByTarget){
 				sequencesByTargetBySample[tar.first] = std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>>{};
 			}
@@ -423,7 +448,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				std::set<std::string> currentAllSamples;
 				std::unordered_map<std::string,std::unordered_map<std::string, VecStr>> currentFailedToCombine;
 				while(tarKeysQueue.getVal(tarKey)){
-					std::cout << "\t" << tarKey << std::endl;
 					auto tarSeqOpts = SeqIOOptions::genFastaOutGz(njh::files::make_path(seqsByTargetDir, tarKey));
 					SeqOutput tarSeqWriter(tarSeqOpts);
 
