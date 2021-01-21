@@ -620,6 +620,15 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 																					 &setUp,&allSamples,&sequencesByTargetBySample,
 																					 &seqOpts,&maxLen,&numThreadsForSample](){
 		std::string tar = "";
+		// create aligner class object
+		aligner alignerObj(maxLen, setUp.pars_.gapInfo_, setUp.pars_.scoring_,
+				KmerMaps(setUp.pars_.colOpts_.kmerOpts_.kLength_),
+				setUp.pars_.qScorePars_, setUp.pars_.colOpts_.alignOpts_.countEndGaps_,
+				setUp.pars_.colOpts_.iTOpts_.weighHomopolyer_);
+		alignerObj.processAlnInfoInput(setUp.pars_.alnInfoDirName_);
+		njhseq::concurrent::AlignerPool alnPool(alignerObj,numThreadsForSample );
+		alnPool.initAligners();
+		alnPool.outAlnDir_ = setUp.pars_.outAlnInfoDirName_;
 	while(tarNamesQueue.getVal(tar)){
 		//translation helpers
 		std::unique_ptr<TranslatorByAlignment> translator;
@@ -647,13 +656,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		}
 
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
-		// create aligner class object
-		aligner alignerObj(maxLen, setUp.pars_.gapInfo_, setUp.pars_.scoring_,
-				KmerMaps(setUp.pars_.colOpts_.kmerOpts_.kLength_),
-				setUp.pars_.qScorePars_, setUp.pars_.colOpts_.alignOpts_.countEndGaps_,
-				setUp.pars_.colOpts_.iTOpts_.weighHomopolyer_);
-//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
-		alignerObj.processAlnInfoInput(setUp.pars_.alnInfoDirName_);
+
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		// create collapserObj used for clustering
 		collapser collapserObj(setUp.pars_.colOpts_);
@@ -675,11 +678,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		{
 			njh::concurrent::LockableQueue<std::string> sampleQueue(allSamples);
-			njhseq::concurrent::AlignerPool alnPool(alignerObj,numThreadsForSample );
-			alnPool.initAligners();
-			alnPool.outAlnDir_ = setUp.pars_.outAlnInfoDirName_;
+
 //			std::cout << __FILE__ << " " << __LINE__ << std::endl;
-			std::function<void()> setupClusterSamples = [&sampleQueue, &alnPool,&collapserObj,&currentPars,&setUp,
+			std::function<void()> setupClusterSamples = [
+																									 &sampleQueue,&alnPool,&collapserObj,&currentPars,&setUp,
 																	&sampColl,&customCutOffsMap,
 																	&customCutOffsMapPerRep, &sequencesByTargetBySample,&tar](){
 				std::string samp = "";
