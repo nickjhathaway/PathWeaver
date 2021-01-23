@@ -254,9 +254,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	std::string sampleField = "sample";
 	std::string targetField = "regionUID";
-	uint64_t maxLen = 0;
-	//key1 = target, key2= sample, value = the sequences
-	std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>>> sequencesByTargetBySample;
+
 	VecStr missingOutput;
 
 	auto seqsByTargetDir = njh::files::make_path(setUp.pars_.directoryName_, "seqsByTarget");
@@ -267,10 +265,16 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	auto sampleMetaDataFnp = njh::files::make_path(infoDir, "sampleMetaData.tab.txt");
 	njh::stopWatch watch;
 	watch.setLapName("Reading in seqs");
+	auto allSeqsFnp = njh::files::make_path(infoDir, "allSeqsFile.fasta");
+	auto allSeqsFnpIn = SeqIOOptions::genFastaIn(allSeqsFnp);
+	allSeqsFnpIn.processed_ = true;
+	std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> seqNumbers;
+
 	{
+		//key1 = target, key2= sample, value = the sequences
+		std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>>> sequencesByTargetBySample;
 		std::unordered_map<std::string, std::vector<seqInfo>> allSeqsByTarget;
 		std::set<std::string> allMetaFields;
-		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 
 		njh::concurrent::LockableVec<bfs::path> inputDirQueue(directories);
@@ -285,7 +289,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			VecStr currentMissingOutput;
 			std::unordered_map<std::string, std::vector<seqInfo>> currentAllSeqsByTarget;
 			while(inputDirQueue.getVal(inputDir)){
-				std::cout << "\t" << inputDir << std::endl;
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
 				if(bfs::exists(finalSeqFnp) && 0 != bfs::file_size(finalSeqFnp) && bfs::exists(coiPerBedLocationFnp)){
@@ -417,7 +420,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				}
 				auto tarName = njh::replaceString(rawTarName, ".", "-");
 				targetKey[tarName] = rawTarName;
-				readVec::getMaxLength(tarSeqs.second, maxLen);
 			}
 		}
 
@@ -576,9 +578,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			}
 			metaTab = metaTab.getUniqueRows();
 			//add in missing samples that had no preferred sample
-
-
-
 			OutputStream metaOut(sampleMetaDataFnp);
 			metaTab.outPutContents(metaOut, "\t");
 		}else{
@@ -586,12 +585,40 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				bfs::copy_file(masterPopClusPars.groupingsFile, sampleMetaDataFnp);
 			}
 		}
+		{
+			//write out seqs
+			uint32_t seqCounts = 0;
+			auto allSeqsFileOpts = SeqIOOptions::genFastaOut(allSeqsFnp);
+			SeqOutput allSeqsWriter(allSeqsFileOpts);
+			allSeqsWriter.openOut();
+			for(const auto & tar : sequencesByTargetBySample){
+				uint32_t totalWrittenForTarget = 0;
+				for(const auto & samp : tar.second){
+					for(const auto & samp2 : samp.second){
+						allSeqsWriter.write(samp2.second.repSeqs_);
+						totalWrittenForTarget+= samp2.second.repSeqs_.size();
+					}
+				}
+				seqNumbers[tar.first] = std::make_pair(seqCounts, totalWrittenForTarget);
+				seqCounts+= totalWrittenForTarget;
+			}
+		}
+		SeqInput::buildIndex(allSeqsFnpIn);
+
 	}
 
 	if("" != masterPopClusPars.groupingsFile){
 		masterPopClusPars.groupingsFile = sampleMetaDataFnp.string();
 	}
 
+
+//	{
+//		SeqInput allSeqsReader(allSeqsFnpIn);
+//		auto seqTargets = allSeqsReader.getReads<seqInfo>(seqNumbers["Pf3D7_14_v3-3213358-3213597-for"].first, seqNumbers["Pf3D7_14_v3-3213358-3213597-for"].second);
+//		for(const auto & seq : seqTargets){
+//			std::cout << seq.name_ << std::endl;
+//		}
+//	}
 
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
@@ -612,24 +639,36 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	seqOpts.inFormat_ = SeqIOOptions::inFormats::FASTA;
 	seqOpts.outFormat_ = SeqIOOptions::outFormats::FASTAGZ;
 
-	auto tarNames = getVectorOfMapKeys(sequencesByTargetBySample);
+	auto tarNames = getVectorOfMapKeys(seqNumbers);
 	njh::sort(tarNames);
 	njh::concurrent::LockableQueue<std::string> tarNamesQueue(tarNames);
 	const auto masterPopClusParsCopyConst = masterPopClusPars;
 	std::function<void()> runPopClusOnTar = [&tarNamesQueue,&masterPopClusParsCopyConst,
-																					 &setUp,&allSamples,&sequencesByTargetBySample,
-																					 &seqOpts,&maxLen,&numThreadsForSample](){
+																					 &setUp,&allSamples,&seqNumbers,
+																					 &allSeqsFnpIn,
+																					 &seqOpts,&numThreadsForSample](){
 		std::string tar = "";
-		// create aligner class object
-		aligner alignerObj(maxLen, setUp.pars_.gapInfo_, setUp.pars_.scoring_,
-				KmerMaps(setUp.pars_.colOpts_.kmerOpts_.kLength_),
-				setUp.pars_.qScorePars_, setUp.pars_.colOpts_.alignOpts_.countEndGaps_,
-				setUp.pars_.colOpts_.iTOpts_.weighHomopolyer_);
-		alignerObj.processAlnInfoInput(setUp.pars_.alnInfoDirName_);
-		njhseq::concurrent::AlignerPool alnPool(alignerObj,numThreadsForSample );
-		alnPool.initAligners();
-		alnPool.outAlnDir_ = setUp.pars_.outAlnInfoDirName_;
+
 	while(tarNamesQueue.getVal(tar)){
+		uint64_t maxLen = 0;
+
+		//read in seqs for target
+		std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>> seqsForSample;
+		{
+			SeqInput targetSeqReader(allSeqsFnpIn);
+			auto seqs = targetSeqReader.getReads<seqInfo>(seqNumbers.at(tar).first, seqNumbers.at(tar).second);
+			for(const auto & seq : seqs){
+				readVec::getMaxLength(seq, maxLen);
+				MetaDataInName meta(seq.name_);
+				auto sample = meta.getMeta("sample");
+				if(njh::in(sample, seqsForSample)){
+					seqsForSample[sample].at(sample).repSeqs_.emplace_back(seq);
+				}else{
+					seqsForSample[sample].emplace(sample, njhseq::collapse::SampleCollapseCollection::RepSeqs(sample, std::vector<seqInfo>{seq}));
+				}
+			}
+		}
+
 		//translation helpers
 		std::unique_ptr<TranslatorByAlignment> translator;
 		if("" != masterPopClusParsCopyConst.transPars.gffFnp_){
@@ -656,7 +695,15 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		}
 
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
-
+		// create aligner class object
+		aligner alignerObj(maxLen, setUp.pars_.gapInfo_, setUp.pars_.scoring_,
+				KmerMaps(setUp.pars_.colOpts_.kmerOpts_.kLength_),
+				setUp.pars_.qScorePars_, setUp.pars_.colOpts_.alignOpts_.countEndGaps_,
+				setUp.pars_.colOpts_.iTOpts_.weighHomopolyer_);
+		alignerObj.processAlnInfoInput(setUp.pars_.alnInfoDirName_);
+		njhseq::concurrent::AlignerPool alnPool(alignerObj,numThreadsForSample );
+		alnPool.initAligners();
+		alnPool.outAlnDir_ = setUp.pars_.outAlnInfoDirName_;
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		// create collapserObj used for clustering
 		collapser collapserObj(setUp.pars_.colOpts_);
@@ -683,20 +730,20 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			std::function<void()> setupClusterSamples = [
 																									 &sampleQueue,&alnPool,&collapserObj,&currentPars,&setUp,
 																	&sampColl,&customCutOffsMap,
-																	&customCutOffsMapPerRep, &sequencesByTargetBySample,&tar](){
+																	&customCutOffsMapPerRep, &seqsForSample](){
 				std::string samp = "";
 				auto currentAligner = alnPool.popAligner();
 				while(sampleQueue.getVal(samp)){
 					if(setUp.pars_.verbose_){
 						std::cout << "Starting: " << samp << std::endl;
 					}
-					if(!njh::in(samp, sequencesByTargetBySample.at(tar))){
+					if(!njh::in(samp, seqsForSample)){
 						sampColl.lowRepCntSamples_.emplace_back(samp);
 						//doesn't contain this sample, continue onwards
 						continue;
 					}
 
-					sampColl.setUpSample(samp,sequencesByTargetBySample.at(tar).at(samp), *currentAligner, collapserObj, setUp.pars_.chiOpts_);
+					sampColl.setUpSample(samp,seqsForSample.at(samp), *currentAligner, collapserObj, setUp.pars_.chiOpts_);
 
 					sampColl.clusterSample(samp, *currentAligner, collapserObj, currentPars.iteratorMap);
 
@@ -1305,6 +1352,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	njh::concurrent::runVoidFunctionThreaded(runPopClusOnTar, masterPopClusPars.numThreads);
 
 
+	//zip all seqs file
+	bfs::path outAllSeqsFnp = allSeqsFnp.string() + ".gz";
+	njh::gzZipFile(IoOptions(InOptions(allSeqsFnp), OutOptions(outAllSeqsFnp)));
+	bfs::remove(allSeqsFnp);
 	return 0;
 }
 
