@@ -667,7 +667,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 			auto populationInput = sampColl.createPopInput();
 			std::cout << populationInput.size() << std::endl;
-
+			std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(100000s);
 			sampColl.doPopulationClustering(populationInput, alignerObj, collapserObj, currentPars.popIteratorMap);
 			std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
 			using namespace std::chrono_literals;
