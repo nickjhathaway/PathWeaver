@@ -667,7 +667,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			std::cout << "sampColl.popCollapse_->input_.info_.totalReadCount_: " << sampColl.popCollapse_->input_.info_.totalReadCount_ << std::endl;
 		}
 
-
+		sleep(100000000);
 
 		if(currentPars.rescuePars_.performResuce()){
 			sampColl.conductResuceOperations(currentPars.rescuePars_, alignerObj, collapserObj, currentPars.popIteratorMap);
