@@ -666,7 +666,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		{
 
 			auto populationInput = sampColl.createPopInput();
-
+			std::cout << populationInput.size() << std::endl;
 
 			sampColl.doPopulationClustering(populationInput, alignerObj, collapserObj, currentPars.popIteratorMap);
 			std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
@@ -1209,7 +1209,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	};
 
-	njh::concurrent::runVoidFunctionThreaded(runPopClusOnTar, masterPopClusPars.numThreads);
+	njh::concurrent::runVoidFunctionThreaded(runPopClusOnTar, 1);
+	//njh::concurrent::runVoidFunctionThreaded(runPopClusOnTar, masterPopClusPars.numThreads);
 
 
 	//zip all seqs file
