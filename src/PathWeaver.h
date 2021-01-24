@@ -27,4 +27,5 @@
 #include "PathWeaver/PathFinding.h"
 #include "PathWeaver/utils.h"
 #include "PathWeaver/seqToolsUtils.h"
+#include "PathWeaver/PostWeavingUtils.h"
 

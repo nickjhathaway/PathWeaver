@@ -16,14 +16,139 @@
 #include <njhseq/objects/dataContainers/tables/TableReader.hpp>
 #include <njhseq/objects/Meta.h>
 
+#include "PathWeaver/PostWeavingUtils/GatheringUtils.hpp"
+
+
 namespace njhseq {
+
+int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
+	SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetPars rawGatherPars;
+	SeqGatheringFromPathWeaver::processedGatherSeqsMetaPars processedPars;
+	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars corePars;
+
+
+	std::set<std::string> samples;
+	std::set<std::string> targets;
+	bfs::path inputDirectory = "./";
+	std::string pat = "";
+	bfs::path groupingsFile;
+
+	corePars.countField = "estimatedPerBaseCoverage";
+	corePars.numThreads = 1;
+	rawGatherPars.addPartial = false;
+
+
+	seqSetUp setUp(inputCommands);
+	// parameters
+	setUp.processDebug();
+	setUp.processVerbose();
+	setUp.setOption(pat, "--pat","The results directory pattern to process, directories must end with this, the prefix to this pattern will be treated as the sample name", true);
+	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
+	setUp.setOption(samples, "--samples", "Process input from only these samples");
+	setUp.setOption(targets, "--targets", "Process input for only these targets");
+	setUp.setOption(rawGatherPars.addPartial, "--addPartial", "Add Partial");
+	setUp.setOption(corePars.numThreads, "--numThreads", "number threads");
+	setUp.setOption(corePars.countField, "--countField", "countField");
+	setUp.setOption(processedPars.keepCommonSeqsWhenFiltering, "--keepCommonSeqsWhenFiltering", "Keep Common Seqs When Filtering");
+
+	setUp.setOption(groupingsFile, "--groupingsFile,--meta", "Groupings File");
+
+	setUp.processDirectoryOutputName(pat+ "_gatheredSeqs", true);
+	setUp.finishSetUp(std::cout);
+
+	setUp.startARunLog(setUp.pars_.directoryName_);
+	corePars.sampleField = "sample";
+	corePars.targetField = "regionUID";
+
+	std::vector<bfs::path> directories;
+	if (samples.empty()) {
+		auto allFiles = njh::files::listAllFiles(inputDirectory, false, {std::regex { ".*" + pat + "$" } });
+		for (const auto &f : allFiles) {
+			if (f.second) {
+				directories.emplace_back(f.first);
+			}
+		}
+	} else {
+		for (const auto &samp : samples) {
+			directories.emplace_back(njh::files::make_path(inputDirectory, samp + pat));
+		}
+	}
+
+	if(directories.empty()){
+		std::stringstream ss;
+		ss << __PRETTY_FUNCTION__ << ", error no directories found in " << inputDirectory << " ending with " << pat << "\n";
+		throw std::runtime_error{ss.str()};
+	}
+
+
+	std::shared_ptr<MultipleGroupMetaData> meta;
+	if("" != groupingsFile){
+		meta = std::make_shared<MultipleGroupMetaData>(groupingsFile);
+	}
+
+	processedPars.outMetaFnp = njh::files::make_path(setUp.pars_.directoryName_, "metaFnp.tab.txt");
+	auto rawAllSeqsFnp = njh::files::make_path(setUp.pars_.directoryName_, "rawAllSeqsFile.fasta");
+	auto targetsLocsFnp = njh::files::make_path(setUp.pars_.directoryName_, "targetLocations.tab.txt");
+	//
+	rawGatherPars.allSeqFnp = rawAllSeqsFnp;
+	rawGatherPars.directories = directories;
+	corePars.meta = meta;
+	rawGatherPars.targets = targets;
+
+	SeqGatheringFromPathWeaver gatherer(corePars);
+
+	auto rawGatherRes = gatherer.gatherSeqsAndSortByTarget(rawGatherPars);
+	{
+		OutputStream targetsLocsOut(targetsLocsFnp);
+		VecStr tarKeys = getVectorOfMapKeys(rawGatherRes.seqsLocations);
+		njh::sort(tarKeys);
+		for(const auto & tar : tarKeys){
+			targetsLocsOut << tar
+					<< "\t" << rawGatherRes.seqsLocations[tar].first
+					<< "\t" << rawGatherRes.seqsLocations[tar].second
+					<< std::endl;
+		}
+	}
+
+	auto processedGatherRes = gatherer.processedGatherSeqsMeta(processedPars, rawGatherRes);
+	if(processedGatherRes.allSeqFnp != rawGatherRes.allSeqFnp){
+		VecStr tarKeys = getVectorOfMapKeys(processedGatherRes.seqsLocations);
+		njh::sort(tarKeys);
+		OutputStream processedTargetsLocsOut(njh::files::make_path(setUp.pars_.directoryName_, "processedTargetLocations.tab.txt"));
+
+		for(const auto & tar : tarKeys){
+			processedTargetsLocsOut << tar
+					<< "\t" << rawGatherRes.seqsLocations[tar].first
+					<< "\t" << rawGatherRes.seqsLocations[tar].second
+					<< std::endl;
+		}
+	}
+
+	if(!processedGatherRes.failedToCombine.empty()){
+		OutputStream failedToCombineOut(njh::files::make_path(setUp.pars_.directoryName_, "failedToCombine.txt"));
+		failedToCombineOut << "target\tmetaField\tsamples" << std::endl;
+		for(const auto & target : iter::sorted(njh::getVecOfMapKeys(processedGatherRes.failedToCombine))){
+			for(const auto & field : processedGatherRes.failedToCombine.at(target)){
+				failedToCombineOut << target
+						<< "\t" << field.first
+						<< "\t" << njh::conToStr(field.second, ",") << std::endl;
+			}
+		}
+	}
+
+
+
+	return 0;
+}
+
 
 int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inputCommands) {
 	std::set<std::string> samples;
 	std::set<std::string> targets;
 	bfs::path inputDirectory = "./";
 	std::string pat = "";
-	std::string countField =  "estimatedPerBaseCoverage";
+	std::string countField = "estimatedPerBaseCoverage";
+
 	bool addPartial = false;
 	bool keepCommonSeqsWhenFiltering = false;
 
@@ -217,8 +342,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			masterPopClusPars.popIteratorMap = masterPopClusPars.iteratorMap;
 		}
 	}
-	bool writeOutSeqsPerTarget = false;
-	setUp.setOption(writeOutSeqsPerTarget, "--writeOutSeqsPerTarget", "Write Out Seqs Per Target");
 	setUp.finishSetUp(std::cout);
 	setUp.startARunLog(setUp.pars_.directoryName_);
 	std::vector<bfs::path> directories;
@@ -231,8 +354,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 	} else {
 		for (const auto &samp : samples) {
-			directories.emplace_back(
-					njh::files::make_path(inputDirectory, samp + pat));
+			directories.emplace_back(njh::files::make_path(inputDirectory, samp + pat));
 		}
 	}
 
@@ -246,379 +368,59 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	std::unordered_map<std::string, std::string> targetKey;//a key because "." can't be analyses names
 
-	std::unique_ptr<MultipleGroupMetaData> meta;
+	std::shared_ptr<MultipleGroupMetaData> meta;
 	if("" != masterPopClusPars.groupingsFile){
-		meta = std::make_unique<MultipleGroupMetaData>(masterPopClusPars.groupingsFile);
+		meta = std::make_shared<MultipleGroupMetaData>(masterPopClusPars.groupingsFile);
 	}
 
 
 	std::string sampleField = "sample";
 	std::string targetField = "regionUID";
 
-	VecStr missingOutput;
-
-	auto seqsByTargetDir = njh::files::make_path(setUp.pars_.directoryName_, "seqsByTarget");
-	if(writeOutSeqsPerTarget){
-		njh::files::makeDir(seqsByTargetDir);
-	}
-	std::set<std::string> allSamples;
 	auto sampleMetaDataFnp = njh::files::make_path(infoDir, "sampleMetaData.tab.txt");
 	njh::stopWatch watch;
-	watch.setLapName("Reading in seqs");
-	auto allSeqsFnp = njh::files::make_path(infoDir, "allSeqsFile.fasta");
+	watch.setLapName("Gathering Raw Seqs");
+	auto rawAllSeqsFnp = njh::files::make_path(infoDir, "rawAllSeqsFile.fasta");
+
+	//
+	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars gatherCorePars;
+	SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetPars rawGatherPars;
+	SeqGatheringFromPathWeaver::processedGatherSeqsMetaPars processGatherPars;
+
+	gatherCorePars.sampleField = sampleField;
+	gatherCorePars.targetField = targetField;
+	gatherCorePars.countField = countField;
+	gatherCorePars.meta = meta;
+	gatherCorePars.numThreads = masterPopClusPars.numThreads;
+
+	rawGatherPars.addPartial = addPartial;
+	rawGatherPars.allSeqFnp = rawAllSeqsFnp;
+	rawGatherPars.directories = directories;
+	rawGatherPars.targets = targets;
+
+	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
+	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
+
+	if(!rawGatherRes.missingOutput.empty()){
+		OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
+		missingOut << njh::conToStr(rawGatherRes.missingOutput, "\n") << std::endl;
+	}
+
+	processGatherPars.keepCommonSeqsWhenFiltering = keepCommonSeqsWhenFiltering;
+	processGatherPars.allSeqFnp = rawGatherRes.allSeqFnp;
+	processGatherPars.outMetaFnp = sampleMetaDataFnp;
+
+	watch.startNewLap("Filtering Seqs On Meta");
+	auto processedGatherRes = seqGatherer.processedGatherSeqsMeta(processGatherPars, rawGatherRes);
+
+	if(bfs::exists(processGatherPars.outMetaFnp)){
+		masterPopClusPars.groupingsFile = processGatherPars.outMetaFnp.string();
+	}
+
+	auto allSeqsFnp = processedGatherRes.allSeqFnp;
 	auto allSeqsFnpIn = SeqIOOptions::genFastaIn(allSeqsFnp);
+	SeqInput::buildIndex(allSeqsFnpIn);
 	allSeqsFnpIn.processed_ = true;
-	std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> seqNumbers;
-
-	{
-		//key1 = target, key2= sample, value = the sequences
-		std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>>> sequencesByTargetBySample;
-		std::unordered_map<std::string, std::vector<seqInfo>> allSeqsByTarget;
-		std::set<std::string> allMetaFields;
-
-
-		njh::concurrent::LockableVec<bfs::path> inputDirQueue(directories);
-		std::mutex allSeqsByTargetMut;
-
-		std::function<void()> collectSeqs = [&inputDirQueue,
-																				 &allSeqsByTarget, &allMetaFields, &allSeqsByTargetMut,
-																				 &sampleField, &targetField,
-																				 &missingOutput, &countField, &targets,
-																				 &meta,&addPartial](){
-			bfs::path inputDir;
-			VecStr currentMissingOutput;
-			std::unordered_map<std::string, std::vector<seqInfo>> currentAllSeqsByTarget;
-			while(inputDirQueue.getVal(inputDir)){
-				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
-				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
-				if(bfs::exists(finalSeqFnp) && 0 != bfs::file_size(finalSeqFnp) && bfs::exists(coiPerBedLocationFnp)){
-					std::unordered_map<std::string, uint32_t> readTotals;
-					TableReader readTab(TableIOOpts::genTabFileIn(coiPerBedLocationFnp,true));
-					VecStr row;
-					uint32_t usedTotal = 0;
-					while(readTab.getNextRow(row)){
-						if("NA" != row[readTab.header_.getColPos("readTotal")]){
-							if(!targets.empty() && !njh::in(row[readTab.header_.getColPos("name")], targets)){
-								continue;
-							}
-							if("true" == row[readTab.header_.getColPos("success")]){
-								usedTotal+= njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotalUsed")]);
-							}
-							readTotals[row[readTab.header_.getColPos("name")]] = njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotal")]);
-						}
-					}
-					if(readTotals.empty() || 0 == usedTotal ){
-						currentMissingOutput.emplace_back(inputDir.string());
-					}else{
-						std::unordered_map<std::string, std::vector<seqInfo>> seqsByTarget;
-						std::set<std::string> samplesInPrcoessFiles;
-						{
-							auto inputOpts = SeqIOOptions::genFastaIn(finalSeqFnp);
-							inputOpts.processed_ = true;
-							SeqInput reader(inputOpts);
-							reader.openIn();
-							seqInfo seq;
-							while(reader.readNextRead(seq)){
-								MetaDataInName seqMeta(seq.name_);
-								auto rawTarName = seqMeta.getMeta(targetField);
-								if(!targets.empty() && !njh::in(rawTarName, targets)){
-									continue;
-								}
-								auto tarName = njh::replaceString(rawTarName, ".", "-");
-								//targetKey[tarName] = rawTarName;
-								seqsByTarget[tarName].emplace_back(seq);
-								samplesInPrcoessFiles.emplace(seqMeta.getMeta(sampleField));
-							}
-						}
-						if(addPartial){
-							auto partialSeqFnp = njh::files::make_path(inputDir,"partial", "allPartial.fasta");
-							if(bfs::exists(partialSeqFnp) && 0 != bfs::file_size(partialSeqFnp)){
-								auto inputOpts = SeqIOOptions::genFastaIn(partialSeqFnp);
-								inputOpts.processed_ = true;
-								SeqInput reader(inputOpts);
-								reader.openIn();
-								seqInfo seq;
-
-								while(reader.readNextRead(seq)){
-									MetaDataInName seqMeta(seq.name_);
-									auto rawTarName = seqMeta.getMeta(targetField);
-									if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
-										if(!targets.empty() && !njh::in(rawTarName, targets)){
-											continue;
-										}
-										auto tarName = njh::replaceString(rawTarName, ".", "-");
-										//targetKey[tarName] = rawTarName;
-										seqsByTarget[tarName].emplace_back(seq);
-										samplesInPrcoessFiles.emplace(seqMeta.getMeta(sampleField));
-									}
-								}
-							}
-						}
-						if(1 != samplesInPrcoessFiles.size()){
-							std::stringstream ss;
-							ss << __PRETTY_FUNCTION__ << ", error " << " found more than 1 sample name in " << inputDir << ", found: " << njh::conToStr(samplesInPrcoessFiles, ",")<< "\n";
-							throw std::runtime_error{ss.str()};
-						}
-						for( auto & tar : seqsByTarget){
-							double totalOfCountField = 0;
-							for(const auto & seq : tar.second){
-								MetaDataInName seqMeta(seq.name_);
-								if("reads" == countField){
-									totalOfCountField += seq.cnt_;
-								}else{
-									totalOfCountField += seqMeta.getMeta<double>(countField);
-								}
-							}
-							std::vector<seqInfo> tarSeqs;
-							for(auto & seq : tar.second){
-								MetaDataInName seqMeta(seq.name_);
-								double count = 0;
-								if("reads" == countField){
-									count = seq.cnt_;
-								}else{
-									count = seqMeta.getMeta<double>(countField);
-								}
-								if(nullptr != meta){
-									auto sampleName = seqMeta.getMeta(sampleField);
-									auto newMeta = meta->getMetaForSample(sampleName, njh::getVecOfMapKeys(meta->groupData_));
-									//newMeta.addMeta("sample", sampleName);
-									seqMeta.addMeta(newMeta, true);
-									seqMeta.resetMetaInName(seq.name_);
-								}
-								njh::addVecToSet(getVectorOfMapKeys(seqMeta.meta_), allMetaFields);
-								seq.cnt_ = round((count/totalOfCountField) * readTotals[seqMeta.getMeta(targetField)]);
-								seq.frac_ = count/totalOfCountField;
-								seq.updateName();
-								tarSeqs.emplace_back(seq);
-							}
-							addOtherVec(currentAllSeqsByTarget[tar.first], tarSeqs);
-						}
-					}
-				} else {
-					currentMissingOutput.emplace_back(inputDir.string());
-				}
-			}
-			{
-				std::lock_guard<std::mutex> lock(allSeqsByTargetMut);
-				addOtherVec(missingOutput, currentMissingOutput);
-				for(const auto & tarSeqs : currentAllSeqsByTarget){
-					addOtherVec(allSeqsByTarget[tarSeqs.first], tarSeqs.second);
-				}
-			}
-		};
-
-		njh::concurrent::runVoidFunctionThreaded(collectSeqs, masterPopClusPars.numThreads);
-
-		// update target key, current population clustering doesn't allow for periods in names
-		for(const auto & tarSeqs : allSeqsByTarget){
-
-			if(tarSeqs.second.size() > 0){
-				MetaDataInName seqMeta(tarSeqs.second.front().name_);
-				auto rawTarName = seqMeta.getMeta(targetField);
-				if(!targets.empty() && !njh::in(rawTarName, targets)){
-					continue;
-				}
-				auto tarName = njh::replaceString(rawTarName, ".", "-");
-				targetKey[tarName] = rawTarName;
-			}
-		}
-
-		if(!missingOutput.empty()){
-			OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
-			missingOut << njh::conToStr(missingOutput, "\n") << std::endl;
-		}
-		watch.startNewLap("Filtering Seqs On Meta");
-
-		if (njh::in("ExperimentSample", allMetaFields)
-				&& njh::in("BiologicalSample", allMetaFields)
-				&& njh::in("sample", allMetaFields)) {
-			std::unordered_map<std::string,std::unordered_map<std::string, VecStr>> failedToCombine;
-			for(auto & tar : allSeqsByTarget){
-				sequencesByTargetBySample[tar.first] = std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>>{};
-			}
-
-			auto tarKeys = getVectorOfMapKeys(allSeqsByTarget);
-			njh::sort(tarKeys);
-			njh::concurrent::LockableQueue<std::string> tarKeysQueue(tarKeys);
-			std::mutex allSamplesMut;
-			std::function<void()> filterBasedOnMeta = [&tarKeysQueue,&sequencesByTargetBySample,
-																								 &allSeqsByTarget,&allSamples,
-																								 &allSamplesMut,&failedToCombine,
-																								 &writeOutSeqsPerTarget,&seqsByTargetDir,
-																								 &sampleField, &keepCommonSeqsWhenFiltering](){
-				std::string tarKey="";
-				std::set<std::string> currentAllSamples;
-				std::unordered_map<std::string,std::unordered_map<std::string, VecStr>> currentFailedToCombine;
-				while(tarKeysQueue.getVal(tarKey)){
-					auto tarSeqOpts = SeqIOOptions::genFastaOutGz(njh::files::make_path(seqsByTargetDir, tarKey));
-					SeqOutput tarSeqWriter(tarSeqOpts);
-
-					std::vector<uint32_t> allSeqsPositions(allSeqsByTarget.at(tarKey).size());
-					njh::iota<uint32_t>(allSeqsPositions, 0);
-					std::unordered_map<std::string, std::vector<seqInfo>> seqsBySample;
-					for(const auto & metaField : VecStr{"ExperimentSample", "BiologicalSample"}){
-						MetaFieldSeqFilterer::MetaFieldSeqFiltererPars filterPars;
-						filterPars.tieBreakerPreferenceField_ = "PreferredSample";
-						filterPars.groupingMetaField_ = sampleField;
-						filterPars.filteringMetaField_ = metaField;
-						filterPars.keepCommonSeqsWhenFiltering_ = keepCommonSeqsWhenFiltering;
-						MetaFieldSeqFilterer metaFilterer(filterPars);
-						auto res = metaFilterer.filterSeqs(allSeqsByTarget.at(tarKey), allSeqsPositions);
-						allSeqsPositions = res.filteredAllSeqs;
-						if(!res.failedGroups.empty()){
-							currentFailedToCombine[tarKey][metaField] = res.failedGroups;
-						}
-					}
-					for(const auto & filtPos : allSeqsPositions){
-						MetaDataInName meta(allSeqsByTarget.at(tarKey)[filtPos].name_);
-						meta.removeMeta("ExperimentSample");
-						meta.removeMeta(sampleField);
-						auto sampleName = meta.getMeta("BiologicalSample");
-						meta.addMeta("sample", sampleName);
-						meta.removeMeta("BiologicalSample");
-						meta.resetMetaInName(allSeqsByTarget.at(tarKey)[filtPos].name_);
-						seqsBySample[sampleName].emplace_back(allSeqsByTarget.at(tarKey)[filtPos]);
-						if(writeOutSeqsPerTarget){
-							tarSeqWriter.openWrite(allSeqsByTarget.at(tarKey)[filtPos]);
-						}
-					}
-					for(const auto & samp : seqsBySample){
-						currentAllSamples.emplace(samp.first);
-						sequencesByTargetBySample[tarKey][samp.first].emplace(samp.first, njhseq::collapse::SampleCollapseCollection::RepSeqs(samp.first, samp.second));
-					}
-				}
-				{
-					std::lock_guard<std::mutex> lock(allSamplesMut);
-					allSamples.insert(currentAllSamples.begin(), currentAllSamples.end());
-					for(const auto & tar : currentFailedToCombine){
-						failedToCombine[tar.first] = tar.second;
-					}
-				}
-			};
-
-			njh::concurrent::runVoidFunctionThreaded(filterBasedOnMeta, masterPopClusPars.numThreads);
-
-
-			if(!failedToCombine.empty()){
-				OutputStream failedToCombineOut(njh::files::make_path(reportsDir, "failedToCombine.txt"));
-				failedToCombineOut << "target\tmetaField\tsamples" << std::endl;
-				for(const auto & target : iter::sorted(njh::getVecOfMapKeys(failedToCombine))){
-					for(const auto & field : failedToCombine.at(target)){
-						failedToCombineOut << target
-								<< "\t" << field.first
-								<< "\t" << njh::conToStr(field.second, ",") << std::endl;
-					}
-				}
-			}
-		} else {
-			for(const auto & tar : allSeqsByTarget){
-				auto tarSeqOpts = SeqIOOptions::genFastaOutGz(njh::files::make_path(seqsByTargetDir, tar.first));
-				SeqOutput tarSeqWriter(tarSeqOpts);
-
-				std::unordered_map<std::string, std::vector<seqInfo>> seqsBySample;
-				for(const auto & seq : tar.second){
-					MetaDataInName seqMeta(seq.name_);
-					auto sampleName = seqMeta.getMeta(sampleField);
-					seqsBySample[sampleName].emplace_back(seq);
-					if(writeOutSeqsPerTarget){
-						tarSeqWriter.openWrite(seq);
-					}
-				}
-				for(const auto & samp : seqsBySample){
-					allSamples.emplace(samp.first);
-					sequencesByTargetBySample[tar.first][samp.first].emplace(samp.first, njhseq::collapse::SampleCollapseCollection::RepSeqs(samp.first, samp.second));
-				}
-			}
-		}
-		watch.startNewLap("redoing meta");
-		if (njh::in("ExperimentSample", allMetaFields)
-				&& njh::in("BiologicalSample", allMetaFields)
-				&& njh::in("sample", allMetaFields)) {
-			//redo the meta
-			table metaTab(masterPopClusPars.groupingsFile, "\t", true);
-			const auto inputMetaColumns = metaTab.columnNames_;
-			metaTab.deleteColumn("ExperimentSample");
-			metaTab.deleteColumn("sample");
-			auto bioSampColumnPos = getPositionsOfTarget(metaTab.columnNames_, "BiologicalSample");
-			metaTab.columnNames_[bioSampColumnPos.front()] = "sample";
-			metaTab.setColNamePositions();
-
-			if(njh::in(std::string("PreferredSample"), metaTab.columnNames_)){
-				auto nonPreferredSamples = metaTab.extractByComp("PreferredSample", [](const auto & val){return "FALSE" == val;});
-				metaTab = metaTab.extractByComp("PreferredSample", [](const auto & val){return "TRUE" == val;});
-				metaTab.deleteColumn("PreferredSample");
-				metaTab.setColNamePositions();
-				nonPreferredSamples.deleteColumn("PreferredSample");
-				nonPreferredSamples = nonPreferredSamples.getUniqueRows();
-				nonPreferredSamples.setColNamePositions();
-
-				auto allInputBiologicalSamples = metaTab.getColumnLevels("sample");
-				std::unordered_map<std::string, uint32_t> countsOfSampleMissingFromMeta;
-				for(const auto & row : nonPreferredSamples){
-					if(!njh::in(row[nonPreferredSamples.getColPos("sample")], allInputBiologicalSamples)){
-						++countsOfSampleMissingFromMeta[row[nonPreferredSamples.getColPos("sample")]];
-					}
-				}
-				VecStr samplesWithMultipleInputs;
-				for(const auto & count : countsOfSampleMissingFromMeta){
-					if(count.second > 1){
-						samplesWithMultipleInputs.emplace_back(count.first);
-					} //createSharedPathwaysFromRefSeqs
-				}
-				if(!samplesWithMultipleInputs.empty()){
-					std::stringstream ss;
-					ss << __PRETTY_FUNCTION__ << ", error " << " the following samples have multiple entries: " << njh::conToStr(samplesWithMultipleInputs, ",")<< "\n";
-					throw std::runtime_error{ss.str()};
-				}
-				for(const auto & row : nonPreferredSamples){
-					if(!njh::in(row[nonPreferredSamples.getColPos("sample")], allInputBiologicalSamples)){
-						metaTab.addRow(row);
-					}
-				}
-			}
-			metaTab = metaTab.getUniqueRows();
-			//add in missing samples that had no preferred sample
-			OutputStream metaOut(sampleMetaDataFnp);
-			metaTab.outPutContents(metaOut, "\t");
-		}else{
-			if("" != masterPopClusPars.groupingsFile){
-				bfs::copy_file(masterPopClusPars.groupingsFile, sampleMetaDataFnp);
-			}
-		}
-		{
-			//write out seqs
-			uint32_t seqCounts = 0;
-			auto allSeqsFileOpts = SeqIOOptions::genFastaOut(allSeqsFnp);
-			SeqOutput allSeqsWriter(allSeqsFileOpts);
-			allSeqsWriter.openOut();
-			for(const auto & tar : sequencesByTargetBySample){
-				uint32_t totalWrittenForTarget = 0;
-				for(const auto & samp : tar.second){
-					for(const auto & samp2 : samp.second){
-						allSeqsWriter.write(samp2.second.repSeqs_);
-						totalWrittenForTarget+= samp2.second.repSeqs_.size();
-					}
-				}
-				seqNumbers[tar.first] = std::make_pair(seqCounts, totalWrittenForTarget);
-				seqCounts+= totalWrittenForTarget;
-			}
-		}
-		SeqInput::buildIndex(allSeqsFnpIn);
-
-	}
-
-	if("" != masterPopClusPars.groupingsFile){
-		masterPopClusPars.groupingsFile = sampleMetaDataFnp.string();
-	}
-
-
-//	{
-//		SeqInput allSeqsReader(allSeqsFnpIn);
-//		auto seqTargets = allSeqsReader.getReads<seqInfo>(seqNumbers["Pf3D7_14_v3-3213358-3213597-for"].first, seqNumbers["Pf3D7_14_v3-3213358-3213597-for"].second);
-//		for(const auto & seq : seqTargets){
-//			std::cout << seq.name_ << std::endl;
-//		}
-//	}
 
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
@@ -639,12 +441,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	seqOpts.inFormat_ = SeqIOOptions::inFormats::FASTA;
 	seqOpts.outFormat_ = SeqIOOptions::outFormats::FASTAGZ;
 
-	auto tarNames = getVectorOfMapKeys(seqNumbers);
+	auto tarNames = getVectorOfMapKeys(processedGatherRes.seqsLocations);
 	njh::sort(tarNames);
 	njh::concurrent::LockableQueue<std::string> tarNamesQueue(tarNames);
 	const auto masterPopClusParsCopyConst = masterPopClusPars;
 	std::function<void()> runPopClusOnTar = [&tarNamesQueue,&masterPopClusParsCopyConst,
-																					 &setUp,&allSamples,&seqNumbers,
+																					 &setUp,&processedGatherRes,
 																					 &allSeqsFnpIn,
 																					 &seqOpts,&numThreadsForSample](){
 		std::string tar = "";
@@ -656,7 +458,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>> seqsForSample;
 		{
 			SeqInput targetSeqReader(allSeqsFnpIn);
-			auto seqs = targetSeqReader.getReads<seqInfo>(seqNumbers.at(tar).first, seqNumbers.at(tar).second);
+			auto seqs = targetSeqReader.getReads<seqInfo>(processedGatherRes.seqsLocations.at(tar).first, processedGatherRes.seqsLocations.at(tar).second);
 			for(const auto & seq : seqs){
 				readVec::getMaxLength(seq, maxLen);
 				MetaDataInName meta(seq.name_);
@@ -711,7 +513,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		// output info about the read In reads
 		collapse::SampleCollapseCollection sampColl(seqOpts, currentPars.masterDir,
 				currentMasterDir,
-				PopNamesInfo(currentPars.experimentNames.populationName_, allSamples, masterPopClusParsCopyConst.experimentNames.controlSamples_),
+				PopNamesInfo(currentPars.experimentNames.populationName_, processedGatherRes.allSamples, masterPopClusParsCopyConst.experimentNames.controlSamples_),
 				currentPars.preFiltCutOffs);
 
 		sampColl.keepSampleInfoInMemory_ = true;
@@ -720,11 +522,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			sampColl.addGroupMetaData(currentPars.groupingsFile);
 		}
 		//process custom cut offs
-		std::unordered_map<std::string, double> customCutOffsMap = collapse::SampleCollapseCollection::processCustomCutOffs(currentPars.customCutOffs, VecStr{allSamples.begin(), allSamples.end()}, currentPars.fracCutoff);
-		std::unordered_map<std::string, double> customCutOffsMapPerRep = collapse::SampleCollapseCollection::processCustomCutOffs(currentPars.customCutOffs, VecStr{allSamples.begin(), allSamples.end()}, currentPars.withinReplicateFracCutOff);
+		std::unordered_map<std::string, double> customCutOffsMap = collapse::SampleCollapseCollection::processCustomCutOffs(currentPars.customCutOffs, VecStr{processedGatherRes.allSamples.begin(), processedGatherRes.allSamples.end()}, currentPars.fracCutoff);
+		std::unordered_map<std::string, double> customCutOffsMapPerRep = collapse::SampleCollapseCollection::processCustomCutOffs(currentPars.customCutOffs, VecStr{processedGatherRes.allSamples.begin(), processedGatherRes.allSamples.end()}, currentPars.withinReplicateFracCutOff);
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		{
-			njh::concurrent::LockableQueue<std::string> sampleQueue(allSamples);
+			njh::concurrent::LockableQueue<std::string> sampleQueue(processedGatherRes.allSamples);
 
 //			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			std::function<void()> setupClusterSamples = [
@@ -838,10 +640,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		if(currentPars.rescueMatchingExpected && !expectedSeqs.empty()){
 //			sampColl.rescueMatchingSeqs(expectedSeqs, alignerObj, collapserObj, currentPars.popIteratorMap);
 //		}
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if(setUp.pars_.verbose_){
 			std::cout << njh::bashCT::boldRed("Done Pop Clustering") << std::endl;
 		}
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//if ("" != currentPars.previousPopFilename && !currentPars.noPopulation) {
 		if ("" != currentPars.previousPopFilename) {
 			auto previousPopSeqsRaw = getSeqs<readObject>(currentPars.previousPopFilename);
@@ -874,15 +677,17 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		if (!expectedSeqs.empty()) {
 //			sampColl.comparePopToRefSeqs(expectedSeqs, alignerObj);
 //		}
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		std::vector<seqInfo> popSeqsPerSamp;
 		std::vector<seqInfo> outPopSeqsPerSamp;
 
 		std::unordered_map<std::string, uint32_t> sampCountsForPopHaps;
 		uint32_t totalPopCount = 0;
 		std::set<std::string> samplesCount;
-
+//		std::cout << njh::conToStr(processedGatherRes.allSamples) << std::endl;
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		popSeqsPerSamp = sampColl.genOutPopSeqsPerSample();
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		outPopSeqsPerSamp = popSeqsPerSamp;
 		for(const auto & popClus : sampColl.popCollapse_->collapsed_.clusters_){
 			sampCountsForPopHaps[popClus.seqBase_.name_] = popClus.sampleClusters().size();
@@ -893,7 +698,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			samplesCount.emplace(seqMeta.getMeta("sample"));
 		}
 
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		std::map<std::string, std::map<std::string, MetaDataInName>> knownAAMeta;
 		//       seqName               transcript   amino acid positions and amino acid
 		std::map<std::string, std::map<std::string, std::string>> knownAATyped;
@@ -1308,7 +1113,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				}
 			}
 		}
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		for(auto & clus : sampColl.popCollapse_->collapsed_.clusters_){
 			auto popName = clus.seqBase_.name_.substr(0, clus.seqBase_.name_.rfind("_f"));
 			std::string typed = "";
@@ -1325,16 +1130,17 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			}
 			clus.meta_.addMeta("h_AATyped", typed);
 		}
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		sampColl.printSampleCollapseInfo(
 				njh::files::make_path(sampColl.masterOutputDir_,
 						"selectedClustersInfo.tab.txt.gz"));
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 //		table hapIdTab = sampColl.genHapIdTable();
 //		hapIdTab.outPutContents(TableIOOpts::genTabFileOut(njh::files::make_path(sampColl.masterOutputDir_,
 //				"hapIdTable.tab.txt.gz"), true));
 		sampColl.dumpPopulation();
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		SeqOutput::write(outPopSeqsPerSamp,SeqIOOptions(njh::files::make_path(sampColl.masterOutputDir_, "population", "popSeqsWithMetaWtihSampleName"), seqOpts.outFormat_));
 
 		auto popMetaTable = seqsToMetaTable(outPopSeqsPerSamp);
@@ -1353,9 +1159,17 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 	//zip all seqs file
+	if(rawGatherRes.allSeqFnp != processedGatherRes.allSeqFnp){
+		//if filtered, there will be two files
+		bfs::path outAllSeqsFnp = rawGatherRes.allSeqFnp.string() + ".gz";
+		njh::gzZipFile(IoOptions(InOptions(rawGatherRes.allSeqFnp), OutOptions(outAllSeqsFnp)));
+		bfs::remove(rawGatherRes.allSeqFnp);
+	}
 	bfs::path outAllSeqsFnp = allSeqsFnp.string() + ".gz";
 	njh::gzZipFile(IoOptions(InOptions(allSeqsFnp), OutOptions(outAllSeqsFnp)));
 	bfs::remove(allSeqsFnp);
+
+
 	return 0;
 }
 

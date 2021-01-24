@@ -39,6 +39,8 @@ class WeaverRunner : public njh::progutils::ProgramRunner {
 	static int ExtractPathWaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands);
 
 	static int runProcessClustersOnRecon(const njh::progutils::CmdArgs & inputCommands);
+	static int rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands);
+
 };
 
 } /* namespace njhseq */

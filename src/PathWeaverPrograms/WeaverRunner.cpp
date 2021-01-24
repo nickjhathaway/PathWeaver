@@ -41,6 +41,7 @@ WeaverRunner::WeaverRunner()
 					 addFunc("ExtractPathWaysReadsFallingInMultipleRegions", ExtractPathWaysReadsFallingInMultipleRegions, false),
 
 					 addFunc("runProcessClustersOnRecon", runProcessClustersOnRecon, false),
+					 addFunc("rawGatherSeqs", rawGatherSeqs, false),
 
           }, //
 				"Weaver") {
