@@ -16,7 +16,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 
 		//key1 = target, key2= sample, value = the sequences
-		std::unordered_map<std::string, std::vector<seqInfo>> allSeqsByTarget;
+		std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> allSeqsByTarget;
 
 
 
@@ -28,7 +28,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 																				 &pars,&ret,this](){
 			bfs::path inputDir;
 			VecStr currentMissingOutput;
-			std::unordered_map<std::string, std::vector<seqInfo>> currentAllSeqsByTarget;
+			std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> currentAllSeqsByTarget;
 			while(inputDirQueue.getVal(inputDir)){
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
@@ -51,7 +51,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 					if(readTotals.empty() || 0 == usedTotal ){
 						currentMissingOutput.emplace_back(inputDir.string());
 					}else{
-						std::unordered_map<std::string, std::vector<seqInfo>> seqsByTarget;
+						std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> seqsByTarget;
 						std::set<std::string> samplesInPrcoessFiles;
 						{
 							auto inputOpts = SeqIOOptions::genFastaIn(finalSeqFnp);
@@ -67,7 +67,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								}
 								auto tarName = njh::replaceString(rawTarName, ".", "-");
 								//targetKey[tarName] = rawTarName;
-								seqsByTarget[tarName].emplace_back(seq);
+								seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
 								samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
 							}
 						}
@@ -89,7 +89,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 										}
 										auto tarName = njh::replaceString(rawTarName, ".", "-");
 										//targetKey[tarName] = rawTarName;
-										seqsByTarget[tarName].emplace_back(seq);
+										seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
 										samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
 									}
 								}
@@ -103,19 +103,19 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 						for( auto & tar : seqsByTarget){
 							double totalOfCountField = 0;
 							for(const auto & seq : tar.second){
-								MetaDataInName seqMeta(seq.name_);
+								MetaDataInName seqMeta(seq->name_);
 								if("reads" == corePars_.countField){
-									totalOfCountField += seq.cnt_;
+									totalOfCountField += seq->cnt_;
 								}else{
 									totalOfCountField += seqMeta.getMeta<double>(corePars_.countField);
 								}
 							}
-							std::vector<seqInfo> tarSeqs;
+							std::vector<std::shared_ptr<seqInfo>> tarSeqs;
 							for(auto & seq : tar.second){
-								MetaDataInName seqMeta(seq.name_);
+								MetaDataInName seqMeta(seq->name_);
 								double count = 0;
 								if("reads" == corePars_.countField){
-									count = seq.cnt_;
+									count = seq->cnt_;
 								}else{
 									count = seqMeta.getMeta<double>(corePars_.countField);
 								}
@@ -124,12 +124,12 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									auto newMeta = corePars_.meta->getMetaForSample(sampleName, njh::getVecOfMapKeys(corePars_.meta->groupData_));
 									//newMeta.addMeta("sample", sampleName);
 									seqMeta.addMeta(newMeta, true);
-									seqMeta.resetMetaInName(seq.name_);
+									seqMeta.resetMetaInName(seq->name_);
 								}
 								njh::addVecToSet(getVectorOfMapKeys(seqMeta.meta_), ret.allMetaFields);
-								seq.cnt_ = round((count/totalOfCountField) * readTotals[seqMeta.getMeta(corePars_.targetField)]);
-								seq.frac_ = count/totalOfCountField;
-								seq.updateName();
+								seq->cnt_ = round((count/totalOfCountField) * readTotals[seqMeta.getMeta(corePars_.targetField)]);
+								seq->frac_ = count/totalOfCountField;
+								seq->updateName();
 								tarSeqs.emplace_back(seq);
 							}
 							addOtherVec(currentAllSeqsByTarget[tar.first], tarSeqs);
@@ -142,7 +142,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			{
 				std::lock_guard<std::mutex> lock(allSeqsByTargetMut);
 				njh::addVecToSet(currentMissingOutput, ret.missingOutput);
-				for(const auto & tarSeqs : currentAllSeqsByTarget){
+				for(auto & tarSeqs : currentAllSeqsByTarget){
 					addOtherVec(allSeqsByTarget[tarSeqs.first], tarSeqs.second);
 				}
 			}
