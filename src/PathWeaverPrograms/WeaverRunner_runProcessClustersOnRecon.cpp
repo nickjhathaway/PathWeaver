@@ -666,7 +666,13 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			std::cout << "sampColl.popCollapse_->input_.info_.numberOfClusters_: " << sampColl.popCollapse_->input_.info_.numberOfClusters_ << std::endl;
 			std::cout << "sampColl.popCollapse_->input_.info_.totalReadCount_: " << sampColl.popCollapse_->input_.info_.totalReadCount_ << std::endl;
 		}
+		if(setUp.pars_.verbose_){
+			std::cout << njh::bashCT::boldGreen("Done Initial Population Clustering") << std::endl;
+		}
+		if(setUp.pars_.verbose_){
 
+		}
+		std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
 		sleep(100000000);
 
 		if(currentPars.rescuePars_.performResuce()){
