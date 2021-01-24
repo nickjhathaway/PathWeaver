@@ -162,6 +162,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				ret.seqsLocations[target] = std::make_pair(seqCounts, allSeqsByTarget[target].size());
 				writer.write(allSeqsByTarget[target]);
 				seqCounts += allSeqsByTarget[target].size();
+				allSeqsByTarget[target].clear();
+				allSeqsByTarget[target].resize(0);
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
 		}
