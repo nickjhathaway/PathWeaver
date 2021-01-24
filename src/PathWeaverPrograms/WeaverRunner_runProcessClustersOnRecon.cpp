@@ -18,6 +18,7 @@
 
 #include "PathWeaver/PostWeavingUtils/GatheringUtils.hpp"
 
+#include <chrono>
 
 namespace njhseq {
 
@@ -655,6 +656,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		if(setUp.pars_.verbose_){
 			std::cout << njh::bashCT::boldGreen("Pop Clustering") << std::endl;
 		}
+
+		std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_for(100000s);
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//first population clustering createSharedPathwaysFromReads
 //		auto popInput = sampColl.createPopInput();
@@ -672,8 +677,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		if(setUp.pars_.verbose_){
 
 		}
-		std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
-		sleep(100000000);
+
 
 		if(currentPars.rescuePars_.performResuce()){
 			sampColl.conductResuceOperations(currentPars.rescuePars_, alignerObj, collapserObj, currentPars.popIteratorMap);
