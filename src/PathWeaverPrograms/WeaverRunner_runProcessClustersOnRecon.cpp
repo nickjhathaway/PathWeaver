@@ -366,7 +366,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	auto reportsDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"reports"});
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 
-	std::unordered_map<std::string, std::string> targetKey;//a key because "." can't be analyses names
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
 	if("" != masterPopClusPars.groupingsFile){
@@ -425,12 +424,50 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
 		outKey << "p_name\t" << targetField << std::endl;
-		auto keys = getVectorOfMapKeys(targetKey);
+		auto keys = getVectorOfMapKeys(processedGatherRes.targetKey);
 		njh::sort(keys);
 		for(const auto & key : keys){
-			outKey << key << '\t' << targetKey[key] << std::endl;
+			outKey << key << '\t' << processedGatherRes.targetKey[key] << std::endl;
 		}
 	}
+	{
+		auto targetsLocsFnp = njh::files::make_path(infoDir, "targetLocations.tab.txt");
+
+		OutputStream targetsLocsOut(targetsLocsFnp);
+		VecStr tarKeys = getVectorOfMapKeys(rawGatherRes.seqsLocations);
+		njh::sort(tarKeys);
+		for(const auto & tar : tarKeys){
+			targetsLocsOut << tar
+					<< "\t" << rawGatherRes.seqsLocations[tar].first
+					<< "\t" << rawGatherRes.seqsLocations[tar].second
+					<< std::endl;
+		}
+	}
+	if(processedGatherRes.allSeqFnp != rawGatherRes.allSeqFnp){
+		VecStr tarKeys = getVectorOfMapKeys(processedGatherRes.seqsLocations);
+		njh::sort(tarKeys);
+		OutputStream processedTargetsLocsOut(njh::files::make_path(infoDir, "processedTargetLocations.tab.txt"));
+
+		for(const auto & tar : tarKeys){
+			processedTargetsLocsOut << tar
+					<< "\t" << rawGatherRes.seqsLocations[tar].first
+					<< "\t" << rawGatherRes.seqsLocations[tar].second
+					<< std::endl;
+		}
+	}
+
+	if(!processedGatherRes.failedToCombine.empty()){
+		OutputStream failedToCombineOut(njh::files::make_path(infoDir, "failedToCombine.txt"));
+		failedToCombineOut << "target\tmetaField\tsamples" << std::endl;
+		for(const auto & target : iter::sorted(njh::getVecOfMapKeys(processedGatherRes.failedToCombine))){
+			for(const auto & field : processedGatherRes.failedToCombine.at(target)){
+				failedToCombineOut << target
+						<< "\t" << field.first
+						<< "\t" << njh::conToStr(field.second, ",") << std::endl;
+			}
+		}
+	}
+
 	if(setUp.pars_.verbose_){
 		watch.logLapTimes(std::cout, true, 6, true);
 		watch.setLapName("clustering");
