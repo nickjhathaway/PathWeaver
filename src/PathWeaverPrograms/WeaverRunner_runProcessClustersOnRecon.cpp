@@ -657,15 +657,21 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			std::cout << njh::bashCT::boldGreen("Pop Clustering") << std::endl;
 		}
 
-		std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
-		using namespace std::chrono_literals;
-		std::this_thread::sleep_for(100000s);
+
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//first population clustering createSharedPathwaysFromReads
 //		auto popInput = sampColl.createPopInput();
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 //		std::cout << "popInput.size() : "<< popInput.size() << std::endl;
-		sampColl.doPopulationClustering(sampColl.createPopInput(), alignerObj, collapserObj, currentPars.popIteratorMap);
+		{
+
+			auto populationInput = sampColl.createPopInput();
+			std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
+			using namespace std::chrono_literals;
+			std::this_thread::sleep_for(100000s);
+
+			sampColl.doPopulationClustering(populationInput, alignerObj, collapserObj, currentPars.popIteratorMap);
+		}
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if (setUp.pars_.debug_) {
 			std::cout << "sampColl.popCollapse_->input_.info_.numberOfClusters_: " << sampColl.popCollapse_->input_.info_.numberOfClusters_ << std::endl;
