@@ -413,6 +413,17 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	watch.startNewLap("Filtering Seqs On Meta");
 	auto processedGatherRes = seqGatherer.processedGatherSeqsMeta(processGatherPars, rawGatherRes);
 
+	{
+		OutputStream targetsGatheredReport(njh::files::make_path(reportsDir, "seqsPerTargetGathered.txt"));
+		auto targetKeys = getVectorOfMapKeys(processedGatherRes.seqsLocations);
+		njh::sort(targetKeys);
+		targetsGatheredReport << "target\tinputSeqs" << std::endl;
+		for(const auto & key : targetKeys){
+			targetsGatheredReport << key
+					<< "\t" << processedGatherRes.seqsLocations[key].second
+					<< std::endl;
+		}
+	}
 	if(bfs::exists(processGatherPars.outMetaFnp)){
 		masterPopClusPars.groupingsFile = processGatherPars.outMetaFnp.string();
 	}
