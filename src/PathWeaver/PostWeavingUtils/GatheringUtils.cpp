@@ -29,6 +29,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			bfs::path inputDir;
 			VecStr currentMissingOutput;
 			std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> currentAllSeqsByTarget;
+			std::unordered_set<std::string> currentAllSamples;
 			while(inputDirQueue.getVal(inputDir)){
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
@@ -100,6 +101,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							ss << __PRETTY_FUNCTION__ << ", error " << " found more than 1 sample name in " << inputDir << ", found: " << njh::conToStr(samplesInPrcoessFiles, ",")<< "\n";
 							throw std::runtime_error{ss.str()};
 						}
+						currentAllSamples.insert(samplesInPrcoessFiles.begin(), samplesInPrcoessFiles.end());
 						for( auto & tar : seqsByTarget){
 							double totalOfCountField = 0;
 							for(const auto & seq : tar.second){
@@ -145,6 +147,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				for(auto & tarSeqs : currentAllSeqsByTarget){
 					addOtherVec(allSeqsByTarget[tarSeqs.first], tarSeqs.second);
 				}
+				ret.allSamples.insert(currentAllSamples.begin(), currentAllSamples.end());
 			}
 		};
 
@@ -259,6 +262,7 @@ SeqGatheringFromPathWeaver::processedGatherSeqsMetaRes SeqGatheringFromPathWeave
 	} else {
 		ret.seqsLocations = gatheredRes.seqsLocations;
 		ret.allSeqFnp = gatheredRes.allSeqFnp;
+		ret.allSamples = gatheredRes.allSamples;
 	}
 	if (!gatheredRes.allMetaFields.empty() &&
 			njh::in("ExperimentSample", gatheredRes.allMetaFields)

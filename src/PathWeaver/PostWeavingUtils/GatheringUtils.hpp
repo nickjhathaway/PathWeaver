@@ -44,6 +44,7 @@ public:
 		std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> seqsLocations;
 		std::set<std::string> missingOutput;
 		bfs::path allSeqFnp;
+		std::set<std::string> allSamples;
 	};
 
 	struct gatherSeqsAndSortByTargetPars{

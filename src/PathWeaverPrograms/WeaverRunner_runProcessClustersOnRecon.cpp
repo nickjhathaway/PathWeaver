@@ -508,7 +508,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		{
 			SeqInput targetSeqReader(allSeqsFnpIn);
 			auto seqs = targetSeqReader.getReads<seqInfo>(processedGatherRes.seqsLocations.at(tar).first, processedGatherRes.seqsLocations.at(tar).second);
+//			std::cout << "target: " << tar << std::endl;
+//			std::cout << '\t' << seqs.size() << std::endl;
+
 			for(const auto & seq : seqs){
+//				std::cout << "\t" << seq.name_ << std::endl;
 				readVec::getMaxLength(seq, maxLen);
 				MetaDataInName meta(seq.name_);
 				auto sample = meta.getMeta("sample");
@@ -576,7 +580,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		{
 			njh::concurrent::LockableQueue<std::string> sampleQueue(processedGatherRes.allSamples);
-
+//			std::cout << njh::conToStr(processedGatherRes.allSamples, ",") << std::endl;
 //			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			std::function<void()> setupClusterSamples = [
 																									 &sampleQueue,&alnPool,&collapserObj,&currentPars,&setUp,
