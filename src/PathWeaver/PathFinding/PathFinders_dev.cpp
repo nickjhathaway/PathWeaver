@@ -56,6 +56,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 	preprocessPars.filteredOff_singletOuts = SeqIOOptions::genFastqOut(njh::files::make_path(finalCurrentDir,     "filteredOff_extractedSingles"));
 	preprocessPars.filteredOffDups_pairedOpts = SeqIOOptions::genPairedOut(njh::files::make_path(finalCurrentDir, "filteredOffDups_extractedPairs"));
 	preprocessPars.filteredOffDups_singletOuts = SeqIOOptions::genFastqOut(njh::files::make_path(finalCurrentDir, "filteredOffDups_extractedSingles"));
+	preprocessPars.filteredOffKmerCommonLoc_pairedOpts = SeqIOOptions::genPairedOut(njh::files::make_path(finalCurrentDir,   "filteredOffKcls_extractedPairs"));
+	preprocessPars.filteredOffKmerCommonLoc_singletOuts = SeqIOOptions::genFastqOut(njh::files::make_path(finalCurrentDir, "filteredOffKcls_extractedSingles"));
 
 	//pre-process sequences this includes (use to include removes seqs with Ns), optionally trimming bad quality, and optionally removing duplicated sequences
 

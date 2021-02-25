@@ -47,6 +47,9 @@ struct preprocessSeqsForWayFindingPars{
 	SeqIOOptions filteredOffDups_pairedOpts;
 	SeqIOOptions filteredOffDups_singletOuts;
 
+	SeqIOOptions filteredOffKmerCommonLoc_pairedOpts;
+	SeqIOOptions filteredOffKmerCommonLoc_singletOuts;
+
 };
 
 struct preprocessSeqsForWayFindingRes{
@@ -64,6 +67,11 @@ struct preprocessSeqsForWayFindingRes{
 	uint32_t filteredR2LowEntropy_{0};
 	uint32_t filteredSinglesLowEntropy_{0};
 
+	uint32_t filteredPairsKmerCommonLocation_{0};
+	uint32_t filteredSinglesKmerCommonLocation_{0};
+	uint32_t filteredR1KmerCommonLocation_{0};
+	uint32_t filteredR2KmerCommonLocation_{0};
+
 
 	Json::Value filteredInfo() const{
 		Json::Value ret;
@@ -75,6 +83,12 @@ struct preprocessSeqsForWayFindingRes{
 		ret["filteredR1LowEntropy_"] = filteredR1LowEntropy_;
 		ret["filteredR2LowEntropy_"] = filteredR2LowEntropy_;
 		ret["filteredSinglesLowEntropy_"] = filteredSinglesLowEntropy_;
+
+		ret["filteredPairsKmerCommonLocation_"] = filteredPairsKmerCommonLocation_;
+		ret["filteredSinglesKmerCommonLocation_"] = filteredSinglesKmerCommonLocation_;
+		ret["filteredR1KmerCommonLocation_"] = filteredR1KmerCommonLocation_;
+		ret["filteredR2KmerCommonLocation_"] = filteredR2KmerCommonLocation_;
+
 		return ret;
 	}
 };

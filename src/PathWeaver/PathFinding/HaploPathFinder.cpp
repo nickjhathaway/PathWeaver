@@ -353,6 +353,21 @@ void HaploPathFinder::PathFinderCorePars::setQualityTrimAndFiltOpts(seqSetUp & s
 	setUp.setOption(seqEdgeEntropyTrimPars_.windowSize, "--trimSeqsEdgesForLowEntropy-windowSize", "Window Size for when --trimSeqsEdgesForLowEntropy is true");
 	setUp.setOption(seqEdgeEntropyTrimPars_.windowStep, "--trimSeqsEdgesForLowEntropy-windowStep", "Window Step for when --trimSeqsEdgesForLowEntropy is true");
 
+
+	setUp.setOption(kmerCommonLocKmerLength, "--kmerCommonLocKmerLength", "Kmer Common Loc Kmer Length");
+	setUp.setOption(kmerCommonLocOccurenceCutOff, "--kmerCommonLocOccurenceCutOff", "kmer Common Loc Occurence Cut Off");
+	setUp.setOption(kmerCommonLocStdCutOff, "--kmerCommonLocStdCutOff", "kmer Common Loc Std Cut Off");
+	setUp.setOption(kmerCommonLocWithin, "--kmerCommonLocWithin", "kmer Common Loc Within");
+
+	if(!filterbyKmerCommonLoc_){
+		setUp.setOption(filterbyKmerCommonLoc_, "--filterByKmerCommonLoc", "filter by Kmer Common Loc");
+	}else{
+		bool nofilterbyKmerCommonLoc = false;
+		setUp.setOption(nofilterbyKmerCommonLoc, "--noFilterByKmerCommonLoc", "Don't filter by Kmer Common Loc");
+		filterbyKmerCommonLoc_ = !nofilterbyKmerCommonLoc;
+	}
+
+//
 }
 
 

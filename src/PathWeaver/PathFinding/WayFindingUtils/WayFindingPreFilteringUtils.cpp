@@ -26,7 +26,7 @@
 
 
 #include "WayFindingPreFilteringUtils.hpp"
-
+#include <njhseq.h>
 
 namespace njhseq {
 
@@ -70,6 +70,11 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 	/**@todo take the time to program a more efficient way of doing this*/
 	std::unordered_map<std::string, std::unordered_set<std::string>> alreadyAddedSeqBySamplePair;
 	std::unordered_map<std::string, std::unordered_set<std::string>> alreadyAddedSeqBySampleSingles;
+
+	std::unordered_map<std::string, std::vector<uint32_t>> kmerPositons;
+	std::unordered_map<std::string, std::vector<uint32_t>> kmerPositonsSecondPass;
+
+	std::unordered_set<std::string> kmersBelowStdCutOff;
 
 	if (inOpts.inPairs_.inExists()) {
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -172,11 +177,41 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				dup_writer.openWrite(pSeq);
 			}else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r1(pSeq.seqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r1.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+					if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r2(pSeq.mateSeqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r2.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 			}else if(!firstSkipped && secondSkipped){
 				singleWriter.openWrite(pSeq.seqBase_);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r1(pSeq.seqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r1.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 				unused_singleWriter.openWrite(pSeq.mateSeqBase_);
 			}else if(firstSkipped && !secondSkipped){
 				singleWriter.openWrite(pSeq.mateSeqBase_);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r2(pSeq.mateSeqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r2.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 				unused_singleWriter.openWrite(pSeq.seqBase_);
 			}else{
 				unused_writer.openWrite(pSeq);
@@ -283,11 +318,41 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				dup_writer.openWrite(pSeq);
 			}else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r1(pSeq.seqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r1.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+					if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r2(pSeq.mateSeqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r2.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 			}else if(!firstSkipped && secondSkipped){
 				singleWriter.openWrite(pSeq.seqBase_);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r1(pSeq.seqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r1.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 				unused_singleWriter.openWrite(pSeq.mateSeqBase_);
 			}else if(firstSkipped && !secondSkipped){
 				singleWriter.openWrite(pSeq.mateSeqBase_);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r2(pSeq.mateSeqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r2.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 				unused_singleWriter.openWrite(pSeq.seqBase_);
 			}else{
 				unused_writer.openWrite(pSeq);
@@ -357,10 +422,23 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				unused_singleWriter.openWrite(seq);
 			} else {
 				singleWriter.openWrite(seq);
+				if(extractionPars.filterbyKmerCommonLoc_){
+					if(len(seq) > extractionPars.kmerCommonLocKmerLength){
+						kmerInfo r1(seq.seq_, extractionPars.kmerCommonLocKmerLength, false);
+						for(const auto & k : r1.kmers_){
+							addOtherVec(kmerPositons[k.first], k.second.positions_);
+						}
+					}
+				}
 			}
 		}
 	}
+
+	bool wrotePairs = false;
+	bool wroteSingles = false;
+
 	if (writer.outOpen()) {
+		wrotePairs = true;
 		ret.usedFilteredPairedR1Fnp = writer.getPrimaryOutFnp();
 		ret.usedFilteredPairedR2Fnp = writer.getSecondaryOutFnp();
 	} else {
@@ -372,6 +450,7 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 		bfs::remove(ret.usedFilteredPairedR2Fnp);
 	}
 	if(singleWriter.outOpen()){
+		wroteSingles = true;
 		ret.usedFilteredSinglesFnp = singleWriter.getPrimaryOutFnp();
 	}else {
 		singleWriter.openOut();
@@ -383,6 +462,399 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 	singleWriter.closeOut();
 	unused_writer.closeOut();
 	unused_singleWriter.closeOut();
+
+	if(extractionPars.filterbyKmerCommonLoc_){
+
+		for(const auto &kpos : kmerPositons){
+			if(kpos.second.size() < extractionPars.kmerCommonLocOccurenceCutOff){
+				continue;
+			}
+//			if(std::string::npos != kpos.first.find("AAGACCATGAAGGG")){
+//				std::cout << njh::bashCT::cyan;
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << "\tk: " << kpos.first << std::endl;
+//				std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//				std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//				std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//				std::cout << njh::bashCT::reset;
+//			}
+//			if(std::string::npos != kpos.first.find("CAAGAAAAAAAGAGT")){
+//				std::cout << njh::bashCT::red;
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << "\tk: " << kpos.first << std::endl;
+//				std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//				std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//				std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//				std::cout << njh::bashCT::reset;
+//			}
+//			if(std::string::npos != kpos.first.find("AGAAAGAGAAGAGAC")){
+//				std::cout << njh::bashCT::blue;
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << "\tk: " << kpos.first << std::endl;
+//				std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//				std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//				std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//				std::cout << njh::bashCT::reset;
+//			}
+//			if(std::string::npos != kpos.first.find("GACAATTAACAAAGA")){
+//				std::cout << njh::bashCT::purple;
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << "\tk: " << kpos.first << std::endl;
+//				std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//				std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//				std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//				std::cout << njh::bashCT::reset;
+//			}
+
+
+			if(vectorStandardDeviationPop(kpos.second) < extractionPars.kmerCommonLocStdCutOff){
+				kmersBelowStdCutOff.emplace(kpos.first);
+			}
+		}
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//
+//		std::cout << "kmersBelowStdCutOff.size(): " << kmersBelowStdCutOff.size() << std::endl;
+//		std::cout << "kmerPositons.size(): " << kmerPositons.size() << std::endl;
+		if(!kmersBelowStdCutOff.empty()){
+			SeqOutput filtCommonLoc_writer(outPars.filteredOffKmerCommonLoc_pairedOpts);
+			SeqOutput filtCommonLoc_singleWriter(outPars.filteredOffKmerCommonLoc_singletOuts);
+
+
+			bfs::path tempPairedFnpStub = njh::files::prependFileBasename(outPars.filteredPairedOpts.out_.outFilename_, "temp_");
+			SeqOutput filtCommonLoc_pairedWriter_temp(SeqIOOptions::genPairedOut(tempPairedFnpStub));
+
+			bfs::path tempSinglesFnp = njh::files::prependFileBasename(ret.usedFilteredSinglesFnp, "temp_");
+			SeqOutput filtCommonLoc_singleWriter_temp(SeqIOOptions(tempSinglesFnp, singleWriter.ioOptions_.outFormat_));
+
+			if(wroteSingles){
+				SeqInput singlesReader(SeqIOOptions(ret.usedFilteredSinglesFnp, SeqIOOptions::getInFormat(singleWriter.ioOptions_.outFormat_)));
+				singlesReader.openIn();
+				seqInfo seq;
+				while(singlesReader.readNextReadLock(seq)){
+					if(len(seq) > extractionPars.kmerCommonLocKmerLength){
+						bool remove = false;
+						for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(seq) - extractionPars.kmerCommonLocKmerLength))){
+							auto k = seq.seq_.substr(pos, extractionPars.kmerCommonLocKmerLength);
+							if(njh::in(k, kmersBelowStdCutOff)){
+								remove = true;
+								break;
+							}
+						}
+						if(!remove){
+							for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(seq) - extractionPars.kmerCommonLocKmerLength))){
+								auto k = seq.seq_.substr(len(seq)-extractionPars.kmerCommonLocKmerLength - pos, extractionPars.kmerCommonLocKmerLength);
+								if(njh::in(k, kmersBelowStdCutOff)){
+									remove = true;
+									break;
+								}
+							}
+						}
+						if(remove){
+							filtCommonLoc_singleWriter.openWrite(seq);
+							++ret.filteredSinglesKmerCommonLocation_;
+						}else{
+							kmerInfo kInfo(seq.seq_, extractionPars.kmerCommonLocKmerLength, false);
+							for (const auto &k : kInfo.kmers_) {
+								addOtherVec(kmerPositonsSecondPass[k.first], k.second.positions_);
+							}
+							filtCommonLoc_singleWriter_temp.openWrite(seq);
+						}
+					}else{
+						filtCommonLoc_singleWriter_temp.openWrite(seq);
+					}
+				}
+			}
+
+			if(wrotePairs){
+				SeqInput pairReader(SeqIOOptions::genPairedIn(ret.usedFilteredPairedR1Fnp, ret.usedFilteredPairedR2Fnp));
+				pairReader.openIn();
+				PairedRead pSeq;
+				while(pairReader.readNextRead(pSeq)){
+					bool removeR1 = false;
+					bool removeR2 = false;
+					if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+						for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.seqBase_) - extractionPars.kmerCommonLocKmerLength))){
+							auto k = pSeq.seqBase_.seq_.substr(pos, extractionPars.kmerCommonLocKmerLength);
+							if(njh::in(k, kmersBelowStdCutOff)){
+								removeR1 = true;
+								break;
+							}
+						}
+						if(!removeR1){
+							for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.seqBase_) - extractionPars.kmerCommonLocKmerLength))){
+								auto k = pSeq.seqBase_.seq_.substr(len(pSeq.seqBase_)-extractionPars.kmerCommonLocKmerLength - pos, extractionPars.kmerCommonLocKmerLength);
+								if(njh::in(k, kmersBelowStdCutOff)){
+									removeR1 = true;
+									break;
+								}
+							}
+						}
+					}//r1
+
+					if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+						for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.mateSeqBase_) - extractionPars.kmerCommonLocKmerLength))){
+							auto k = pSeq.mateSeqBase_.seq_.substr(pos, extractionPars.kmerCommonLocKmerLength);
+							if(njh::in(k, kmersBelowStdCutOff)){
+								removeR2 = true;
+								break;
+							}
+						}
+						if(!removeR2){
+							for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.mateSeqBase_) - extractionPars.kmerCommonLocKmerLength))){
+								auto k = pSeq.mateSeqBase_.seq_.substr(len(pSeq.mateSeqBase_)-extractionPars.kmerCommonLocKmerLength - pos, extractionPars.kmerCommonLocKmerLength);
+								if(njh::in(k, kmersBelowStdCutOff)){
+									removeR2 = true;
+									break;
+								}
+							}
+						}
+					}//r2
+					if(removeR1 && removeR2){
+						//both filtered
+						filtCommonLoc_writer.openWrite(pSeq);
+						++ret.filteredPairsKmerCommonLocation_;
+						++ret.filteredR1KmerCommonLocation_;
+						++ret.filteredR2KmerCommonLocation_;
+					}else if(removeR1){
+						//just r1 filtered
+						filtCommonLoc_singleWriter_temp.openWrite(pSeq.mateSeqBase_);
+						if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+							kmerInfo r2(pSeq.mateSeqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+							for(const auto & k : r2.kmers_){
+								addOtherVec(kmerPositonsSecondPass[k.first], k.second.positions_);
+							}
+						}
+						filtCommonLoc_singleWriter.openWrite(pSeq.seqBase_);
+						++ret.filteredR1KmerCommonLocation_;
+
+					}else if(removeR2){
+						//just r2 filtered
+						filtCommonLoc_singleWriter_temp.openWrite(pSeq.seqBase_);
+						if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+							kmerInfo r1(pSeq.seqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+							for(const auto & k : r1.kmers_){
+								addOtherVec(kmerPositonsSecondPass[k.first], k.second.positions_);
+							}
+						}
+						filtCommonLoc_singleWriter.openWrite(pSeq.mateSeqBase_);
+						++ret.filteredR2KmerCommonLocation_;
+					}else{
+						//no filtering
+						filtCommonLoc_pairedWriter_temp.openWrite(pSeq);
+						if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+							kmerInfo r1(pSeq.seqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+							for(const auto & k : r1.kmers_){
+								addOtherVec(kmerPositonsSecondPass[k.first], k.second.positions_);
+							}
+						}
+						if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+							kmerInfo r2(pSeq.mateSeqBase_.seq_, extractionPars.kmerCommonLocKmerLength, false);
+							for(const auto & k : r2.kmers_){
+								addOtherVec(kmerPositonsSecondPass[k.first], k.second.positions_);
+							}
+						}
+					}
+				}
+			}
+			bfs::path tempSinglesWrittenFnp;
+			bfs::path tempR1Fnp;
+			bfs::path tempR2Fnp;
+			if(filtCommonLoc_singleWriter_temp.outOpen()){
+				tempSinglesWrittenFnp = filtCommonLoc_singleWriter_temp.getPrimaryOutFnp();
+				filtCommonLoc_singleWriter_temp.closeOut();
+			}
+			if(filtCommonLoc_pairedWriter_temp.outOpen()){
+				tempR1Fnp = filtCommonLoc_pairedWriter_temp.getPrimaryOutFnp();
+				tempR2Fnp = filtCommonLoc_pairedWriter_temp.getSecondaryOutFnp();
+				filtCommonLoc_pairedWriter_temp.closeOut();
+			}
+			//whether or not to do second pass
+			if(ret.filteredR1KmerCommonLocation_ + ret.filteredR2KmerCommonLocation_ + ret.filteredSinglesKmerCommonLocation_ > 0){
+				for(const auto &kpos : kmerPositonsSecondPass){
+					if(kpos.second.size() < extractionPars.kmerCommonLocOccurenceCutOff){
+						continue;
+					}
+//
+//					if(std::string::npos != kpos.first.find("AAGACCATGAAGGG")){
+//						std::cout << njh::bashCT::cyan;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << "\tk: " << kpos.first << std::endl;
+//						std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//						std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//						std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//						std::cout << njh::bashCT::reset;
+//					}
+//					if(std::string::npos != kpos.first.find("CAAGAAAAAAAGAGT")){
+//						std::cout << njh::bashCT::red;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << "\tk: " << kpos.first << std::endl;
+//						std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//						std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//						std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//						std::cout << njh::bashCT::reset;
+//					}
+//					if(std::string::npos != kpos.first.find("AGAAAGAGAAGAGAC")){
+//						std::cout << njh::bashCT::blue;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << "\tk: " << kpos.first << std::endl;
+//						std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//						std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//						std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//						std::cout << njh::bashCT::reset;
+//					}
+//					if(std::string::npos != kpos.first.find("GACAATTAACAAAGA")){
+//						std::cout << njh::bashCT::purple;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << "\tk: " << kpos.first << std::endl;
+//						std::cout << "\tk#s: " << kpos.second.size()  << std::endl;
+//						std::cout << "\tksd: " << vectorStandardDeviationPop(kpos.second)  << std::endl;
+//						std::cout << "\tkmeanPos: " << vectorMean(kpos.second)  << std::endl;
+//						std::cout << njh::bashCT::reset;
+//					}
+
+					if(vectorStandardDeviationPop(kpos.second) < extractionPars.kmerCommonLocStdCutOff){
+						kmersBelowStdCutOff.emplace(kpos.first);
+					}
+				}
+				//second pass
+				//reuse, erase the old ones so there isn't confusion over them in case all of the pairs or all of the singles were filtered off
+
+				if(bfs::exists(ret.usedFilteredSinglesFnp)){
+					bfs::remove(ret.usedFilteredSinglesFnp);
+				}
+				if(bfs::exists(ret.usedFilteredPairedR1Fnp)){
+					bfs::remove(ret.usedFilteredPairedR1Fnp);
+					bfs::remove(ret.usedFilteredPairedR2Fnp);
+				}
+
+				SeqOutput pass_pairedWriter(outPars.filteredPairedOpts);
+				SeqOutput pass_singleWriter(outPars.filteredSingletOuts);
+
+
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+				if(wroteSingles){
+//					std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//					std::cout << "tempSinglesWrittenFnp: " << tempSinglesWrittenFnp << std::endl;
+					//create readers from the temp files
+					SeqInput singlesReader(SeqIOOptions(tempSinglesWrittenFnp, SeqIOOptions::getInFormat(singleWriter.ioOptions_.outFormat_)));
+					singlesReader.openIn();
+					seqInfo seq;
+					while(singlesReader.readNextReadLock(seq)){
+						if(len(seq) > extractionPars.kmerCommonLocKmerLength){
+							bool remove = false;
+							for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(seq) - extractionPars.kmerCommonLocKmerLength))){
+								auto k = seq.seq_.substr(pos, extractionPars.kmerCommonLocKmerLength);
+								if(njh::in(k, kmersBelowStdCutOff)){
+									remove = true;
+									break;
+								}
+							}
+							if(!remove){
+								for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(seq) - extractionPars.kmerCommonLocKmerLength))){
+									auto k = seq.seq_.substr(len(seq)-extractionPars.kmerCommonLocKmerLength - pos, extractionPars.kmerCommonLocKmerLength);
+									if(njh::in(k, kmersBelowStdCutOff)){
+										remove = true;
+										break;
+									}
+								}
+							}
+							if(remove){
+								filtCommonLoc_singleWriter.openWrite(seq);
+								++ret.filteredSinglesKmerCommonLocation_;
+							}else{
+								pass_singleWriter.openWrite(seq);
+							}
+						}else{
+							pass_singleWriter.openWrite(seq);
+						}
+					}
+				}
+
+				if(wrotePairs){
+//					std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//					std::cout << "tempR1Fnp: " << tempR1Fnp << std::endl;
+//					std::cout << "tempR2Fnp: " << tempR2Fnp << std::endl;
+					//create readers from the temp files
+					SeqInput pairReader(SeqIOOptions::genPairedIn(tempR1Fnp, tempR2Fnp));
+					pairReader.openIn();
+					PairedRead pSeq;
+					while(pairReader.readNextRead(pSeq)){
+						bool removeR1 = false;
+						bool removeR2 = false;
+						if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){
+							for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.seqBase_) - extractionPars.kmerCommonLocKmerLength))){
+								auto k = pSeq.seqBase_.seq_.substr(pos, extractionPars.kmerCommonLocKmerLength);
+								if(njh::in(k, kmersBelowStdCutOff)){
+									removeR1 = true;
+									break;
+								}
+							}
+							if(!removeR1){
+								for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.seqBase_) - extractionPars.kmerCommonLocKmerLength))){
+									auto k = pSeq.seqBase_.seq_.substr(len(pSeq.seqBase_)-extractionPars.kmerCommonLocKmerLength - pos, extractionPars.kmerCommonLocKmerLength);
+									if(njh::in(k, kmersBelowStdCutOff)){
+										removeR1 = true;
+										break;
+									}
+								}
+							}
+						}//r1
+
+						if(len(pSeq.mateSeqBase_) > extractionPars.kmerCommonLocKmerLength){
+							for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.mateSeqBase_) - extractionPars.kmerCommonLocKmerLength))){
+								auto k = pSeq.mateSeqBase_.seq_.substr(pos, extractionPars.kmerCommonLocKmerLength);
+								if(njh::in(k, kmersBelowStdCutOff)){
+									removeR2 = true;
+									break;
+								}
+							}
+							if(!removeR2){
+								for(const auto pos : iter::range(std::min<uint32_t>(extractionPars.kmerCommonLocWithin, len(pSeq.mateSeqBase_) - extractionPars.kmerCommonLocKmerLength))){
+									auto k = pSeq.mateSeqBase_.seq_.substr(len(pSeq.mateSeqBase_)-extractionPars.kmerCommonLocKmerLength - pos, extractionPars.kmerCommonLocKmerLength);
+									if(njh::in(k, kmersBelowStdCutOff)){
+										removeR2 = true;
+										break;
+									}
+								}
+							}
+						}//r2
+						if(removeR1 && removeR2){
+							//both filtered
+							filtCommonLoc_writer.openWrite(pSeq);
+							++ret.filteredPairsKmerCommonLocation_;
+							++ret.filteredR1KmerCommonLocation_;
+							++ret.filteredR2KmerCommonLocation_;
+						}else if(removeR1){
+							//just r1 filtered
+							pass_singleWriter.openWrite(pSeq.mateSeqBase_);
+							filtCommonLoc_singleWriter.openWrite(pSeq.seqBase_);
+							++ret.filteredR1KmerCommonLocation_;
+
+						}else if(removeR2){
+							//just r2 filtered
+							pass_singleWriter.openWrite(pSeq.seqBase_);
+							filtCommonLoc_singleWriter.openWrite(pSeq.mateSeqBase_);
+							++ret.filteredR2KmerCommonLocation_;
+						}else{
+							//no filtering
+							pass_pairedWriter.openWrite(pSeq);
+						}
+					}
+				}
+				pass_pairedWriter.closeOut();
+				pass_singleWriter.closeOut();
+			}
+
+			//clean up
+			if(bfs::exists(tempSinglesWrittenFnp)){
+				bfs::remove(tempSinglesWrittenFnp);
+			}
+			if(bfs::exists(tempR1Fnp)){
+				bfs::remove(tempR1Fnp);
+				bfs::remove(tempR2Fnp);
+			}
+		}
+	}
 	return ret;
 }
 

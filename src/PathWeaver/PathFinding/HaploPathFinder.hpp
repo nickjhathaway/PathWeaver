@@ -247,6 +247,15 @@ public:
 
 		uint32_t estimatorKlen = 15;
 
+
+		uint32_t kmerCommonLocKmerLength = 15;
+		uint32_t kmerCommonLocOccurenceCutOff = 40;
+		double kmerCommonLocStdCutOff = 15;
+		uint32_t kmerCommonLocWithin = 200;
+
+		bool filterbyKmerCommonLoc_{false};
+
+
 		/**@todo update with new members*/
 		Json::Value toJson() const;
 
