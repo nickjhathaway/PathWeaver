@@ -47,13 +47,7 @@ struct PathFinderFromSeqsRes{
 	writeOutTandemsAndOptionallyStitchRes previousDetTandems_;
 };
 
-PathFinderFromSeqsRes PathFinderFromSeqs(
-		const BamExtractor::ExtractedFilesOpts & inOpts,
-		const bfs::path & workingDir,
-		const std::string & sampName,
-		const HaploPathFinder::PathFinderCorePars & pars,
-		const std::unique_ptr<MultipleGroupMetaData> & meta,
-		const PathFinderFromSeqsRes & previousRunRes = PathFinderFromSeqsRes{});
+
 
 
 
