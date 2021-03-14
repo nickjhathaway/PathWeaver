@@ -170,7 +170,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
 		}
-
+		sleep(2); //have to sleep for at least one second or the index is going to be the same age as the file
 		SeqInput::buildIndex(SeqIOOptions::genFastaIn(ret.allSeqFnp));
 
 
@@ -257,6 +257,8 @@ SeqGatheringFromPathWeaver::processedGatherSeqsMetaRes SeqGatheringFromPathWeave
 		njh::concurrent::runVoidFunctionThreaded(filterBasedOnMeta, corePars_.numThreads);
 
 		writer.closeOut();
+		sleep(2); //have to sleep for at least one second or the index is going to be the same age as the file
+
 		SeqInput::buildIndex(SeqIOOptions::genFastaIn(ret.allSeqFnp));
 
 	} else {
