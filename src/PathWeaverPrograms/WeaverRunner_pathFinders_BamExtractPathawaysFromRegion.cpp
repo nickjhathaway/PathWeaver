@@ -146,6 +146,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	setUp.setOption(ignoreFailedTrim, "--ignoreFailedTrim", "Ignore failed trim status sequences");
 
 	setUp.setOption(masterPars.pFinderPars_.trimToCircularGenome, "--trimToCircularGenome", "Trim contigs to the reference assuming ref is circular");
+	setUp.setOption(masterPars.pFinderPars_.circularTrimPars_.extend_, "--trimToCircularGenomeExtendAmount", "When trimming to circular reference, extend by this much which can help with trimming");
 
 	//getting base coverage
 	setUp.setOption(filterOnBaseCoverage, "--filterOnBaseCoverage", "Filter On Base Coverage");

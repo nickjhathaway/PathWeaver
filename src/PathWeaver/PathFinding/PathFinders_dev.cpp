@@ -3153,6 +3153,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					const auto & trimSeqsVec = extractionPars.trimSeqs.empty() ? extractionPars.inputSeqs : extractionPars.trimSeqs;
 					readVec::getMaxLength(trimSeqsVec, maxLen);
 					readVec::getMaxLength(outSeqs, maxLen);
+					maxLen += extractionPars.circularTrimPars_.extend_ * 2;
+
+
 					aligner alignerObj(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix(2,-2), false);
 					//alignerObj.processAlnInfoInputNoCheck(njh::files::make_path(workingDir, "trimAlnCache").string(), extractionPars.verbose);
 					std::vector<kmerInfo> inputSeqsKmerInfos;
@@ -3176,6 +3179,17 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									bestRefPos = pos;
 									bestRefScore = revComp.second;
 								}
+							}
+						}
+						if(extractionPars.circularTrimPars_.extend_ > 0){
+							if(len(seq) > extractionPars.circularTrimPars_.extend_){
+								auto front = seq.getSubRead(0, extractionPars.circularTrimPars_.extend_);
+								auto back = seq.getSubRead(len(seq) - extractionPars.circularTrimPars_.extend_);
+								seq.prepend(back);
+								seq.append(front);
+							}else{
+								seq.append(seq);
+								seq.prepend(seq);
 							}
 						}
 						auto circularParsCopy = extractionPars.circularTrimPars_;

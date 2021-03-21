@@ -482,6 +482,7 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 	setUp.setOption(noTrimWithGlobalAln, "--noTrimWithGlobalAln", "Trim to the input references with global alignment to input seqs rather than with muscle");
 	trimWithGlobalAln = !noTrimWithGlobalAln;
 	setUp.setOption(trimToCircularGenome, "--trimToCircularGenome", "Trim contigs to the reference assuming ref is circular");
+	setUp.setOption(circularTrimPars_.extend_, "--trimToCircularGenomeExtendAmount", "When trimming to circular reference, extend by this much which can help with trimming");
 	setUp.setOption(trimEnds, "--trimEnds", "Trim the ends of called haplotypes");
 	setUp.setOption(trimEndsByCoverage, "--trimEndsByCoverage", "Trim Ends By low coverage");
 	setUp.setOption(trimEndsBy, "--trimEndsBy", "Trim Ends By this length when trimming, rather than the kmer length");
