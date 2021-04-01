@@ -367,6 +367,39 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	auto reportsDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"reports"});
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 
+	//gather all basic info
+	{
+		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
+		std::shared_ptr<TableReader> firstTable;
+		for(const auto & dir : directories){
+			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
+			if(bfs::exists(basicFnp)){
+				TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
+				if(nullptr == firstTable){
+					firstTable = std::make_shared<TableReader>(currentTabOpts);
+					firstTable->header_.outPutContents(allBasicInfo, "\t");
+					VecStr row;
+					while(firstTable->getNextRow(row)){
+						allBasicInfo << njh::conToStr(row, "\t") << "\n";
+					}
+				}else{
+					TableReader currentTable(currentTabOpts);
+					if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
+						std::stringstream ss;
+						ss << __PRETTY_FUNCTION__ << ", error " << "table " << basicFnp << " header's doesn't match other's header"<< "\n";
+						ss << "Expected Header: " << njh::conToStr(firstTable->header_.columnNames_, ",") << "\n";
+						ss << "Current  Header: " << njh::conToStr(currentTable.header_.columnNames_, ",") << "\n";
+						throw std::runtime_error{ss.str()};
+					}
+					VecStr row;
+					while(currentTable.getNextRow(row)){
+						allBasicInfo << njh::conToStr(row, "\t") << "\n";
+					}
+				}
+			}
+		}
+	}
+
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
 	if("" != masterPopClusPars.groupingsFile){
@@ -1227,6 +1260,41 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	//njh::concurrent::runVoidFunctionThreaded(runPopClusOnTar, 1);
 	njh::concurrent::runVoidFunctionThreaded(runPopClusOnTar, masterPopClusPars.numThreads);
 
+
+	//gather all selected cluster info
+	{
+
+		OutputStream allSelectedInfo(njh::files::make_path(reportsDir, "allSelectedClustersInfo.tab.txt.gz"));
+		std::shared_ptr<TableReader> firstTable;
+		for(const auto & tar : tarNames){
+
+			auto resultsFnp = njh::files::make_path(setUp.pars_.directoryName_, tar, "selectedClustersInfo.tab.txt.gz");
+			if(bfs::exists(resultsFnp)){
+				TableIOOpts currentTabOpts(InOptions(resultsFnp), "\t", true);
+				if(nullptr == firstTable){
+					firstTable = std::make_shared<TableReader>(currentTabOpts);
+					firstTable->header_.outPutContents(allSelectedInfo, "\t");
+					VecStr row;
+					while(firstTable->getNextRow(row)){
+						allSelectedInfo << njh::conToStr(row, "\t") << "\n";
+					}
+				}else{
+					TableReader currentTable(currentTabOpts);
+					if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
+						std::stringstream ss;
+						ss << __PRETTY_FUNCTION__ << ", error " << "table " << resultsFnp << " header's doesn't match other's header"<< "\n";
+						ss << "Expected Header: " << njh::conToStr(firstTable->header_.columnNames_, ",") << "\n";
+						ss << "Current  Header: " << njh::conToStr(currentTable.header_.columnNames_, ",") << "\n";
+						throw std::runtime_error{ss.str()};
+					}
+					VecStr row;
+					while(currentTable.getNextRow(row)){
+						allSelectedInfo << njh::conToStr(row, "\t") << "\n";
+					}
+				}
+			}
+		}
+	}
 
 	//zip all seqs file
 	if(rawGatherRes.allSeqFnp != processedGatherRes.allSeqFnp){
