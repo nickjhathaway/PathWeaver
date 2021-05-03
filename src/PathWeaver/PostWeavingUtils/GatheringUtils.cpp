@@ -162,12 +162,12 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			njh::sort(targetKeys);
 
 			for(const auto & target : targetKeys){
+				ret.targetKey[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
 				ret.seqsLocations[target] = std::make_pair(seqCounts, allSeqsByTarget[target].size());
 				writer.write(allSeqsByTarget[target]);
 				seqCounts += allSeqsByTarget[target].size();
 				allSeqsByTarget[target].clear();
 				allSeqsByTarget[target].resize(0);
-				ret.targetKey[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
 		}
