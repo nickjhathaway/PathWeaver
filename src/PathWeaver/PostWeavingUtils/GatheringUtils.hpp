@@ -45,6 +45,8 @@ public:
 		std::set<std::string> missingOutput;
 		bfs::path allSeqFnp;
 		std::set<std::string> allSamples;
+		std::unordered_map<std::string, std::string> targetKey;//a key because "." can't be analyses names
+
 	};
 
 	struct gatherSeqsAndSortByTargetPars{
@@ -63,7 +65,7 @@ public:
 
 		std::set<std::string> allSamples;
 		std::unordered_map<std::string,std::unordered_map<std::string, VecStr>> failedToCombine;
-		std::unordered_map<std::string, std::string> targetKey;//a key because "." can't be analyses names
+		//std::unordered_map<std::string, std::string> targetKey;//a key because "." can't be analyses names
 
 	};
 

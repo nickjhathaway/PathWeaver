@@ -366,7 +366,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	}
 	auto reportsDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"reports"});
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
-
+	std::unordered_set<std::string> allTargets;
 	//gather all basic info
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
@@ -381,6 +381,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					VecStr row;
 					while(firstTable->getNextRow(row)){
 						allBasicInfo << njh::conToStr(row, "\t") << "\n";
+						allTargets.emplace(row[firstTable->header_.getColPos("name")]);
 					}
 				}else{
 					TableReader currentTable(currentTabOpts);
@@ -452,9 +453,19 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		njh::sort(targetKeys);
 		targetsGatheredReport << "target\tinputSeqs" << std::endl;
 		for(const auto & key : targetKeys){
-			targetsGatheredReport << key
-					<< "\t" << processedGatherRes.seqsLocations[key].second
-					<< std::endl;
+			targetsGatheredReport
+			<< key << "\t" << processedGatherRes.seqsLocations[key].second
+			<< std::endl;
+		}
+		VecStr noDataForTargets;
+		for(const auto & tar :allTargets){
+			if(!njh::in(tar, targetKeys)){
+				noDataForTargets.emplace_back(tar);
+			}
+		}
+		njh::sort(noDataForTargets);
+		for(const auto & tar : noDataForTargets){
+			targetsGatheredReport << tar << "\t" << 0 << std::endl;
 		}
 	}
 	if(bfs::exists(processGatherPars.outMetaFnp)){
@@ -469,10 +480,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
 		outKey << "p_name\t" << targetField << std::endl;
-		auto keys = getVectorOfMapKeys(processedGatherRes.targetKey);
+		auto keys = getVectorOfMapKeys(rawGatherRes.targetKey);
 		njh::sort(keys);
 		for(const auto & key : keys){
-			outKey << key << '\t' << processedGatherRes.targetKey[key] << std::endl;
+			outKey << key << '\t' << rawGatherRes.targetKey[key] << std::endl;
 		}
 	}
 	{

@@ -167,6 +167,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				seqCounts += allSeqsByTarget[target].size();
 				allSeqsByTarget[target].clear();
 				allSeqsByTarget[target].resize(0);
+				ret.targetKey[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
 		}
@@ -241,7 +242,7 @@ SeqGatheringFromPathWeaver::processedGatherSeqsMetaRes SeqGatheringFromPathWeave
 					for(const auto & filtPos : allSeqsPositions){
 						writer.write(targetSeqs[filtPos]);
 					}
-					ret.targetKey[tarKey] = MetaDataInName(targetSeqs.front().name_).getMeta(corePars_.targetField);
+					//ret.targetKey[tarKey] = MetaDataInName(targetSeqs.front().name_).getMeta(corePars_.targetField);
 					seqCount += allSeqsPositions.size();
 				}
 			}
