@@ -150,6 +150,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	std::string pat = "";
 	std::string countField = "estimatedPerBaseCoverage";
 
+	bfs::path trimBedFnp = "";
+	bfs::path genomeFnp = "";
+
 	bool addPartial = false;
 	bool keepCommonSeqsWhenFiltering = false;
 
@@ -164,6 +167,19 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	setUp.processDebug();
 	setUp.processVerbose();
+	bool trimBedSet = setUp.setOption(trimBedFnp, "--trimBedFnp", "Bed File of trim locations, 4th column must match the name of the input targets");
+	setUp.setOption(genomeFnp, "--genome2bit", "genome 2bit file for when supplying trim locations", trimBedSet);
+	if(trimBedSet){
+		if(!bfs::exists(trimBedFnp)){
+			setUp.failed_ = true;
+			setUp.addWarning(njh::pasteAsStr(trimBedFnp, " doesn't exist"));
+		}
+		if(!bfs::exists(genomeFnp)){
+			setUp.failed_ = true;
+			setUp.addWarning(njh::pasteAsStr(genomeFnp, " doesn't exist"));
+		}
+	}
+
 	setUp.setOption(keepCommonSeqsWhenFiltering, "--keepCommonSeqsWhenFiltering", "Keep Common Seqs When Filtering");
 	setUp.setOption(pat, "--pat","The results directory pattern to process, directories must end with this, the prefix to this pattern will be treated as the sample name", true);
 	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
@@ -344,6 +360,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 	}
 	setUp.finishSetUp(std::cout);
+
 	setUp.startARunLog(setUp.pars_.directoryName_);
 	std::vector<bfs::path> directories;
 	if (samples.empty()) {
@@ -408,6 +425,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	}
 
 
+
+
 	std::string sampleField = "sample";
 	std::string targetField = "regionUID";
 
@@ -432,6 +451,16 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	rawGatherPars.directories = directories;
 	rawGatherPars.targets = targets;
 
+	if(trimBedSet){
+		TwoBit::TwoBitFile tReader(genomeFnp);
+		auto locations = bedPtrsToGenomicRegs(getBeds(trimBedFnp));
+		for(const auto & loc : locations){
+
+			rawGatherPars.trimSeqs[loc.uid_].emplace_back(seqWithKmerInfo(loc.extractSeq(tReader),7, false));
+		}
+	}
+
+
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
 	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
 
@@ -445,6 +474,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	processGatherPars.outMetaFnp = sampleMetaDataFnp;
 
 	watch.startNewLap("Filtering Seqs On Meta");
+
+
 	auto processedGatherRes = seqGatherer.processedGatherSeqsMeta(processGatherPars, rawGatherRes);
 
 	{

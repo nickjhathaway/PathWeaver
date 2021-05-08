@@ -23,13 +23,24 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		njh::concurrent::LockableVec<bfs::path> inputDirQueue(pars.directories);
 		std::mutex allSeqsByTargetMut;
 
+		uint64_t maxLen = 500;
+		for(const auto & trimSeqsPerTarget : pars.trimSeqs){
+			readVec::getMaxLength(trimSeqsPerTarget.second, maxLen);
+		}
+		maxLen *=2;
+		aligner baseAligner(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix::createDegenScoreMatrixCaseInsensitive(2,-2));
+		concurrent::AlignerPool alnPool(baseAligner, corePars_.numThreads);
+		alnPool.initAligners();
+
 		std::function<void()> collectSeqs = [&inputDirQueue,
 																				 &allSeqsByTarget, &allSeqsByTargetMut,
+																				 &alnPool,
 																				 &pars,&ret,this](){
 			bfs::path inputDir;
 			VecStr currentMissingOutput;
 			std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> currentAllSeqsByTarget;
 			std::unordered_set<std::string> currentAllSamples;
+			auto currentAligner = alnPool.popAligner();
 			while(inputDirQueue.getVal(inputDir)){
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
@@ -68,6 +79,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								}
 								auto tarName = njh::replaceString(rawTarName, ".", "-");
 								//targetKey[tarName] = rawTarName;
+								if(njh::in(rawTarName,pars.trimSeqs)){
+									readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
+								}
 								seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
 								samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
 							}
@@ -90,6 +104,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 										}
 										auto tarName = njh::replaceString(rawTarName, ".", "-");
 										//targetKey[tarName] = rawTarName;
+										if(njh::in(rawTarName,pars.trimSeqs)){
+											readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
+										}
 										seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
 										samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
 									}

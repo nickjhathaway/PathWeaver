@@ -54,6 +54,7 @@ public:
 		std::vector<bfs::path> directories;
 		std::set<std::string> targets;
 		bool addPartial = false;
+		std::unordered_map<std::string, std::vector<seqWithKmerInfo>> trimSeqs;
 	};
 
 	gatherSeqsAndSortByTargetRes gatherSeqsAndSortByTarget(const gatherSeqsAndSortByTargetPars & pars);
