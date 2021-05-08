@@ -497,8 +497,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			<< std::endl;
 		}
 		VecStr noDataForTargets;
-		for(const auto & tar :allTargets){
-			if(!njh::in(tar, targetKeys)){
+		for(const auto & tar : allTargets){
+			auto rawTargetName = rawGatherRes.targetKey[tar];
+			if(!njh::in(rawTargetName, targetKeys) && (targets.empty() || njh::in(rawTargetName, targets))){
 				noDataForTargets.emplace_back(tar);
 			}
 		}

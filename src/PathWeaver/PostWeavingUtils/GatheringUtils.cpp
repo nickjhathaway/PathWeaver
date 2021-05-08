@@ -82,8 +82,10 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								if(njh::in(rawTarName,pars.trimSeqs)){
 									readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
 								}
-								seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
-								samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
+								if(len(seq) >= pars.minInputSeqLen){
+									seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
+									samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
+								}
 							}
 						}
 						if(pars.addPartial){
@@ -107,8 +109,10 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 										if(njh::in(rawTarName,pars.trimSeqs)){
 											readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
 										}
-										seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
-										samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
+										if(len(seq) >= pars.minInputSeqLen){
+											seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
+											samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
+										}
 									}
 								}
 							}
