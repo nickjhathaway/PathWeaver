@@ -163,7 +163,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	bool swgaSampleClusErrorSet = false;
 	bool swgaPopClusErrorSet = false;
-
+	bool skipRBind = false;
 
 	setUp.processDebug();
 	setUp.processVerbose();
@@ -179,6 +179,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			setUp.addWarning(njh::pasteAsStr(genomeFnp, " doesn't exist"));
 		}
 	}
+	setUp.setOption(skipRBind, "--skipRBind", "Skip doing large rBind of all basic info files");
 
 	setUp.setOption(keepCommonSeqsWhenFiltering, "--keepCommonSeqsWhenFiltering", "Keep Common Seqs When Filtering");
 	setUp.setOption(pat, "--pat","The results directory pattern to process, directories must end with this, the prefix to this pattern will be treated as the sample name", true);
@@ -401,21 +402,28 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						allTargets.emplace(row[firstTable->header_.getColPos("name")]);
 					}
 				}else{
-					TableReader currentTable(currentTabOpts);
-					if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
-						std::stringstream ss;
-						ss << __PRETTY_FUNCTION__ << ", error " << "table " << basicFnp << " header's doesn't match other's header"<< "\n";
-						ss << "Expected Header: " << njh::conToStr(firstTable->header_.columnNames_, ",") << "\n";
-						ss << "Current  Header: " << njh::conToStr(currentTable.header_.columnNames_, ",") << "\n";
-						throw std::runtime_error{ss.str()};
-					}
-					VecStr row;
-					while(currentTable.getNextRow(row)){
-						allBasicInfo << njh::conToStr(row, "\t") << "\n";
+					if(!skipRBind){
+						TableReader currentTable(currentTabOpts);
+						if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
+							std::stringstream ss;
+							ss << __PRETTY_FUNCTION__ << ", error " << "table " << basicFnp << " header's doesn't match other's header"<< "\n";
+							ss << "Expected Header: " << njh::conToStr(firstTable->header_.columnNames_, ",") << "\n";
+							ss << "Current  Header: " << njh::conToStr(currentTable.header_.columnNames_, ",") << "\n";
+							throw std::runtime_error{ss.str()};
+						}
+						VecStr row;
+						while(currentTable.getNextRow(row)){
+							allBasicInfo << njh::conToStr(row, "\t") << "\n";
+						}
+					}else{
+						break;
 					}
 				}
 			}
 		}
+	}
+	if(skipRBind){
+		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 	}
 
 
