@@ -835,6 +835,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		std::vector<seqInfo> outPopSeqsPerSamp;
 
 		std::unordered_map<std::string, uint32_t> sampCountsForPopHaps;
+		std::unordered_map<std::string, std::unordered_set<std::string>> sampNamesForPopHaps;
+
 		uint32_t totalPopCount = 0;
 		std::set<std::string> samplesCount;
 //		std::cout << njh::conToStr(processedGatherRes.allSamples) << std::endl;
@@ -844,6 +846,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		outPopSeqsPerSamp = popSeqsPerSamp;
 		for(const auto & popClus : sampColl.popCollapse_->collapsed_.clusters_){
 			sampCountsForPopHaps[popClus.seqBase_.name_] = popClus.sampleClusters().size();
+			auto samples = getVectorOfMapKeys(popClus.sampleClusters());
+			sampNamesForPopHaps[popClus.seqBase_.name_].insert(samples.begin(), samples.end());
 			totalPopCount += popClus.sampleClusters().size();
 		}
 		for(const auto & seq : popSeqsPerSamp){
@@ -870,7 +874,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			SeqOutput::write(sampColl.popCollapse_->collapsed_.clusters_, popOutOpts);
 
 			popSeqsOpts.firstName_ = popOutOpts.out_.outName();
-			auto translatedRes = translator->run(popSeqsOpts, sampCountsForPopHaps, currentPars.variantCallerRunPars);
+			auto translatedRes = translator->run(popSeqsOpts, sampNamesForPopHaps, currentPars.variantCallerRunPars);
 			SeqOutput transwriter(SeqIOOptions::genFastaOut(njh::files::make_path(variantInfoDir, "translatedInput.fasta")));
 			for(const auto & seqName : translatedRes.translations_){
 				for(const auto & transcript : seqName.second){
