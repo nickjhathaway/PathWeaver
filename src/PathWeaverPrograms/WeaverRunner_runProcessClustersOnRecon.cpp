@@ -463,7 +463,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		TwoBit::TwoBitFile tReader(genomeFnp);
 		auto locations = bedPtrsToGenomicRegs(getBeds(trimBedFnp));
 		for(const auto & loc : locations){
-
 			rawGatherPars.trimSeqs[loc.uid_].emplace_back(seqWithKmerInfo(loc.extractSeq(tReader),7, false));
 		}
 	}

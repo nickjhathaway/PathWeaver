@@ -3181,21 +3181,76 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								}
 							}
 						}
+
+						seqInfo originalSeq = seq;
 						if(extractionPars.circularTrimPars_.extend_ > 0){
+							seqInfo front;
+							seqInfo back;
 							if(len(seq) > extractionPars.circularTrimPars_.extend_){
-								auto front = seq.getSubRead(0, extractionPars.circularTrimPars_.extend_);
-								auto back = seq.getSubRead(len(seq) - extractionPars.circularTrimPars_.extend_);
+								front = seq.getSubRead(0, extractionPars.circularTrimPars_.extend_);
+								back = seq.getSubRead(len(seq) - extractionPars.circularTrimPars_.extend_);
+							}else{
+								front = seq;
+								back = seq;
+							}
+							// since these are circular seqs check the fronts and back for same seq
+							uint32_t checkLenTo = extractionPars.circularTrimPars_.extendSeqCheckLenTo_;
+							//to adjust for seq len;
+							checkLenTo = std::min<uint32_t>(checkLenTo, len(seq));
+							uint32_t checkLenFrom = extractionPars.circularTrimPars_.extendSeqCheckLenFrom_;
+				//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+				//			std::cout << "checkLenFrom: " << checkLenFrom << std::endl;
+				//			std::cout << "checkLenTo: " << checkLenTo << std::endl;
+
+							if(checkLenFrom >= checkLenTo){
+								checkLenFrom = checkLenTo - 1;
+							}
+							bool sameSeqFrontBack = false;
+							uint32_t sameSeqSize = std::numeric_limits<uint32_t>::max();
+							for(const auto pos : iter::range(checkLenFrom, checkLenTo)){
+								if(std::equal(seq.seq_.begin(),                  seq.seq_.begin() + pos + 1,
+										          seq.seq_.begin() + len(seq) - pos - 1 )){
+				//					std::cout << "pos: " << pos << std::endl;
+				//					std::cout << "pos + 1: " << pos + 1 << std::endl;
+				//					std::cout << seq.seq_.substr(0, pos + 1) << std::endl;;
+				//					std::cout << seq.seq_.substr(len(seq)-pos - 1, pos + 1) << std::endl;;
+									sameSeqFrontBack = true;
+									sameSeqSize = pos + 1;
+									break;
+								}
+							}
+							if(sameSeqFrontBack){
+								if(len(front) > sameSeqSize){
+									front = front.getSubRead(sameSeqSize);
+									back = front.getSubRead(0, len(back) - sameSeqSize);
+									seq.prepend(back);
+									seq.append(front);
+								}
+							}else{
 								seq.prepend(back);
 								seq.append(front);
-							}else{
-								seq.append(seq);
-								seq.prepend(seq);
 							}
 						}
 						auto circularParsCopy = extractionPars.circularTrimPars_;
 						circularParsCopy.refSeq_ = trimSeqsVec[bestRefPos];
 						auto res = readVecTrimmer::trimCircularGenomeToRef(seq, circularParsCopy, alignerObj);
-						addOtherVec(trimmedOutSeqs, res);
+						if(extractionPars.circularTrimPars_.extend_ == 0){
+							// if no extension just add results
+							addOtherVec(trimmedOutSeqs, res);
+						}else{
+							if(1 == res.size() && !res.front().on_){
+								//no trim, adding original seq in case it was extended
+								originalSeq.on_ = false;
+								trimmedOutSeqs.emplace_back(originalSeq);
+							}else if(1 == res.size() && res.front().on_){
+								//trimmed to one piece add results
+								addOtherVec(trimmedOutSeqs, res);
+							} else {
+								//there was trimming but not complete, since we extended just trim to the original seq
+								auto res = readVecTrimmer::trimCircularGenomeToRef(originalSeq, circularParsCopy, alignerObj);
+								addOtherVec(trimmedOutSeqs, res);
+							}
+						}
 					}
 					outSeqs = trimmedOutSeqs;
 					//alignerObj.processAlnInfoOutputNoCheck(njh::files::make_path(workingDir, "trimAlnCache").string(), extractionPars.verbose);
