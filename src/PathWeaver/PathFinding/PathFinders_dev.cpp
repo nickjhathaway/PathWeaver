@@ -52,6 +52,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 	preprocessSeqsForWayFindingPars preprocessPars;
 	preprocessPars.filteredPairedOpts = SeqIOOptions::genPairedOut(njh::files::make_path(finalCurrentDir,         "filteredExtractedPairs"));
 	preprocessPars.filteredSingletOuts = SeqIOOptions::genFastqOut(njh::files::make_path(finalCurrentDir,         "filteredSingles"));
+
 	preprocessPars.filteredOff_pairedOpts = SeqIOOptions::genPairedOut(njh::files::make_path(finalCurrentDir,     "filteredOff_extractedPairs"));
 	preprocessPars.filteredOff_singletOuts = SeqIOOptions::genFastqOut(njh::files::make_path(finalCurrentDir,     "filteredOff_extractedSingles"));
 	preprocessPars.filteredOffDups_pairedOpts = SeqIOOptions::genPairedOut(njh::files::make_path(finalCurrentDir, "filteredOffDups_extractedPairs"));
@@ -241,7 +242,11 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		//uint32_t klength = currentKLen;
 		std::vector<TandemRepeatPlusAdjustedSize> allTandems = readInTandemsWithPartInfo(tandemInfoFnp);
 		auto processedTandems = processGlobalTandems(allTandems, currentKLen, extractionPars);
-		processedTandems.writeOutInfos(currentKmerDirectory, false);
+
+		if(extractionPars.writeOutAll_){
+			processedTandems.writeOutInfos(currentKmerDirectory, false);
+		}
+
 		watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": ",
 				"klen_", currentKLen,
 				"- Processing Sequences For Tandems - Finding Tandems In Seqs" ) );
@@ -3027,10 +3032,19 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		ret.log_["bestKmerLength"] = bestResult.runParams_.klen_;
 		ret.log_["bestKmerParsName"] = njh::json::toJson(njh::pasteAsStr("klen_", bestResult.runParams_.klen_, "-kcut_", bestResult.runParams_.kcut_, "-shortTip_", bestResult.runParams_.shortNumber_));
 		ret.log_["bestResult"] = njh::json::toJson(bestResult);
-		OutputStream bestOptInfoOut(njh::files::make_path(finalCurrentDir, "optimizationInfoBest.json"));
-		bestOptInfoOut << njh::json::toJson(bestResult)<< std::endl;
-		OutputStream bestOptAllInfoOut(njh::files::make_path(finalCurrentDir, "optimizationInfoAll.json"));
-		bestOptAllInfoOut << njh::json::toJson(allOptRunResults)<< std::endl;
+		if(extractionPars.writeOutAll_){
+			OutputStream bestOptInfoOut(njh::files::make_path(finalCurrentDir, "optimizationInfoBest.json"));
+			bestOptInfoOut << njh::json::toJson(bestResult)<< std::endl;
+			OutputStream bestOptAllInfoOut(njh::files::make_path(finalCurrentDir, "optimizationInfoAll.json"));
+			bestOptAllInfoOut << njh::json::toJson(allOptRunResults)<< std::endl;
+		}
+//		std::cout << finalCurrentDir.string() << std::endl;
+//		if(finalCurrentDir.string().find("Pf3D7_09_v3-1413521-1414732") != std::string::npos){
+//			OutputStream bestOptInfoOut(njh::files::make_path("./", "optimizationInfoBest.json"));
+//			bestOptInfoOut << njh::json::toJson(bestResult)<< std::endl;
+//			OutputStream bestOptAllInfoOut(njh::files::make_path("./", "optimizationInfoAll.json"));
+//			bestOptAllInfoOut << njh::json::toJson(allOptRunResults)<< std::endl;
+//		}
 		{
 			watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": Getting Estimate Counts") );
 			//KmerPathwayGraphDev estimatingGraph(bestResult.runParams_.klen_);
@@ -3477,32 +3491,45 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			}
 
 
-			auto outSeqOptsAboveFrac = SeqIOOptions::genFastaOut(njh::files::make_path(bestResult.runDirs_.klenDir_, "output_aboveCutOff.fasta"));
-			OutOptions outInfoAboveFracOpts(njh::files::make_path(bestResult.runDirs_.klenDir_, "outputInfo_aboveCutOff.tab.txt"));
-			std::ofstream outInfoAboveFracFile;
-			outInfoAboveFracOpts.openFile(outInfoAboveFracFile);
-			outInfoAboveFracFile << "name\treadCount\tfraction" << "\n";
-			SeqOutput aboveWriter(outSeqOptsAboveFrac);
-			aboveWriter.openOut();
-			for(auto & seq : finalFilteredSeqs){
-				outInfoAboveFracFile << seq.name_ << "\t" << seq.cnt_ << "\t" << seq.cnt_/finalTotalCountAbove << std::endl;;
-				aboveWriter.write(seq);
+			if(extractionPars.writeOutAll_){
+				auto outSeqOptsAboveFrac = SeqIOOptions::genFastaOut(njh::files::make_path(bestResult.runDirs_.klenDir_, "output_aboveCutOff.fasta"));
+				SeqOutput aboveWriter(outSeqOptsAboveFrac);
+				aboveWriter.openOut();
+				aboveWriter.write(finalFilteredSeqs);
+			}else{
+				auto outSeqOptsAboveFrac = SeqIOOptions::genFastaOut(njh::files::make_path(finalCurrentDir, "output_aboveCutOff.fasta"));
+				SeqOutput aboveWriter(outSeqOptsAboveFrac);
+				aboveWriter.openOut();
+				aboveWriter.write(finalFilteredSeqs);
+			}
+
+			if(extractionPars.writeOutAll_){
+				OutOptions outInfoAboveFracOpts(njh::files::make_path(bestResult.runDirs_.klenDir_, "outputInfo_aboveCutOff.tab.txt"));
+				std::ofstream outInfoAboveFracFile;
+				outInfoAboveFracOpts.openFile(outInfoAboveFracFile);
+				outInfoAboveFracFile << "name\treadCount\tfraction" << "\n";
+				for(auto & seq : finalFilteredSeqs){
+					outInfoAboveFracFile << seq.name_ << "\t" << seq.cnt_ << "\t" << seq.cnt_/finalTotalCountAbove << std::endl;;
+				}
 			}
 		}
-		auto filesToMoveTop = njh::files::filesInFolder(bestResult.runDirs_.klenDir_);
-		for(const auto & fnp : filesToMoveTop){
-			if(bfs::is_regular_file(fnp)){
-				if(!extractionPars.keepOptimizedSubDirs){
-					bfs::rename(
-							njh::files::make_path(bestResult.runDirs_.klenDir_, fnp.filename()),
-							njh::files::make_path(finalCurrentDir, fnp.filename()));
-				}else{
-					bfs::copy_file(
-							njh::files::make_path(bestResult.runDirs_.klenDir_, fnp.filename()),
-							njh::files::make_path(finalCurrentDir, fnp.filename()));
-					//set the mod time to the what was copied from
-					bfs::last_write_time(njh::files::make_path(finalCurrentDir, fnp.filename()),
-					bfs::last_write_time(njh::files::make_path(bestResult.runDirs_.klenDir_, fnp.filename())));
+
+		if(extractionPars.writeOutAll_){
+			auto filesToMoveTop = njh::files::filesInFolder(bestResult.runDirs_.klenDir_);
+			for(const auto & fnp : filesToMoveTop){
+				if(bfs::is_regular_file(fnp)){
+					if(!extractionPars.keepOptimizedSubDirs){
+						bfs::rename(
+								njh::files::make_path(bestResult.runDirs_.klenDir_, fnp.filename()),
+								njh::files::make_path(finalCurrentDir, fnp.filename()));
+					}else{
+						bfs::copy_file(
+								njh::files::make_path(bestResult.runDirs_.klenDir_, fnp.filename()),
+								njh::files::make_path(finalCurrentDir, fnp.filename()));
+						//set the mod time to the what was copied from
+						bfs::last_write_time(njh::files::make_path(finalCurrentDir, fnp.filename()),
+						bfs::last_write_time(njh::files::make_path(bestResult.runDirs_.klenDir_, fnp.filename())));
+					}
 				}
 			}
 		}
@@ -3539,9 +3566,11 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //			std::cout << "bestResult.keepSeqNames_.size(): " << bestResult.keepSeqNames_.size() << std::endl;
 			keepSeqNamesOut << njh::conToStr(bestResult.keepSeqNames_, "\n") << std::endl;
 		}
-		//always write output.fasta
-		auto outputSeqOutOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalCurrentDir, "output.fasta"));
-		SeqOutput::write(bestResult.finalFilteredOutSeqs_, outputSeqOutOpts);
+		if(extractionPars.writeOutAll_){
+			//always write output.fasta
+			auto outputSeqOutOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalCurrentDir, "output.fasta"));
+			SeqOutput::write(bestResult.finalFilteredOutSeqs_, outputSeqOutOpts);
+		}
 #endif
 
 		if(!extractionPars.keepOptimizedSubDirs){

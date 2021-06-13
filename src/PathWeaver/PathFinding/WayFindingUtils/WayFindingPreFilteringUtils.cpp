@@ -60,9 +60,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 	preprocessSeqsForWayFindingRes ret;
 	SeqOutput writer(outPars.filteredPairedOpts);
 	SeqOutput singleWriter(outPars.filteredSingletOuts);
+
 	SeqOutput unused_writer(outPars.filteredOff_pairedOpts);
 	SeqOutput unused_singleWriter(outPars.filteredOff_singletOuts);
-
 	SeqOutput dup_writer(outPars.filteredOffDups_pairedOpts);
 	SeqOutput dup_singleWriter(outPars.filteredOffDups_singletOuts);
 
@@ -174,7 +174,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			}
 			//check mate
 			if(dup){
-				dup_writer.openWrite(pSeq);
+//				if(extractionPars.writeOutAll_){
+					dup_writer.openWrite(pSeq);
+//				}
 			}else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -201,7 +203,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-				unused_singleWriter.openWrite(pSeq.mateSeqBase_);
+//				if(extractionPars.writeOutAll_){
+					unused_singleWriter.openWrite(pSeq.mateSeqBase_);
+//				}
 			}else if(firstSkipped && !secondSkipped){
 				singleWriter.openWrite(pSeq.mateSeqBase_);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -212,9 +216,13 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-				unused_singleWriter.openWrite(pSeq.seqBase_);
+//				if(extractionPars.writeOutAll_){
+					unused_singleWriter.openWrite(pSeq.seqBase_);
+//				}
 			}else{
-				unused_writer.openWrite(pSeq);
+//				if(extractionPars.writeOutAll_){
+					unused_writer.openWrite(pSeq);
+//				}
 			}
 		}
 	}
@@ -315,7 +323,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			}
 
 			if(dup){
-				dup_writer.openWrite(pSeq);
+//				if(extractionPars.writeOutAll_){
+					dup_writer.openWrite(pSeq);
+//				}
 			}else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -342,7 +352,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-				unused_singleWriter.openWrite(pSeq.mateSeqBase_);
+//				if(extractionPars.writeOutAll_){
+					unused_singleWriter.openWrite(pSeq.mateSeqBase_);
+//				}
 			}else if(firstSkipped && !secondSkipped){
 				singleWriter.openWrite(pSeq.mateSeqBase_);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -353,9 +365,13 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-				unused_singleWriter.openWrite(pSeq.seqBase_);
+//				if(extractionPars.writeOutAll_){
+					unused_singleWriter.openWrite(pSeq.seqBase_);
+//				}
 			}else{
-				unused_writer.openWrite(pSeq);
+//				if(extractionPars.writeOutAll_){
+					unused_writer.openWrite(pSeq);
+//				}
 			}
 		}
 	}
@@ -417,9 +433,13 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				}
 			}
 			if (dup) {
-				dup_singleWriter.openWrite(seq);
+//				if(extractionPars.writeOutAll_){
+					dup_singleWriter.openWrite(seq);
+//				}
 			} else if (singleSkipped) {
-				unused_singleWriter.openWrite(seq);
+//				if(extractionPars.writeOutAll_){
+					unused_singleWriter.openWrite(seq);
+//				}
 			} else {
 				singleWriter.openWrite(seq);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -1102,7 +1122,11 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 		multiWriter.closeOutAll();
 		if(extractionPars.stitchPairs){
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-			OutputStream stitchResultsOut(njh::files::make_path(runPars.workingDir_, "stitchedResults.json"));
+
+			std::shared_ptr<OutputStream> stitchResultsOut;
+			if(extractionPars.writeOutAll_){
+				stitchResultsOut = std::make_shared<OutputStream>(njh::files::make_path(runPars.workingDir_, "stitchedResults.json"));
+			}
 
 			if(extractionPars.reOrientPairsForStitching){
 				pairProcessCountsCombined.total = pairProcessCountsBeforeReOrientingAll.total;
@@ -1123,9 +1147,13 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 				stitchResults["beforeReorienting"] = pairProcessCountsBeforeReOrientingAll.toJsonCounts();
 				stitchResults["afterReorienting"] = pairProcessCountsAfterReOrientingAll.toJsonCounts();
 				stitchResults["combined"] = pairProcessCountsCombined.toJsonCounts();
-				stitchResultsOut << stitchResults << std::endl;
+				if(extractionPars.writeOutAll_){
+					*stitchResultsOut << stitchResults << std::endl;
+				}
 			}else{
-				stitchResultsOut << pairProcessCountsBeforeReOrientingAll.toJsonCounts() << std::endl;
+				if(extractionPars.writeOutAll_){
+					*stitchResultsOut << pairProcessCountsBeforeReOrientingAll.toJsonCounts() << std::endl;
+				}
 			}
 			auto notStitchedR1Fnp = njh::files::make_path(runPars.workingDir_,   "not_stitched_filteredExtractedPairs_R1.fastq");
 			auto notStitchedR2Fnp = njh::files::make_path(runPars.workingDir_,   "not_stitched_filteredExtractedPairs_R2.fastq");
@@ -1239,12 +1267,14 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 				return tr1.repeat_.getSize() < tr2.repeat_.getSize();
 			}
 		});
-		OutputStream outTandemInfoOut(runPars.tandemInfoOpts_);
-		outTandemInfoOut << "repeat\tsize\tadjustedPartialSize" << std::endl;
-		for (const auto & t : ret.allTandems) {
-			outTandemInfoOut << t.repeat_.repeat_
-					<< "\t" << t.repeat_.getSize()
-					<< "\t" << t.adjustedPartialSize_ << "\n";
+//		if(extractionPars.writeOutAll_){
+			OutputStream outTandemInfoOut(runPars.tandemInfoOpts_);
+			outTandemInfoOut << "repeat\tsize\tadjustedPartialSize" << std::endl;
+			for (const auto & t : ret.allTandems) {
+				outTandemInfoOut << t.repeat_.repeat_
+						<< "\t" << t.repeat_.getSize()
+						<< "\t" << t.adjustedPartialSize_ << "\n";
+//			}
 		}
 	}
 	{

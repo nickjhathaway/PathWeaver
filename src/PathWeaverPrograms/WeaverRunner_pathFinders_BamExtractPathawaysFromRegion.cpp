@@ -158,6 +158,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	setUp.setOption(reDetermineReadCounts, "--reDetermineReadCounts", "Re-determine Read Counts by mapping the recruited sequences back to final sequences");
 	setUp.setOption(writeOutBaseCoveragePerSeq, "--writeOutBaseCoveragePerSeq", "Write Out Base Coverage Per Seq");
 	setUp.setOption(keepTemporaryFiles, "--keepTemporaryFiles", "Keep Temporary Files, by default only the final calls are kept");
+	masterPars.bamExtractPars_.writeAll_ = keepTemporaryFiles;
 	setUp.setOption(keepRawCoverageFile, "--keepRawCoverageFile", "Keep Raw Coverage File");
 
 
@@ -178,7 +179,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 	setUp.finishSetUp(std::cout);
 	setUp.startARunLog(setUp.pars_.directoryName_);
-
+	masterPars.pFinderPars_.writeOutAll_ = keepTemporaryFiles;
 
 
 
@@ -213,18 +214,20 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	njh::LockableJsonLog jLog(njh::files::make_path(setUp.pars_.directoryName_, "extractionLog.json"));
 
 	masterPars.outputDir = setUp.pars_.directoryName_;
-	bool regionFailed = false;
-	std::stringstream ss;
-	ss << __PRETTY_FUNCTION__ << ", error, couldn't find ref seqs for the following directories: " << "\n";
-	for(const auto & region : inputRegions){
-		auto refSeqs = njh::files::make_path(refDir, region.createUidFromCoordsStrand(), "allRefs.fasta");
-		if(!bfs::exists(refSeqs)){
-			ss << 	region.createUidFromCoordsStrand() << "\n";
-		}
-	}//lol this currently isn't doing anything, maybe change that up?
-	if(regionFailed){
-		throw std::runtime_error{ss.str()};
-	}
+//	{
+//		bool regionFailed = false;
+//		std::stringstream ss;
+//		ss << __PRETTY_FUNCTION__ << ", error, couldn't find ref seqs for the following directories: " << "\n";
+//		for(const auto & region : inputRegions){
+//			auto refSeqs = njh::files::make_path(refDir, region.createUidFromCoordsStrand(), "allRefs.fasta");
+//			if(!bfs::exists(refSeqs)){
+//				ss << 	region.createUidFromCoordsStrand() << "\n";
+//			}
+//		}//lol this currently isn't doing anything, maybe change that up?
+//		if(regionFailed){
+//			throw std::runtime_error{ss.str()};
+//		}
+//	}
 	std::string coverageField = "estimatedPerBaseCoverage";
 	if(reDetermineReadCounts){
 		coverageField = "meanBaseCoverage";
@@ -273,7 +276,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 			 &writeOutLogs,&expandEndRegions,&expandRegionBy,
 			 &regInfosByUID,&noTrim,&subNumThreads,
 			 &bamPool,
-			 &allFinalWriter, &allPartialWriter, &allFinalWriterMut,&allPartialWriterMut](HaploPathFinder::ExtractParams inputPars) {
+			 &allFinalWriter, &allPartialWriter, &allFinalWriterMut,&allPartialWriterMut,
+			 &keepTemporaryFiles](HaploPathFinder::ExtractParams inputPars) {
 				std::string regionName;
 				BamExtractor bExtractor(setUp.pars_.verbose_);
 				bExtractor.debug_ = setUp.pars_.debug_;
@@ -310,10 +314,12 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 								parsForRegion.pFinderPars_.trimToInputSeqs = true;
 							}
 						}
-						//write out the allRefsFile
-						SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
-								SeqIOOptions::genFastaOut(
-										njh::files::make_path(regionDir, "allRefs.fasta")));
+						if(keepTemporaryFiles){
+							//write out the allRefsFile
+							SeqOutput::write(parsForRegion.pFinderPars_.inputSeqs,
+									SeqIOOptions::genFastaOut(
+											njh::files::make_path(regionDir, "allRefs.fasta")));
+						}
 						readVec::getMaxLength(parsForRegion.pFinderPars_.inputSeqs, maxLen);
 					} else {
 						parsForRegion.pFinderPars_.trimToInputSeqs = false;
@@ -339,7 +345,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 						auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(
 								*bamReader, extractedOpts.out_, regionsUsed, parsForRegion.bamExtractPars_);
-						{
+						if(keepTemporaryFiles){
 							OutOptions extractedReadsStatsFileOpts(njh::files::make_path(extractionDir, "extractedReadsStats.tab.txt"));
 							OutputStream extractedReadsStatsFileOut(extractedReadsStatsFileOpts);
 							regionExtracted.log(extractedReadsStatsFileOut, setUp.pars_.ioOptions_.firstName_);

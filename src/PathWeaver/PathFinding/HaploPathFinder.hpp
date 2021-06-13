@@ -45,6 +45,9 @@ public:
 
 
 		PathFinderCorePars();
+
+		bool writeOutAll_ = true;
+
 		bool needToRePair_ = false;
 
 		//uint32_t connectorCutOff = 1;
