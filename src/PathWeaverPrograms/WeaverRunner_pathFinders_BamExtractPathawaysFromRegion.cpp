@@ -427,8 +427,8 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 								if(!failFilters){
 
 									auto finalSeqsOnClusters = cluster::convertVectorToClusterVector<cluster>(outputSeqs);
-									auto finalKeptSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(regionDir, sampName, "finalKeptTrimedSeqs.fasta"));
-									SeqOutput::write(finalSeqsOnClusters, finalKeptSeqOpts);
+//									auto finalKeptSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(regionDir, sampName, "finalKeptTrimedSeqs.fasta"));
+//									SeqOutput::write(finalSeqsOnClusters, finalKeptSeqOpts);
 									auto finalInfoRegionDir = njh::files::make_path(finalDirectory, regionName);
 									if(reDetermineReadCounts){
 										njh::files::makeDir(njh::files::MkdirPar{finalInfoRegionDir});

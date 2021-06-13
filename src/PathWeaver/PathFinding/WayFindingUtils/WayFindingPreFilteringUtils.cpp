@@ -174,9 +174,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			}
 			//check mate
 			if(dup){
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					dup_writer.openWrite(pSeq);
-//				}
+				}
 			}else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -203,9 +203,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_singleWriter.openWrite(pSeq.mateSeqBase_);
-//				}
+				}
 			}else if(firstSkipped && !secondSkipped){
 				singleWriter.openWrite(pSeq.mateSeqBase_);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -216,13 +216,13 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_singleWriter.openWrite(pSeq.seqBase_);
-//				}
+				}
 			}else{
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_writer.openWrite(pSeq);
-//				}
+				}
 			}
 		}
 	}
@@ -323,9 +323,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 			}
 
 			if(dup){
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					dup_writer.openWrite(pSeq);
-//				}
+				}
 			}else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -352,9 +352,9 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_singleWriter.openWrite(pSeq.mateSeqBase_);
-//				}
+				}
 			}else if(firstSkipped && !secondSkipped){
 				singleWriter.openWrite(pSeq.mateSeqBase_);
 				if(extractionPars.filterbyKmerCommonLoc_){
@@ -365,13 +365,13 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 						}
 					}
 				}
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_singleWriter.openWrite(pSeq.seqBase_);
-//				}
+				}
 			}else{
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_writer.openWrite(pSeq);
-//				}
+				}
 			}
 		}
 	}
@@ -433,13 +433,13 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				}
 			}
 			if (dup) {
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					dup_singleWriter.openWrite(seq);
-//				}
+				}
 			} else if (singleSkipped) {
-//				if(extractionPars.writeOutAll_){
+				if(extractionPars.writeOutAll_){
 					unused_singleWriter.openWrite(seq);
-//				}
+				}
 			} else {
 				singleWriter.openWrite(seq);
 				if(extractionPars.filterbyKmerCommonLoc_){
