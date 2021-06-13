@@ -575,6 +575,9 @@ BamRegionInvestigator::ReadCountsResSingle BamRegionInvestigator::getFullSpannin
 
 
 
+
+
+
 std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvestigator::getCoverageAndFullSpanningReads(
 		const bfs::path & bamFnp,
 		const std::vector<GenomicRegion> & regions,

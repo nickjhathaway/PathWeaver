@@ -31,6 +31,8 @@
 #include <njhseq/GenomeUtils.h>
 
 #include <njhcpp/concurrency/LockableJsonLog.hpp>
+#include <njhseq/concurrency/pools/BamReaderPool.hpp>
+
 #include <njhseq/objects/seqContainers.h>
 #include <njhseq/objects/seqObjects/Clusters/cluster.hpp>
 
@@ -38,6 +40,8 @@
 #include "PathWeaver/objects/Meta/CountryMetaData.hpp"
 #include "PathWeaver/seqToolsUtils/HaplotypeLocator.hpp"
 #include "PathWeaver/PathFinding.h"
+
+
 
 namespace njhseq {
 
@@ -228,10 +232,18 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	//
 	bfs::path finalDirectory = njh::files::makeDir(masterPars.outputDir, njh::files::MkdirPar("final"));
 	bfs::path partialDirectory = njh::files::makeDir(masterPars.outputDir, njh::files::MkdirPar("partial"));
-
+	auto allFinalSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalDirectory, "allFinal.fasta"));
+	auto allPartialSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(partialDirectory, "allPartial.fasta"));
+	SeqOutput allFinalWriter(allFinalSeqOpts);
+	SeqOutput allPartialWriter(allPartialSeqOpts);
+	allFinalWriter.openOut();
+	allPartialWriter.openOut();
+	std::mutex allFinalWriterMut;
+	std::mutex allPartialWriterMut;
 	//get coverage and spanning read info
 	brInvestPars.numThreads_ = masterPars.pFinderPars_.numThreads;
 	brInvestPars.countDups_ = masterPars.bamExtractPars_.keepMarkedDuplicate_;
+
 	BamRegionInvestigator brInvestor(brInvestPars);
 	auto regInfos = brInvestor.getCoverageAndFullSpanningReads(
 			setUp.pars_.ioOptions_.firstName_, inputRegions, spanningReadsPar, genomeFnp2bit);
@@ -249,20 +261,25 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	njh::concurrent::LockableQueue<std::string> regionsQueue(regionNames);
 
 
+	concurrent::BamReaderPool bamPool(setUp.pars_.ioOptions_.firstName_, masterPars.pFinderPars_.numThreads);
+	bamPool.openBamFile();
 
 	std::function<void(HaploPathFinder::ExtractParams)> extractPathway =
 			[&meta,&regionsQueue,&jLog,&refDir,
 			 &finalDirectory, &writeOutBaseCoveragePerSeq,&baseCoverageCutOff,
 			 &filterOnBaseCoverage,&reDetermineReadCounts,
 			 &setUp,&coverageField,
-			 &ignoreFailedTrim, &partialDirectory,&genomeFnp2bit,
+			 &ignoreFailedTrim,&genomeFnp2bit,
 			 &writeOutLogs,&expandEndRegions,&expandRegionBy,
-			 &regInfosByUID,&noTrim,&subNumThreads](HaploPathFinder::ExtractParams inputPars) {
+			 &regInfosByUID,&noTrim,&subNumThreads,
+			 &bamPool,
+			 &allFinalWriter, &allPartialWriter, &allFinalWriterMut,&allPartialWriterMut](HaploPathFinder::ExtractParams inputPars) {
 				std::string regionName;
 				BamExtractor bExtractor(setUp.pars_.verbose_);
 				bExtractor.debug_ = setUp.pars_.debug_;
 				const bfs::path bamFnp = setUp.pars_.ioOptions_.firstName_;
 				TwoBit::TwoBitFile tReader(genomeFnp2bit);
+				auto bamReader = bamPool.popReader();
 				while(regionsQueue.getVal(regionName)) {
 					HaploPathFinder::ExtractParams parsForRegion = inputPars;
 					parsForRegion.pFinderPars_.numThreads = subNumThreads;
@@ -321,7 +338,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 						}
 
 						auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(
-								extractedOpts, regionsUsed, parsForRegion.bamExtractPars_);
+								*bamReader, extractedOpts.out_, regionsUsed, parsForRegion.bamExtractPars_);
 						{
 							OutOptions extractedReadsStatsFileOpts(njh::files::make_path(extractionDir, "extractedReadsStats.tab.txt"));
 							OutputStream extractedReadsStatsFileOut(extractedReadsStatsFileOpts);
@@ -406,9 +423,9 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 									auto finalSeqsOnClusters = cluster::convertVectorToClusterVector<cluster>(outputSeqs);
 									auto finalKeptSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(regionDir, sampName, "finalKeptTrimedSeqs.fasta"));
 									SeqOutput::write(finalSeqsOnClusters, finalKeptSeqOpts);
-									auto finalInfoRegionDir = njh::files::makeDir(finalDirectory,
-																njh::files::MkdirPar(regionName));
+									auto finalInfoRegionDir = njh::files::make_path(finalDirectory, regionName);
 									if(reDetermineReadCounts){
+										njh::files::makeDir(njh::files::MkdirPar{finalInfoRegionDir});
 										readVec::getMaxLength(finalSeqsOnClusters, maxLen);
 
 										auto r1Fnp =      njh::files::make_path(regionDir, sampName, "filteredExtractedPairs_R1.fastq");
@@ -830,45 +847,73 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 										totalMeanCoverage += metaName.getMeta<double>(coverageField);
 										totalReadCnt+=clus.seqBase_.cnt_;
 									}
-									OutOptions outFinalInfoOpts(njh::files::make_path(finalInfoRegionDir,"finalOutputInfo.tab.txt"));
-									OutputStream outFinalInfo(outFinalInfoOpts);
-									outFinalInfo << "ReadName\treadCount\treadFraction\tlength\t"<< coverageField << "\tfractionByCoverage";
-									outFinalInfo << "\n";
+//									OutOptions outFinalInfoOpts(njh::files::make_path(finalInfoRegionDir,"finalOutputInfo.tab.txt"));
+//									OutputStream outFinalInfo(outFinalInfoOpts);
+//									outFinalInfo << "ReadName\treadCount\treadFraction\tlength\t"<< coverageField << "\tfractionByCoverage";
+//									outFinalInfo << "\n";
 									uint32_t count = 0;
 									for(auto & clus : finalSeqsOnClusters){
 										MetaDataInName metaName(clus.seqBase_.name_);
 										metaName.addMeta("length", len(clus), true);
 										clus.seqBase_.name_ = regionName + "." + leftPadNumStr<uint32_t>(count, finalSeqsOnClusters.size()) + metaName.createMetaName();
 										clus.updateName();
-										outFinalInfo << clus.seqBase_.name_
-												<< "\t" << clus.seqBase_.cnt_
-												<< "\t" << clus.seqBase_.cnt_/totalReadCnt
-												<< "\t" << len(clus)
-												<< "\t" << metaName.getMeta<double>(coverageField)
-												<< "\t" << metaName.getMeta<double>(coverageField)/totalMeanCoverage
-												<< "\n";
+//										outFinalInfo << clus.seqBase_.name_
+//												<< "\t" << clus.seqBase_.cnt_
+//												<< "\t" << clus.seqBase_.cnt_/totalReadCnt
+//												<< "\t" << len(clus)
+//												<< "\t" << metaName.getMeta<double>(coverageField)
+//												<< "\t" << metaName.getMeta<double>(coverageField)/totalMeanCoverage
+//												<< "\n";
 										++count;
 									}
-									auto finalSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalInfoRegionDir,"finalOutput.fasta"));
-									SeqOutput::write(finalSeqsOnClusters, finalSeqOpts);
+									for(auto & reg : regInfo){
+										reg->uniqHaps_ = finalSeqsOnClusters.size();
+										reg->infoCalled_ = true;
+									}
+									{
+										std::lock_guard<std::mutex> lock(allFinalWriterMut);
+										allFinalWriter.write(finalSeqsOnClusters);
+									}
+//									auto finalSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalInfoRegionDir,"finalOutput.fasta"));
+//									SeqOutput::write(finalSeqsOnClusters, finalSeqOpts);
 									//std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;
 								}else{
-									auto partialInfoRegionDir = njh::files::makeDir(partialDirectory,
-											njh::files::MkdirPar(regionName));
+//									auto partialInfoRegionDir = njh::files::makeDir(partialDirectory, njh::files::MkdirPar(regionName));
 									SeqInput originalSeqReader(outputOpts);
-									SeqOutput originalWriter(SeqIOOptions::genFastaOut(njh::files::make_path(partialInfoRegionDir, "output.fasta")));
+//									SeqOutput originalWriter(SeqIOOptions::genFastaOut(njh::files::make_path(partialInfoRegionDir, "output.fasta")));
 									seqInfo seq;
 									originalSeqReader.openIn();
-									originalWriter.openOut();
+//									originalWriter.openOut();
 
+									std::vector<seqInfo> partialSeqs;
 									while(originalSeqReader.readNextRead(seq)){
 										MetaDataInName seqMeta(seq.name_);
 										seqMeta.addMeta("regionUID", regionName);
 										seqMeta.addMeta("regionCoords", njh::conToStr(uidCoords, ","));
 										seqMeta.resetMetaInName(seq.name_);
-										originalWriter.write(seq);
+										partialSeqs.emplace_back(seq);
+										//originalWriter.write(seq);
+									}
+									{
+										std::lock_guard<std::mutex> lock(allPartialWriterMut);
+										allPartialWriter.write(partialSeqs);
+									}
+									for(auto & reg : regInfo){
+										reg->uniqHaps_ = 0;
+										reg->infoCalled_ = false;
 									}
 								}
+							}else{
+								//output file was there but was empty, nothing called
+								for(auto & reg : regInfo){
+									reg->uniqHaps_ = 0;
+									reg->infoCalled_ = false;
+								}
+							}
+						}else{
+							for(auto & reg : regInfo){
+								reg->uniqHaps_ = 0;
+								reg->infoCalled_ = false;
 							}
 						}
 					} catch (std::exception & e) {
@@ -902,102 +947,97 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	}
 
 	jLog.writeLog();
-
+	allFinalWriter.closeOut();
+	allPartialWriter.closeOut();
 
 	//make a table of coi counts
 	//make a table of bed6 plus the coi at that location and total read count
 
 	//make a table that is basically a concatenation of the finalOutputInfo files
 	//mkae a table of call rates
-	std::unordered_map<uint32_t, std::uint32_t> coiCounts;
-	OutputStream finalTableOut(OutOptions(njh::files::make_path(finalDirectory, "allFinalTable.tab.txt")));
-	OutputStream coiTableOut(OutOptions(njh::files::make_path(finalDirectory, "coiCounts.tab.txt")));
-	auto allFinalSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(finalDirectory, "allFinal.fasta"));
-	auto allPartialSeqOpts = SeqIOOptions::genFastaOut(njh::files::make_path(partialDirectory, "allPartial.fasta"));
+//	OutputStream finalTableOut(OutOptions(njh::files::make_path(finalDirectory, "allFinalTable.tab.txt")));
 
-	SeqOutput allFinalWriter(allFinalSeqOpts);
-	SeqOutput allPartialWriter(allPartialSeqOpts);
 
-	seqInfo seq;
-	allFinalWriter.openOut();
-	allPartialWriter.openOut();
+
+//	seqInfo seq;
+
 	//collect meta fields
-	std::set<std::string> metaFields;
-	std::vector<uint32_t> readTotals;
+//	std::set<std::string> metaFields;
+//	std::vector<uint32_t> readTotals;
 
-	for(const auto & regionName : regionNames){
-		auto finalOutputSeqFnp = njh::files::make_path(finalDirectory, regionName, "finalOutput.fasta");
-		if(bfs::exists(finalOutputSeqFnp)){
-			SeqInput finalReader(SeqIOOptions::genFastaIn(finalOutputSeqFnp));
-			finalReader.openIn();
-			while(finalReader.readNextRead(seq)){
-				allFinalWriter.write(seq);
-			}
-		}
-		auto partialOutputSeqFnp = njh::files::make_path(partialDirectory, regionName, "output.fasta");
-		if(bfs::exists(partialOutputSeqFnp)){
-			SeqInput partialReader(SeqIOOptions::genFastaIn(partialOutputSeqFnp));
-			partialReader.openIn();
-			while(partialReader.readNextRead(seq)){
-				allPartialWriter.write(seq);
-			}
-		}
-		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regionName, "finalOutputInfo.tab.txt");
-		if(bfs::exists(finalOutputInfoFnp)){
-			table finalInfoTab(finalOutputInfoFnp, "\t", true);
-			uint32_t readTotal = 0;
-			for(const auto & row : finalInfoTab.content_){
-				readTotal += njh::lexical_cast<uint32_t>(row[finalInfoTab.getColPos("readCount")]);
-				MetaDataInName metaInReadName(row[finalInfoTab.getColPos("ReadName")]);
-				for(const auto & m : metaInReadName.meta_){
-					if("length" != m.first && coverageField != m.first){
-						metaFields.insert(m.first);
-					}
-				}
-			}
-			readTotals.emplace_back(readTotal);
-		}
-	}
-	allFinalWriter.closeOut();
-	allPartialWriter.closeOut();
+//	for(const auto & regionName : regionNames){
+//
+//		auto finalOutputSeqFnp = njh::files::make_path(finalDirectory, regionName, "finalOutput.fasta");
+//		if(bfs::exists(finalOutputSeqFnp)){
+//			SeqInput finalReader(SeqIOOptions::genFastaIn(finalOutputSeqFnp));
+//			finalReader.openIn();
+//			while(finalReader.readNextRead(seq)){
+//				allFinalWriter.write(seq);
+//			}
+//		}
+//		auto partialOutputSeqFnp = njh::files::make_path(partialDirectory, regionName, "output.fasta");
+//		if(bfs::exists(partialOutputSeqFnp)){
+//			SeqInput partialReader(SeqIOOptions::genFastaIn(partialOutputSeqFnp));
+//			partialReader.openIn();
+//			while(partialReader.readNextRead(seq)){
+//				allPartialWriter.write(seq);
+//			}
+//		}
+//		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regionName, "finalOutputInfo.tab.txt");
+//		if(bfs::exists(finalOutputInfoFnp)){
+//			table finalInfoTab(finalOutputInfoFnp, "\t", true);
+//			uint32_t readTotal = 0;
+//			for(const auto & row : finalInfoTab.content_){
+//				readTotal += njh::lexical_cast<uint32_t>(row[finalInfoTab.getColPos("readCount")]);
+//				MetaDataInName metaInReadName(row[finalInfoTab.getColPos("ReadName")]);
+//				for(const auto & m : metaInReadName.meta_){
+//					if("length" != m.first && coverageField != m.first){
+//						metaFields.insert(m.first);
+//					}
+//				}
+//			}
+//			readTotals.emplace_back(readTotal);
+//		}
+//	}
+
 
 	//auto readTotalMedian = vectorMedianRef(readTotals);
+	std::unordered_map<uint32_t, std::uint32_t> coiCounts;
 
 
-	finalTableOut << "ReadName\treadCount\treadFraction\tlength\t" << coverageField << "\tfractionByCoverage\t" << njh::conToStr(metaFields, "\t") << "\n";
+//	finalTableOut << "ReadName\treadCount\treadFraction\tlength\t" << coverageField << "\tfractionByCoverage\t" << njh::conToStr(metaFields, "\t") << "\n";
 	for(const auto & regionName : regionNames){
-		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regionName, "finalOutputInfo.tab.txt");
-		if(bfs::exists(finalOutputInfoFnp)){
-			table finalInfoTab(finalOutputInfoFnp, "\t", true);
-			//add to coi count
-			++coiCounts[finalInfoTab.nRow()];
-			//add to final table
-			uint32_t readTotal = 0;
-			for(const auto & row : finalInfoTab.content_){
-				finalTableOut << njh::conToStr(row, "\t");
-				readTotal += njh::lexical_cast<uint32_t>(row[finalInfoTab.getColPos("readCount")]);
-				//add meta
-				MetaDataInName metaInReadName(row[finalInfoTab.getColPos("ReadName")]);
-				for(const auto & field : metaFields){
-					finalTableOut << "\t" << (metaInReadName.containsMeta(field) ? metaInReadName.getMeta(field) : "NA");
-				}
-				finalTableOut << std::endl;
-			}
-			//output to called calledTableOut
-			for(auto & regInfo : regInfosByUID.at(regionName)){
-				regInfo->uniqHaps_ = finalInfoTab.nRow();
-				regInfo->infoCalled_ = true;
-			}
-
-		}else{
-			//output to bed coi file
-			//output to called calledTableOut
-			for(auto & regInfo : regInfosByUID.at(regionName)){
-				regInfo->uniqHaps_ = 0;
-				regInfo->infoCalled_ = false;
-			}
-			++coiCounts[0];
-		}
+//		auto finalOutputInfoFnp = njh::files::make_path(finalDirectory, regionName, "finalOutputInfo.tab.txt");
+//		if(bfs::exists(finalOutputInfoFnp)){
+//			table finalInfoTab(finalOutputInfoFnp, "\t", true);
+//			//add to coi count
+//			++coiCounts[finalInfoTab.nRow()];
+//			//add to final table
+//			uint32_t readTotal = 0;
+//			for(const auto & row : finalInfoTab.content_){
+//				finalTableOut << njh::conToStr(row, "\t");
+//				readTotal += njh::lexical_cast<uint32_t>(row[finalInfoTab.getColPos("readCount")]);
+//				//add meta
+//				MetaDataInName metaInReadName(row[finalInfoTab.getColPos("ReadName")]);
+//				for(const auto & field : metaFields){
+//					finalTableOut << "\t" << (metaInReadName.containsMeta(field) ? metaInReadName.getMeta(field) : "NA");
+//				}
+//				finalTableOut << std::endl;
+//			}
+//			//output to called calledTableOut
+//			for(auto & regInfo : regInfosByUID.at(regionName)){
+//				regInfo->uniqHaps_ = finalInfoTab.nRow();
+//				regInfo->infoCalled_ = true;
+//			}
+//		}else{
+//			//output to bed coi file
+//			//output to called calledTableOut
+//			for(auto & regInfo : regInfosByUID.at(regionName)){
+//				regInfo->uniqHaps_ = 0;
+//				regInfo->infoCalled_ = false;
+//			}
+//			++coiCounts[0];
+//		}
 
 		//adjust per base coverage etc, probably not be the best way to do this
 
@@ -1016,6 +1056,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 			totalPairedReads += regInfo->totalPairedReads_;
 			totalProperPairedReads += regInfo->totalProperPairedReads_;
 			totalOneMateUnmappedImproperPairs += regInfo->totalOneMateUnmappedImproperPairs_;
+			++coiCounts[regInfo->uniqHaps_];
 		}
 		for(auto & regInfo : regInfosByUID.at(regionName)){
 			regInfo->coverage_ = coverage;
@@ -1030,10 +1071,12 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 	brInvestor.writeBasicInfoWithHapRes(regInfos, sampName, OutOptions(njh::files::make_path(finalDirectory, "basicInfoPerRegion.tab.txt")));
 
-
-	table coiCountsTab(coiCounts, VecStr{"coi", "count"});
-	coiCountsTab.sortTable("coi", false);
-	coiCountsTab.outPutContents(coiTableOut, "\t");
+	{
+		OutputStream coiTableOut(OutOptions(njh::files::make_path(finalDirectory, "coiCounts.tab.txt")));
+		table coiCountsTab(coiCounts, VecStr{"coi", "count"});
+		coiCountsTab.sortTable("coi", false);
+		coiCountsTab.outPutContents(coiTableOut, "\t");
+	}
 
 	if(!keepTemporaryFiles){
 		if(!keepRawCoverageFile){

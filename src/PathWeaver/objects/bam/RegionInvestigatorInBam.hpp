@@ -155,11 +155,14 @@ public:
 			const BamCountSpecficRegionsPars & spanningReadsPar,
 			BamTools::BamReader &currentBReader, aligner & alignerObj) const;
 
+
 	std::vector<std::shared_ptr<RegionInfo>> getCoverageAndFullSpanningReads(
 			const bfs::path & bamFnp,
 			const std::vector<GenomicRegion> & regions,
 			const BamCountSpecficRegionsPars & spanningReadsPar,
 			const bfs::path & genomeFnp) const;
+
+
 
 	void writeCovInfo(const std::vector<std::shared_ptr<RegionInfo>> & pairs,
 			const std::string & sampName,
