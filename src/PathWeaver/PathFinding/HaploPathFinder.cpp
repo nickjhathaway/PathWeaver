@@ -373,9 +373,19 @@ void HaploPathFinder::PathFinderCorePars::setQualityTrimAndFiltOpts(seqSetUp & s
 
 void HaploPathFinder::PathFinderCorePars::setFurtherSplittingOpts(seqSetUp & setUp){
 	//splitting
+
+	if(splitEndsOnce_){
+		bool doNotSplitEndsOnce = false;
+		setUp.setOption(doNotSplitEndsOnce, "--doNotSplitEndsOnce", "Do Not Split Ends Nodes Once");
+		splitEndsOnce_ = !doNotSplitEndsOnce;
+	}else{
+		setUp.setOption(splitEndsOnce_, "--splitEndsOnce", "Split Ends Nodes Once");
+	}
+
+
+
 	setUp.setOption(splitTailed_, "--splitTailed", "Split Tailed Nodes");
 	setUp.setOption(splitEnds_, "--splitEnds", "Split End Nodes");
-	setUp.setOption(splitEndsOnce_, "--splitEndsOnce", "Split Ends Nodes Once");
 	setUp.setOption(maxSplitEndNodeSize_, "--maxSplitEndNodeSize", "Max Split End Node Size");
 	setUp.setOption(keepCycles_, "--keepCycles", "Keep Cycles Pathways seqs, this have a higher change of being false");
 	setUp.setOption(splitToRecruit_, "--splitToRecruit", "Split To Recruit");

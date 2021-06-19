@@ -110,6 +110,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 
 	//graph options
 	//splitting
+	masterPars.pFinderPars_.splitEndsOnce_ = true;
 	masterPars.pFinderPars_.setFurtherSplittingOpts(setUp);
 	//processing nodes, onebase indel nodes, remove headless and tailless nodes
 	masterPars.pFinderPars_.setNodeProcessingOpts(setUp);

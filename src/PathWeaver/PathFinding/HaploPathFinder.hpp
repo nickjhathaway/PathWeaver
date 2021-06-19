@@ -116,10 +116,10 @@ public:
 		readVecTrimmer::TrimEdgesByLowEntropyPars trimEdgesOfEndNodesPars_;
 
 
-		double oneBaseIndelError_ = 0.50;
-		double twoBaseIndelError_ = 0.50;
-		double largeBaseIndelError_ = 0.50;
-		double homopolymerIndelCollapseFreqMultiplier_ = 2.0;
+		double oneBaseIndelError_ = 0.80;
+		double twoBaseIndelError_ = 0.80;
+		double largeBaseIndelError_ = 0.80;
+		double homopolymerIndelCollapseFreqMultiplier_ = 1.01;
 
 		bool initialBreakingSinglePaths_ = false;
 
