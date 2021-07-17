@@ -72,6 +72,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							reader.openIn();
 							seqInfo seq;
 							while(reader.readNextRead(seq)){
+//								std::cout << seq.name_ << std::endl;
 								MetaDataInName seqMeta(seq.name_);
 								auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 								if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){

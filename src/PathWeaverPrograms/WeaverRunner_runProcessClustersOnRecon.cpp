@@ -470,7 +470,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
 	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
-
 	if(!rawGatherRes.missingOutput.empty()){
 		OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
 		missingOut << njh::conToStr(rawGatherRes.missingOutput, "\n") << std::endl;
