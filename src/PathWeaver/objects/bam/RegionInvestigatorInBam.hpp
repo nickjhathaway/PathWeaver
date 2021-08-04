@@ -100,7 +100,10 @@ public:
 		bool countDups_ { false };
 		uint32_t numThreads_ { 1 };
 		uint32_t mapQualityCutOff_ { 0 }; //!< Don't include alignments below this map quality, non-inclusive
-		uint32_t mapQualityCutOffForMultiMap_ { 5 };//!< Include alignments below this map quality in the multimapping count colum
+		uint32_t mapQualityCutOffForMultiMap_ { 5 };//!< Include alignments below this map quality in the multimapping count column
+
+		uint32_t softClipFilt_ { std::numeric_limits<uint32_t>::max() };//!< don't count reads with this much soft clipping
+		bool countOnlyProperPairs_ { false };//!< only count proper pairs
 	};
 
 	BamRegionInvestigator(const BamRegionInvestigatorPars & pars);

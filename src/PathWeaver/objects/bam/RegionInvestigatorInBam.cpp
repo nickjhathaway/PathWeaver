@@ -149,6 +149,12 @@ BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageForRegion(
 			if(bAln.MapQuality <  pars_.mapQualityCutOff_){
 				continue;
 			}
+			if(pars_.countOnlyProperPairs_ && bAln.IsPaired() && !bAln.IsProperPair()){
+				continue;
+			}
+			if(pars_.softClipFilt_ != std::numeric_limits<uint32_t>::max() && getSoftClipAmount(bAln) > pars_.softClipFilt_){
+				continue;
+			}
 			//only try to find and adjust for the mate's overlap if is mapped and could possibly fall within the region
 			if(bAln.IsPaired() && bAln.IsMateMapped() && bAln.MatePosition < ret.region_.end_){
 				bAln.BuildCharData();
