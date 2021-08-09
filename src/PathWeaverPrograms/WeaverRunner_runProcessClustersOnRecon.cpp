@@ -389,20 +389,33 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
+		std::mutex allBasicInfoMut;
 		for(const auto & dir : directories){
 			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
 			if(bfs::exists(basicFnp)){
 				TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
-				if(nullptr == firstTable){
-					firstTable = std::make_shared<TableReader>(currentTabOpts);
-					firstTable->header_.outPutContents(allBasicInfo, "\t");
-					VecStr row;
-					while(firstTable->getNextRow(row)){
-						allBasicInfo << njh::conToStr(row, "\t") << "\n";
-						allTargets.emplace(row[firstTable->header_.getColPos("name")]);
-					}
-				}else{
+				firstTable = std::make_shared<TableReader>(currentTabOpts);
+				firstTable->header_.outPutContents(allBasicInfo, "\t");
+				VecStr row;
+				while(firstTable->getNextRow(row)){
 					if(!skipRBind){
+						allBasicInfo << njh::conToStr(row, "\t") << "\n";
+					}
+					allTargets.emplace(row[firstTable->header_.getColPos("name")]);
+				}
+			}
+			break;
+		}
+		if(!skipRBind){
+			njh::concurrent::LockableVec dirQueue(directories);
+
+			std::function<void()> gatherAllBasicInfoFiles= [&allBasicInfo,&allBasicInfoMut,&dirQueue, &firstTable](){
+				bfs::path dir;
+				while(dirQueue.getVal(dir)){
+					auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
+					if(bfs::exists(basicFnp)){
+						std::stringstream tabOut;
+						TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 						TableReader currentTable(currentTabOpts);
 						if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
 							std::stringstream ss;
@@ -413,14 +426,18 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						}
 						VecStr row;
 						while(currentTable.getNextRow(row)){
-							allBasicInfo << njh::conToStr(row, "\t") << "\n";
+							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
-					}else{
-						break;
+						{
+							std::lock_guard<std::mutex> lock(allBasicInfoMut);
+							allBasicInfo << tabOut.str();
+						}
 					}
 				}
-			}
+			};
+			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
 		}
+
 	}
 	if(skipRBind){
 		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
