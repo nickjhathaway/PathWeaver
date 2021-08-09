@@ -407,7 +407,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			break;
 		}
 		if(!skipRBind){
-			njh::concurrent::LockableVec dirQueue(directories);
+			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
 
 			std::function<void()> gatherAllBasicInfoFiles= [&allBasicInfo,&allBasicInfoMut,&dirQueue, &firstTable](){
 				bfs::path dir;
