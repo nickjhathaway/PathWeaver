@@ -42,6 +42,7 @@ WeaverRunner::WeaverRunner()
 
 					 addFunc("runProcessClustersOnRecon", runProcessClustersOnRecon, false),
 					 addFunc("rawGatherSeqs", rawGatherSeqs, false),
+					 addFunc("MergeMultipleBamExtractPathawaysFromRegion", MergeMultipleBamExtractPathawaysFromRegion, false),
 
           }, //
 				"Weaver") {
