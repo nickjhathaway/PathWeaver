@@ -300,7 +300,7 @@ public:
 
 		bfs::path trimSeqBedFnp;
 
-		double maxPerBaseCoverage = 5000;
+		double maxPerBaseCoverage = 2000;
 
 		void setGenomeFnp();
 
