@@ -300,6 +300,8 @@ public:
 
 		bfs::path trimSeqBedFnp;
 
+		double maxPerBaseCoverage = 5000;
+
 		void setGenomeFnp();
 
 		BamExtractor::extractReadsWtihCrossRegionMappingPars bamExtractPars_;

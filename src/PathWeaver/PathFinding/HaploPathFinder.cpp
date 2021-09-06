@@ -76,6 +76,10 @@ Json::Value HaploPathFinder::ExtractParams::toJson() const{
 
 	ret["region_"] = njh::json::toJson(region_);
 	ret["pFinderPars_"] = njh::json::toJson(pFinderPars_);
+
+	ret["maxPerBaseCoverage"] = njh::json::toJson(maxPerBaseCoverage);
+
+
 	return ret;
 }
 
@@ -520,61 +524,68 @@ void HaploPathFinder::PathFinderCorePars::setDuplicatedSeqHandlingOpts(seqSetUp 
 
 
 void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
+
+	setUp.setOption(maxPerBaseCoverage, "--maxPerBaseCoverage", "Sub sample reads to this read depth, helps to cut down on memory usage and compute time", false, "BamExtracting");
+
+	if(setUp.setOption(bamExtractPars_.percentSubSample_, "--percentSubSample", "A number between 0 and 1 for sub sampling", false, "BamExtracting", njh::progutils::ProgramSetUp::flagCheckFrom0To1<double>("percentSubSample"))){
+		maxPerBaseCoverage = std::numeric_limits<double>::max();
+	}
+
 	if (bamExtractPars_.keepMarkedDuplicate_) {
 		bool removeMakredDups = false;
 		setUp.setOption(removeMakredDups, "--removeMakredDuplicate",
-				"Remove alignments marked as duplicate");
+				"Remove alignments marked as duplicate", false, "BamExtracting");
 		bamExtractPars_.keepMarkedDuplicate_ = !removeMakredDups;
 	} else {
 		setUp.setOption(bamExtractPars_.keepMarkedDuplicate_,
-				"--keepMarkedDuplicate", "Keep alignments marked as duplicate");
+				"--keepMarkedDuplicate", "Keep alignments marked as duplicate", false, "BamExtracting");
 	}
 	if (bamExtractPars_.filterOffLowEntropyOrphansRecruits_) {
 		bool noFilterOffLowEntropyOrphansRecruits = false;
 		setUp.setOption(noFilterOffLowEntropyOrphansRecruits,
 				"--noFilterOffLowEntropyOrphansRecruits",
-				"No Filter Off Low Entropy Orphans Recruits");
+				"No Filter Off Low Entropy Orphans Recruits", false, "BamExtracting");
 		bamExtractPars_.filterOffLowEntropyOrphansRecruits_ =
 				!noFilterOffLowEntropyOrphansRecruits;
 	} else {
 		setUp.setOption(bamExtractPars_.filterOffLowEntropyOrphansRecruits_,
 				"--filterOffLowEntropyOrphansRecruits",
-				"Filter Off Low Entropy Orphans Recruits");
+				"Filter Off Low Entropy Orphans Recruits", false, "BamExtracting");
 	}
 
 	if (bamExtractPars_.removeImproperPairs_) {
 		bool keepImproperMates = false;
 		setUp.setOption(keepImproperMates, "--keepImproperMates",
-				"Keep Pairs marked as improper (mate doesn't map, inverse mapping etc)");
+				"Keep Pairs marked as improper (mate doesn't map, inverse mapping etc)", false, "BamExtracting");
 		bamExtractPars_.removeImproperPairs_ = !keepImproperMates;
 	} else {
 		setUp.setOption(bamExtractPars_.removeImproperPairs_,
 				"--removeImproperPairs",
-				"Filter Off Pairs marked as improper (mate doesn't map, inverse mapping etc)");
+				"Filter Off Pairs marked as improper (mate doesn't map, inverse mapping etc)", false, "BamExtracting");
 	}
 
 	if (bamExtractPars_.removeImproperPairs_) {
 		bool removeImproperMateUnmapped = false;
 		setUp.setOption(removeImproperMateUnmapped, "--removeImproperMateUnmapped",
-				"When Filtering Off Pairs marked as improper, also remove the improper pairs where it's due to one mate not mapping)");
+				"When Filtering Off Pairs marked as improper, also remove the improper pairs where it's due to one mate not mapping)", false, "BamExtracting");
 		bamExtractPars_.keepImproperMateUnmapped_ = !removeImproperMateUnmapped;
 	} else {
 		setUp.setOption(bamExtractPars_.keepImproperMateUnmapped_,
 				"--keepImproperMateUnmapped",
-				"When Filtering Off Pairs marked as improper,  keep the improper pairs where it's due to one mate not mapping");
+				"When Filtering Off Pairs marked as improper,  keep the improper pairs where it's due to one mate not mapping", false, "BamExtracting");
 	}
 
 
 
-	setUp.setOption(bamExtractPars_.filterOffLowEntropyOrphansRecruitsCutOff_,  "--filterOffLowEntropyOrphansRecruitsCutOff",  "Filter Off Low Entropy Orphans Recruits Cut Off");
-	setUp.setOption(bamExtractPars_.entropyKlen_,  "--entropyKlen",  "Entropy Klen");
+	setUp.setOption(bamExtractPars_.filterOffLowEntropyOrphansRecruitsCutOff_,  "--filterOffLowEntropyOrphansRecruitsCutOff",  "Filter Off Low Entropy Orphans Recruits Cut Off", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.entropyKlen_,  "--entropyKlen",  "Entropy Klen", false, "BamExtracting");
 
 
-	setUp.setOption(bamExtractPars_.tryToFindOrphansMate_,  "--tryToFindOrphanMates",  "Try To Find Orphan Mates");
-	setUp.setOption(bamExtractPars_.throwAwayUnmappedMate_, "--throwAwayUnmappedMate", "Throw Away Unmapped Mate");
-	setUp.setOption(bamExtractPars_.percInRegion_,          "--percInRegion",          "Percent of bases in Region to be included");
-	setUp.setOption(bamExtractPars_.minAlnMapSize_, "--minAlnMapSize", "min Aln Map Size for initial recruitment");
-	setUp.setOption(bamExtractPars_.softClipPercentageCutOff_, "--softClipPercentageCutOff", "The minimum percentage of the bases that can be soft clipped to include alignment");
+	setUp.setOption(bamExtractPars_.tryToFindOrphansMate_,  "--tryToFindOrphanMates",  "Try To Find Orphan Mates", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.throwAwayUnmappedMate_, "--throwAwayUnmappedMate", "Throw Away Unmapped Mate", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.percInRegion_,          "--percInRegion",          "Percent of bases in Region to be included", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.minAlnMapSize_, "--minAlnMapSize", "min Aln Map Size for initial recruitment", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.softClipPercentageCutOff_, "--softClipPercentageCutOff", "The minimum percentage of the bases that can be soft clipped to include alignment", false, "BamExtracting");
 
 }
 

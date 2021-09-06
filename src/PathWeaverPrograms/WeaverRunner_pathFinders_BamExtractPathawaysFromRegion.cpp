@@ -249,8 +249,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	brInvestPars.countDups_ = masterPars.bamExtractPars_.keepMarkedDuplicate_;
 
 	BamRegionInvestigator brInvestor(brInvestPars);
-	auto regInfos = brInvestor.getCoverageAndFullSpanningReads(
-			setUp.pars_.ioOptions_.firstName_, inputRegions, spanningReadsPar, genomeFnp2bit);
+	auto regInfos = brInvestor.getCoverageAndFullSpanningReads(setUp.pars_.ioOptions_.firstName_, inputRegions, spanningReadsPar, genomeFnp2bit);
 
 	brInvestor.writeBasicInfo(regInfos, sampName, OutOptions(njh::files::make_path(finalDirectory, "perBaseCoveragePerRegion.bed")));
 
@@ -344,6 +343,18 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 							}
 						}
 
+						uint64_t bases  = 0;
+						uint32_t lenSum = 0;
+						for(const auto & reg : regInfo){
+							bases += reg->coverage_;
+							lenSum += reg->region_.getLen();
+						}
+						auto perBaseCoverage = bases/static_cast<double>(lenSum);
+						if(perBaseCoverage > parsForRegion.maxPerBaseCoverage){
+							parsForRegion.bamExtractPars_.percentSubSample_ = parsForRegion.maxPerBaseCoverage/perBaseCoverage;
+							perBaseCoverage = parsForRegion.maxPerBaseCoverage;
+						}
+
 						auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(
 								*bamReader, extractedOpts.out_, regionsUsed, parsForRegion.bamExtractPars_);
 						if(keepTemporaryFiles){
@@ -352,14 +363,15 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 							regionExtracted.log(extractedReadsStatsFileOut, setUp.pars_.ioOptions_.firstName_);
 						}
 
+
 						if(parsForRegion.pFinderPars_.autoDetermineKCuts){
-							uint64_t bases  = 0;
-							uint32_t lenSum = 0;
-							for(const auto & reg : regInfo){
-								bases += reg->coverage_;
-								lenSum += reg->region_.getLen();
-							}
-							auto perBaseCoverage = bases/static_cast<double>(lenSum);
+//							uint64_t bases  = 0;
+//							uint32_t lenSum = 0;
+//							for(const auto & reg : regInfo){
+//								bases += reg->coverage_;
+//								lenSum += reg->region_.getLen();
+//							}
+//							auto perBaseCoverage = bases/static_cast<double>(lenSum);
 							if(perBaseCoverage > 100 || parsForRegion.pFinderPars_.forceDetermineKCuts){
 								parsForRegion.pFinderPars_.kmerKOcurrenceCutOffs.clear();
 								for(const auto & perc : parsForRegion.pFinderPars_.autoDetermineKCutsPercentages){
