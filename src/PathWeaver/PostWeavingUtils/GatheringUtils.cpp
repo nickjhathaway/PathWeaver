@@ -37,7 +37,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 																				 &alnPool,
 																				 &pars,&ret,this](){
 			bfs::path inputDir;
-			VecStr currentMissingOutput;
+			VecStr currentMissingDirectoriesOutput;
+			VecStr currentMissingSamplesOutput;
 			std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> currentAllSeqsByTarget;
 			std::unordered_set<std::string> currentAllSamples;
 			auto currentAligner = alnPool.popAligner();
@@ -49,7 +50,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 					TableReader readTab(TableIOOpts::genTabFileIn(coiPerBedLocationFnp,true));
 					VecStr row;
 					uint32_t usedTotal = 0;
+					std::set<std::string> samplesInFile;
 					while(readTab.getNextRow(row)){
+						samplesInFile.emplace(row[readTab.header_.getColPos("sample")]);
 						if("NA" != row[readTab.header_.getColPos("readTotal")]){
 							if(!pars.targets.empty() && !njh::in(row[readTab.header_.getColPos("name")], pars.targets)){
 								continue;
@@ -61,7 +64,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 						}
 					}
 					if(readTotals.empty() || 0 == usedTotal ){
-						currentMissingOutput.emplace_back(inputDir.string());
+						currentMissingDirectoriesOutput.emplace_back(inputDir.string());
+						njh::addConToVec(currentMissingSamplesOutput, samplesInFile);
 					}else{
 						std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> seqsByTarget;
 						std::set<std::string> samplesInPrcoessFiles;
@@ -160,12 +164,12 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 						}
 					}
 				} else {
-					currentMissingOutput.emplace_back(inputDir.string());
+					currentMissingDirectoriesOutput.emplace_back(inputDir.string());
 				}
 			}
 			{
 				std::lock_guard<std::mutex> lock(allSeqsByTargetMut);
-				njh::addVecToSet(currentMissingOutput, ret.missingOutput);
+				njh::addVecToSet(currentMissingDirectoriesOutput, ret.missingOutput);
 				for(auto & tarSeqs : currentAllSeqsByTarget){
 					addOtherVec(allSeqsByTarget[tarSeqs.first], tarSeqs.second);
 				}
