@@ -413,8 +413,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				bfs::path dir;
 				while(dirQueue.getVal(dir)){
 					auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
+					std::stringstream tabOut;
+
 					if(bfs::exists(basicFnp)){
-						std::stringstream tabOut;
 						TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 						TableReader currentTable(currentTabOpts);
 						if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
@@ -428,17 +429,19 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						while(currentTable.getNextRow(row)){
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
-						{
-							std::lock_guard<std::mutex> lock(allBasicInfoMut);
-							allBasicInfo << tabOut.str();
-						}
+					}
+					{
+						std::lock_guard<std::mutex> lock(allBasicInfoMut);
+						allBasicInfo << tabOut.str();
 					}
 				}
 			};
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		}
-
 	}
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(skipRBind){
 		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 	}
@@ -486,7 +489,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(!rawGatherRes.missingOutput.empty()){
 		OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
 		missingOut << njh::conToStr(rawGatherRes.missingOutput, "\n") << std::endl;
