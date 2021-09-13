@@ -436,12 +436,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					}
 				}
 			};
-			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
-			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		}
 	}
-	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(skipRBind){
 		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 	}
@@ -489,9 +489,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
-	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
-	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(!rawGatherRes.missingOutput.empty()){
 		OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
 		missingOut << njh::conToStr(rawGatherRes.missingOutput, "\n") << std::endl;
