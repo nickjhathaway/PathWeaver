@@ -18,8 +18,6 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		//key1 = target, key2= sample, value = the sequences
 		std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> allSeqsByTarget;
 
-
-
 		njh::concurrent::LockableVec<bfs::path> inputDirQueue(pars.directories);
 		std::mutex allSeqsByTargetMut;
 
@@ -43,9 +41,11 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			std::unordered_set<std::string> currentAllSamples;
 			auto currentAligner = alnPool.popAligner();
 			while(inputDirQueue.getVal(inputDir)){
+
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
-				if(bfs::exists(finalSeqFnp) && 0 != bfs::file_size(finalSeqFnp) && bfs::exists(coiPerBedLocationFnp)){
+
+				if(bfs::exists(coiPerBedLocationFnp)){
 					std::unordered_map<std::string, uint32_t> readTotals;
 					TableReader readTab(TableIOOpts::genTabFileIn(coiPerBedLocationFnp,true));
 					VecStr row;
@@ -63,65 +63,75 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							readTotals[row[readTab.header_.getColPos("name")]] = njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotal")]);
 						}
 					}
-					if(readTotals.empty() || 0 == usedTotal ){
-						currentMissingDirectoriesOutput.emplace_back(inputDir.string());
-						njh::addConToVec(currentMissingSamplesOutput, samplesInFile);
-					}else{
-						std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> seqsByTarget;
-						std::set<std::string> samplesInPrcoessFiles;
-						{
-							auto inputOpts = SeqIOOptions::genFastaIn(finalSeqFnp);
+
+					std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> seqsByTarget;
+					std::set<std::string> samplesInPrcoessFiles;
+					uint32_t seqsAdded = 0;
+					if(bfs::exists(finalSeqFnp) && 0 != bfs::file_size(finalSeqFnp)){
+						auto inputOpts = SeqIOOptions::genFastaIn(finalSeqFnp);
+						inputOpts.processed_ = true;
+						SeqInput reader(inputOpts);
+						reader.openIn();
+						seqInfo seq;
+						while(reader.readNextRead(seq)){
+//								std::cout << seq.name_ << std::endl;
+							MetaDataInName seqMeta(seq.name_);
+							auto rawTarName = seqMeta.getMeta(corePars_.targetField);
+							if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
+								continue;
+							}
+							auto tarName = njh::replaceString(rawTarName, ".", "-");
+							//targetKey[tarName] = rawTarName;
+							if(njh::in(rawTarName,pars.trimSeqs)){
+								readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
+							}
+							if(len(seq) >= pars.minInputSeqLen){
+								seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
+								samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
+								++seqsAdded;
+							}
+						}
+					}
+
+					if(pars.addPartial){
+						auto partialSeqFnp = njh::files::make_path(inputDir,"partial", "allPartial.fasta");
+
+						if(bfs::exists(partialSeqFnp) && 0 != bfs::file_size(partialSeqFnp)){
+							auto inputOpts = SeqIOOptions::genFastaIn(partialSeqFnp);
 							inputOpts.processed_ = true;
 							SeqInput reader(inputOpts);
 							reader.openIn();
 							seqInfo seq;
+
 							while(reader.readNextRead(seq)){
-//								std::cout << seq.name_ << std::endl;
 								MetaDataInName seqMeta(seq.name_);
 								auto rawTarName = seqMeta.getMeta(corePars_.targetField);
-								if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
-									continue;
-								}
-								auto tarName = njh::replaceString(rawTarName, ".", "-");
-								//targetKey[tarName] = rawTarName;
-								if(njh::in(rawTarName,pars.trimSeqs)){
-									readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
-								}
-								if(len(seq) >= pars.minInputSeqLen){
-									seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
-									samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
-								}
-							}
-						}
-						if(pars.addPartial){
-							auto partialSeqFnp = njh::files::make_path(inputDir,"partial", "allPartial.fasta");
-							if(bfs::exists(partialSeqFnp) && 0 != bfs::file_size(partialSeqFnp)){
-								auto inputOpts = SeqIOOptions::genFastaIn(partialSeqFnp);
-								inputOpts.processed_ = true;
-								SeqInput reader(inputOpts);
-								reader.openIn();
-								seqInfo seq;
-
-								while(reader.readNextRead(seq)){
-									MetaDataInName seqMeta(seq.name_);
-									auto rawTarName = seqMeta.getMeta(corePars_.targetField);
-									if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
-										if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
-											continue;
-										}
-										auto tarName = njh::replaceString(rawTarName, ".", "-");
-										//targetKey[tarName] = rawTarName;
-										if(njh::in(rawTarName,pars.trimSeqs)){
-											readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
-										}
-										if(len(seq) >= pars.minInputSeqLen){
-											seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
-											samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
-										}
+								if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
+									if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
+										continue;
+									}
+									auto tarName = njh::replaceString(rawTarName, ".", "-");
+									//targetKey[tarName] = rawTarName;
+									if(njh::in(rawTarName,pars.trimSeqs)){
+										readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
+									}
+									if(len(seq) >= pars.minInputSeqLen){
+										seqsByTarget[tarName].emplace_back(std::make_shared<seqInfo>(seq));
+										samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
+										++seqsAdded;
 									}
 								}
 							}
 						}
+					}
+
+
+
+					//if(readTotals.empty() || 0 == usedTotal ){
+					if(0 == seqsAdded){
+						currentMissingDirectoriesOutput.emplace_back(inputDir.string());
+						njh::addConToVec(currentMissingSamplesOutput, samplesInFile);
+					}else{
 						if(1 != samplesInPrcoessFiles.size()){
 							std::stringstream ss;
 							ss << __PRETTY_FUNCTION__ << ", error " << " found more than 1 sample name in " << inputDir << ", found: " << njh::conToStr(samplesInPrcoessFiles, ",")<< "\n";
@@ -197,7 +207,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
 		}
-		sleep(2); //have to sleep for at least one second or the index is going to be the same age as the file
+		sleep(5); //have to sleep for at least one second or the index is going to be the same age as the file
 		SeqInput::buildIndex(SeqIOOptions::genFastaIn(ret.allSeqFnp));
 
 
@@ -284,7 +294,7 @@ SeqGatheringFromPathWeaver::processedGatherSeqsMetaRes SeqGatheringFromPathWeave
 		njh::concurrent::runVoidFunctionThreaded(filterBasedOnMeta, corePars_.numThreads);
 
 		writer.closeOut();
-		sleep(2); //have to sleep for at least one second or the index is going to be the same age as the file
+		sleep(5); //have to sleep for at least one second or the index is going to be the same age as the file
 
 		SeqInput::buildIndex(SeqIOOptions::genFastaIn(ret.allSeqFnp));
 
