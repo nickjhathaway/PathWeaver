@@ -389,23 +389,26 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
-		std::mutex allBasicInfoMut;
+
 		for(const auto & dir : directories){
 			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
 			if(bfs::exists(basicFnp)){
 				TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 				firstTable = std::make_shared<TableReader>(currentTabOpts);
-				firstTable->header_.outPutContents(allBasicInfo, "\t");
+				if(!skipRBind){
+					firstTable->header_.outPutContents(allBasicInfo, "\t");
+				}
 				VecStr row;
 				while(firstTable->getNextRow(row)){
-					if(!skipRBind){
-						allBasicInfo << njh::conToStr(row, "\t") << "\n";
-					}
+//					if(!skipRBind){
+//						allBasicInfo << njh::conToStr(row, "\t") << "\n";
+//					}
 					allTargets.emplace(row[firstTable->header_.getColPos("name")]);
 				}
+				break;
 			}
-			break;
 		}
+		std::mutex allBasicInfoMut;
 		if(!skipRBind){
 			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
 
