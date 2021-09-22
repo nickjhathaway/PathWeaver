@@ -20,15 +20,19 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 		njh::concurrent::LockableVec<bfs::path> inputDirQueue(pars.directories);
 		std::mutex allSeqsByTargetMut;
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		uint64_t maxLen = 500;
 		for(const auto & trimSeqsPerTarget : pars.trimSeqs){
 			readVec::getMaxLength(trimSeqsPerTarget.second, maxLen);
 		}
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
 		maxLen *=2;
 		aligner baseAligner(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix::createDegenScoreMatrixCaseInsensitive(2,-2));
 		concurrent::AlignerPool alnPool(baseAligner, corePars_.numThreads);
 		alnPool.initAligners();
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		std::function<void()> collectSeqs = [&inputDirQueue,
 																				 &allSeqsByTarget, &allSeqsByTargetMut,
@@ -92,6 +96,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							}
 						}
 					}
+					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 					if(pars.addPartial){
 						auto partialSeqFnp = njh::files::make_path(inputDir,"partial", "allPartial.fasta");
@@ -125,6 +130,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 						}
 					}
 
+					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 
 					//if(readTotals.empty() || 0 == usedTotal ){
@@ -186,8 +192,10 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				ret.allSamples.insert(currentAllSamples.begin(), currentAllSamples.end());
 			}
 		};
-
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		njh::concurrent::runVoidFunctionThreaded(collectSeqs, corePars_.numThreads);
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
 		{
 			auto allSeqOpts = SeqIOOptions::genFastaOut(pars.allSeqFnp);
 			allSeqOpts.out_.overWriteFile_ = corePars_.overWrite;
@@ -207,8 +215,11 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
 		}
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
 		sleep(5); //have to sleep for at least one second or the index is going to be the same age as the file
 		SeqInput::buildIndex(SeqIOOptions::genFastaIn(ret.allSeqFnp));
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 
 		return ret;
