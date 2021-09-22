@@ -20,6 +20,9 @@
 
 #include <chrono>
 
+
+
+
 namespace njhseq {
 
 int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
@@ -101,6 +104,7 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 	auto rawGatherRes = gatherer.gatherSeqsAndSortByTarget(rawGatherPars);
 	{
 		OutputStream targetsLocsOut(targetsLocsFnp);
+
 		VecStr tarKeys = getVectorOfMapKeys(rawGatherRes.seqsLocations);
 		njh::sort(tarKeys);
 		for(const auto & tar : tarKeys){
