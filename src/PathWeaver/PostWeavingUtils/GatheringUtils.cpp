@@ -135,14 +135,17 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 					//if(readTotals.empty() || 0 == usedTotal ){
 					if(0 == seqsAdded){
+						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						currentMissingDirectoriesOutput.emplace_back(inputDir.string());
 						njh::addConToVec(currentMissingSamplesOutput, samplesInFile);
 					}else{
+						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						if(1 != samplesInPrcoessFiles.size()){
 							std::stringstream ss;
 							ss << __PRETTY_FUNCTION__ << ", error " << " found more than 1 sample name in " << inputDir << ", found: " << njh::conToStr(samplesInPrcoessFiles, ",")<< "\n";
 							throw std::runtime_error{ss.str()};
 						}
+						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						currentAllSamples.insert(samplesInPrcoessFiles.begin(), samplesInPrcoessFiles.end());
 						for( auto & tar : seqsByTarget){
 							double totalOfCountField = 0;
@@ -154,6 +157,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									totalOfCountField += seqMeta.getMeta<double>(corePars_.countField);
 								}
 							}
+							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::vector<std::shared_ptr<seqInfo>> tarSeqs;
 							for(auto & seq : tar.second){
 								MetaDataInName seqMeta(seq->name_);
@@ -176,13 +180,16 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								seq->updateName();
 								tarSeqs.emplace_back(seq);
 							}
+							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							addOtherVec(currentAllSeqsByTarget[tar.first], tarSeqs);
+							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						}
 					}
 				} else {
 					currentMissingDirectoriesOutput.emplace_back(inputDir.string());
 				}
 			}
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			{
 				std::lock_guard<std::mutex> lock(allSeqsByTargetMut);
 				njh::addVecToSet(currentMissingDirectoriesOutput, ret.missingOutput);
@@ -191,6 +198,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				}
 				ret.allSamples.insert(currentAllSamples.begin(), currentAllSamples.end());
 			}
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		};
 		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		njh::concurrent::runVoidFunctionThreaded(collectSeqs, corePars_.numThreads);
