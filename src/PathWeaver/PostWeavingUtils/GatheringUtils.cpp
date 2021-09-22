@@ -183,10 +183,15 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							addOtherVec(currentAllSeqsByTarget[tar.first], tarSeqs);
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
 						}
+						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 					}
+					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				} else {
+					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 					currentMissingDirectoriesOutput.emplace_back(inputDir.string());
+					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				}
 			}
 			std::cout << __FILE__ << " " << __LINE__ << std::endl;
