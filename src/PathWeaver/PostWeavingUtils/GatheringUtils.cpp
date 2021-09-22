@@ -46,7 +46,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			auto currentAligner = alnPool.popAligner();
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			while(inputDirQueue.getVal(inputDir)){
-				std::cout << "inputDir:" << inputDir << std::endl;
+				//std::cout << "inputDir:" << inputDir << std::endl;
 				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
