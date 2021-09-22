@@ -390,9 +390,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 	std::unordered_set<std::string> allTargets;
 	//gather all basic info
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		for(const auto & dir : directories){
 			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
@@ -412,6 +415,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				break;
 			}
 		}
+		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
 		std::mutex allBasicInfoMut;
 		if(!skipRBind){
 			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
@@ -443,15 +448,16 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					}
 				}
 			};
-//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
-//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		}
 	}
-//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(skipRBind){
 		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 	}
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
@@ -461,6 +467,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	std::string sampleField = "sample";
 	std::string targetField = "regionUID";
@@ -469,6 +476,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	njh::stopWatch watch;
 	watch.setLapName("Gathering Raw Seqs");
 	auto rawAllSeqsFnp = njh::files::make_path(infoDir, "rawAllSeqsFile.fasta");
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	//
 	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars gatherCorePars;
@@ -496,13 +504,14 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
-//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
-//	std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(!rawGatherRes.missingOutput.empty()){
 		OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
 		missingOut << njh::conToStr(rawGatherRes.missingOutput, "\n") << std::endl;
 	}
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	processGatherPars.keepCommonSeqsWhenFiltering = keepCommonSeqsWhenFiltering;
 	processGatherPars.allSeqFnp = rawGatherRes.allSeqFnp;
@@ -510,8 +519,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	watch.startNewLap("Filtering Seqs On Meta");
 
-
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	auto processedGatherRes = seqGatherer.processedGatherSeqsMeta(processGatherPars, rawGatherRes);
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	{
 		OutputStream targetsGatheredReport(njh::files::make_path(reportsDir, "seqsPerTargetGathered.txt"));
@@ -538,11 +548,14 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	if(bfs::exists(processGatherPars.outMetaFnp)){
 		masterPopClusPars.groupingsFile = processGatherPars.outMetaFnp.string();
 	}
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	auto allSeqsFnp = processedGatherRes.allSeqFnp;
 	auto allSeqsFnpIn = SeqIOOptions::genFastaIn(allSeqsFnp);
+	sleep(3); //have to sleep before building index
 	SeqInput::buildIndex(allSeqsFnpIn);
 	allSeqsFnpIn.processed_ = true;
+	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
