@@ -26,12 +26,14 @@
 
 
 #include "WeaverRunner.hpp"
+
+#include <njhcpp/concurrency/LockableJsonLog.hpp>
+
 #include <TwoBit.h>
 
 #include <njhseq/BamToolsUtils.h>
 #include <njhseq/objects/BioDataObject.h>
 #include <njhseq/GenomeUtils.h>
-#include <njhcpp/concurrency/LockableJsonLog.hpp>
 #include <njhseq/objects/seqContainers.h>
 
 #include "PathWeaver/objects/Meta/CountryMetaData.hpp"
