@@ -44,11 +44,13 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> currentAllSeqsByTarget;
 			std::unordered_set<std::string> currentAllSamples;
 			auto currentAligner = alnPool.popAligner();
+			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			while(inputDirQueue.getVal(inputDir)){
-
+				std::cout << "inputDir:" << inputDir << std::endl;
+				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
-
+				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				if(bfs::exists(coiPerBedLocationFnp)){
 					std::unordered_map<std::string, uint32_t> readTotals;
 					TableReader readTab(TableIOOpts::genTabFileIn(coiPerBedLocationFnp,true));
@@ -193,6 +195,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 					currentMissingDirectoriesOutput.emplace_back(inputDir.string());
 					std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				}
+				std::cout << "inputDir:" << inputDir << std::endl;
+				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			}
 			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			{
