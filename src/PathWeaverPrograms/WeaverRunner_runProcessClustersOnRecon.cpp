@@ -195,8 +195,21 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(countField, "--countField", "counts field (set equal to \"reads\" to use the total reads for a hap");
 	setUp.processDirectoryOutputName(pat+ "_populationClustering", true);
 
+	setUp.setOption(masterPopClusPars.collapseVarCallPars.variantCallerRunPars.occurrenceCutOff, "--occurrenceCutOff", "Occurrence Cut Off, don't report variants below this count");
+	setUp.setOption(masterPopClusPars.collapseVarCallPars.variantCallerRunPars.lowVariantCutOff, "--lowVariantCutOff", "Low Variant Cut Off, don't report variants below this fraction");
+  masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.lowVarFreq = masterPopClusPars.collapseVarCallPars.variantCallerRunPars.lowVariantCutOff;
+  masterPopClusPars.collapseVarCallPars.transPars.setOptions(setUp);
+  setUp.setOption(masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.getPairwiseComps, "--getPairwiseComps", "get Pairwise comparison metrics");
+  bool noDiagAlnPairwiseComps = false;
+  setUp.setOption(masterPopClusPars.collapseVarCallPars.noDiagAlnPairwiseComps, "--noDiagAlnPairwiseComps", "Use diagonal Alignment for Pairwise Comparisons");
+  masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.diagAlnPairwiseComps = !noDiagAlnPairwiseComps;
 
-	masterPopClusPars.transPars.setOptions(setUp);
+  //setOption(pars.collapseVarCallPars.ignoreSubFields, "--ignoreSubFields", "Meta Sub Field values to ignore when calculating variants, e.g. --ignoreSubFields \"isFieldSample:TRUE,PreferredSample:FALSE\"");
+
+  masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.numThreads = masterPopClusPars.numThreads;
+ // masterPopClusPars.collapseVarCallPars.alnCacheDir = pars_.alnInfoDirName_;
+
+
 
 	setUp.setOption(masterPopClusPars.chiCutOff, "--chiCutOff",
 			"The Fraction of a cluster to determine if it chimeric", false, "Chimeras");
@@ -648,12 +661,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			}
 		}
 
-		//translation helpers
-		std::unique_ptr<TranslatorByAlignment> translator;
-		if("" != masterPopClusParsCopyConst.transPars.gffFnp_){
-			translator = std::make_unique<TranslatorByAlignment>(masterPopClusParsCopyConst.transPars);
-		}
-
 		auto currentPars = masterPopClusParsCopyConst;
 		currentPars.experimentNames.populationName_ = tar;
 		//make directory
@@ -895,362 +902,45 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			samplesCount.emplace(seqMeta.getMeta("sample"));
 		}
 
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-		std::map<std::string, std::map<std::string, MetaDataInName>> knownAAMeta;
-		//       seqName               transcript   amino acid positions and amino acid
-		std::map<std::string, std::map<std::string, std::string>> knownAATyped;
-		std::map<std::string, std::map<std::string, std::string>> fullAATyped;
-		if("" != currentPars.transPars.gffFnp_){
+	  auto varCallDirPath = njh::files::make_path(sampColl.masterOutputDir_,  "variantCalling");
+	  if(!masterPopClusParsCopyConst.collapseVarCallPars.transPars.lzPars_.genomeFnp.empty()){
+	  	auto collapseVarCallParsCopy = masterPopClusParsCopyConst.collapseVarCallPars;
 
-			auto variantInfoDir =  njh::files::make_path(sampColl.masterOutputDir_, "variantInfo");
-			njh::files::makeDir(njh::files::MkdirPar{variantInfoDir});
-			translator->pars_.keepTemporaryFiles_ = true;
-			translator->pars_.workingDirtory_ = variantInfoDir;
-			auto popSeqsOpts = seqOpts;
-			SeqIOOptions popOutOpts(
-					njh::files::make_path(variantInfoDir,
-							"PopSeqs" + seqOpts.getOutExtension()),
-							seqOpts.outFormat_);
-			SeqOutput::write(sampColl.popCollapse_->collapsed_.clusters_, popOutOpts);
+	    //if genome set call variants against genome
+	    collapseVarCallParsCopy.identifier = tar;
+	    collapseVarCallParsCopy.outputDirectory = varCallDirPath;
+	    collapseAndCallVariants(collapseVarCallParsCopy, outPopSeqsPerSamp);
+	  }
 
-			popSeqsOpts.firstName_ = popOutOpts.out_.outName();
-			auto translatedRes = translator->run(popSeqsOpts, sampNamesForPopHaps, currentPars.variantCallerRunPars);
-			SeqOutput transwriter(SeqIOOptions::genFastaOut(njh::files::make_path(variantInfoDir, "translatedInput.fasta")));
-			for(const auto & seqName : translatedRes.translations_){
-				for(const auto & transcript : seqName.second){
-					transwriter.openWrite(transcript.second.translation_);
-				}
-			}
-			SeqInput popReader(popSeqsOpts);
-			auto popSeqs = popReader.readAllReads<seqInfo>();
-			std::unordered_map<std::string, uint32_t> popSeqsPosition;
-			for(const auto popPos : iter::range(popSeqs.size())){
-				popSeqsPosition[popSeqs[popPos].name_] = popPos;
-			}
-			OutputStream popBedLocs(njh::files::make_path(variantInfoDir, "PopSeqs.bed"));
-			for(const auto & seqLocs : translatedRes.seqAlns_){
-				for(const auto & loc : seqLocs.second){
-					popBedLocs << loc.gRegion_.genBedRecordCore().toDelimStrWithExtra() << std::endl;
-				}
-			}
+	  std::map<std::string, std::string> fullAATyped;
+	  //if typing file exists, read it in and set in map
+	  auto seqTypingFnp = njh::files::make_path(varCallDirPath, "variantCalls/seqsAATyped.tab.txt.gz");
+	  if(bfs::exists(seqTypingFnp)){
+	    std::unordered_map<std::string, std::string> nameKey;
+	    auto seqNamesFnp = njh::files::make_path(varCallDirPath, "uniqueSeqs_meta.tab.txt.gz");
+	    {
+	      TableReader seqNamesTab(TableIOOpts::genTabFileIn(seqNamesFnp, true));
+	      VecStr row;
+	      while(seqNamesTab.getNextRow(row)){
+	        nameKey[row[seqNamesTab.header_.getColPos("CollapsedName")]] = row[seqNamesTab.header_.getColPos("PopUID")];
+	      }
+	    }
+	    {
+	      VecStr row;
+	      TableReader seqTypingTab(TableIOOpts::genTabFileIn(seqTypingFnp, true));
+	      while(seqTypingTab.getNextRow(row)){
+	      	auto collapsedName = row[seqTypingTab.header_.getColPos("name")];
+	        auto typed = row[seqTypingTab.header_.getColPos("fullTyped")];
+	        auto popName = nameKey[collapsedName];
+	        fullAATyped[popName] = typed;
+	      }
+	    }
+	  }
 
-			for(const auto & pop : popSeqs){
-				if(!njh::in(pop.name_, translatedRes.seqAlns_)){
-					totalPopCount -= sampCountsForPopHaps[pop.name_];
-					popBedLocs << "*"
-							<< "\t" << "*"
-							<< "\t" << "*"
-							<< "\t" << pop.name_
-							<< "\t" << "*"
-							<< "\t" << "*" << std::endl;
-				}
-			}
-
-			{
-				//protein
-				for(auto & varPerTrans : translatedRes.proteinVariants_){
-
-					varPerTrans.second.writeOutSNPsFinalInfo(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerTrans.first +  "-protein_aminoAcidVariable.tab.txt")), varPerTrans.first, true	);
-					varPerTrans.second.writeOutSNPsAllInfo(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerTrans.first +  "-protein_aminoAcidsAll.tab.txt")), varPerTrans.first, true	);
-
-					std::set<uint32_t> knownMutationsLocations;
-					for(const auto & snpPos : varPerTrans.second.allBases){
-						if(njh::in(snpPos.first + 1, translator->knownAminoAcidPositions_[varPerTrans.first])){
-							knownMutationsLocations.emplace(snpPos.first);
-						}
-					}
-					if(!varPerTrans.second.variablePositons_.empty()){
-						GenomicRegion variableRegion = varPerTrans.second.getVariableRegion();
-						variableRegion.start_ = variableRegion.start_ +1;
-						OutputStream bedVariableRegionOut(OutOptions(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerTrans.first +  "-protein_variableRegion.bed"))));
-						bedVariableRegionOut << variableRegion.genBedRecordCore().toDelimStrWithExtra() << std::endl;
-					}
-
-					std::set<uint32_t> allLocations(knownMutationsLocations.begin(), knownMutationsLocations.end());
-					for(const auto & variablePos : varPerTrans.second.snpsFinal){
-						allLocations.emplace(variablePos.first);
-					}
-					std::map<std::string, MetaDataInName> aaMeta;
-
-
-					for(auto & seqName : translatedRes.translations_){
-						if(njh::in(varPerTrans.first, seqName.second)){
-							for(const auto & variablePos : allLocations){
-								auto aa = seqName.second[varPerTrans.first].queryAlnTranslation_.seq_[getAlnPosForRealPos(seqName.second[varPerTrans.first].refAlnTranslation_.seq_, variablePos)];
-								aaMeta[seqName.first].addMeta(estd::to_string(variablePos), aa, false);
-							}
-						}
-						for(const auto & knownLoc : knownMutationsLocations){
-							auto aa = seqName.second[varPerTrans.first].queryAlnTranslation_.seq_[getAlnPosForRealPos(seqName.second[varPerTrans.first].refAlnTranslation_.seq_, knownLoc)];
-							knownAAMeta[seqName.first.substr(0, seqName.first.rfind("_f"))][varPerTrans.first].addMeta(estd::to_string(knownLoc), aa, false);
-						}
-					}
-
-					for (auto & seqName : translatedRes.translations_) {
-						if (njh::in(varPerTrans.first, seqName.second)) {
-							VecStr allAAPosCoded;
-							std::string popName = seqName.first.substr(0, seqName.first.rfind("_f"));
-							std::string transcript = varPerTrans.first;
-							for (const auto & loc : allLocations) {
-								////std::cout << __FILE__ << " " << __LINE__ << std::endl;
-								auto aa =seqName.second[varPerTrans.first].queryAlnTranslation_.seq_[getAlnPosForRealPos(seqName.second[varPerTrans.first].refAlnTranslation_.seq_,loc)];
-								allAAPosCoded.emplace_back(njh::pasteAsStr(loc + 1, "-", aa));
-								////std::cout << __FILE__ << " " << __LINE__ << std::endl;
-							}
-							if(!allAAPosCoded.empty()){
-								fullAATyped[popName][transcript] = njh::conToStr(allAAPosCoded, ":");
-							}else{
-								fullAATyped[popName][transcript] = "NONE";
-							}
-						}
-					}
-					if(!knownMutationsLocations.empty()){
-						varPerTrans.second.writeOutSNPsInfo(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerTrans.first +  "-protein_aminoAcidKnownMutations.tab.txt")), varPerTrans.first,knownMutationsLocations, true	);
-
-						for(const auto & pop : knownAAMeta){
-							std::string popName = pop.first;
-							std::string transcript = varPerTrans.first;
-							std::vector<std::string> aaPos;
-							for(const auto & variablePos : knownMutationsLocations){
-								aaPos.emplace_back(estd::to_string(variablePos + 1) + "-" + pop.second.at(transcript).getMeta(estd::to_string(variablePos)));
-							}
-							knownAATyped[popName][transcript] = njh::conToStr(aaPos, ":");
-						}
-					}
-					OutputStream outPopHapAminos(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerTrans.first +  "-popHapToAmino.tab.txt")));
-					outPopHapAminos << "h_PopUID" ;
-					VecStr aminoPositionsHeader;
-					for(const auto & variablePos : allLocations){
-						outPopHapAminos << "\t" << varPerTrans.first << "-aa" << variablePos + 1;
-						aminoPositionsHeader.emplace_back(njh::pasteAsStr(varPerTrans.first, "-aa",  variablePos + 1));
-					}
-					outPopHapAminos << std::endl;
-					std::unordered_map<std::string, std::string> popHapAminoTyped;
-					std::unordered_map<std::string, VecStr> popHapAminoTypedRow;
-
-					for(const auto & pop : aaMeta){
-						outPopHapAminos << pop.first.substr(0, pop.first.rfind("_f")) ;
-						std::string typed = varPerTrans.first + "=";
-						std::vector<std::string> aaPos;
-						std::vector<std::string> aa;
-
-						for(const auto & variablePos : allLocations){
-							outPopHapAminos << "\t" << pop.second.getMeta(estd::to_string(variablePos));
-							aaPos.emplace_back(estd::to_string(variablePos + 1) + "-" + pop.second.getMeta(estd::to_string(variablePos)));
-							aa.emplace_back(pop.second.getMeta(estd::to_string(variablePos)));
-
-						}
-						if (!aaPos.empty()) {
-							typed += njh::conToStr(aaPos, ":");
-						} else {
-							typed += "NONE";
-						}
-						//typed +=";";
-
-						popHapAminoTyped[pop.first.substr(0, pop.first.rfind("_f"))] = typed;
-						popHapAminoTypedRow[pop.first.substr(0, pop.first.rfind("_f"))] = aa;
-						outPopHapAminos << std::endl;
-					}
-					auto popMetaTable = seqsToMetaTable(popSeqsPerSamp);
-					popMetaTable.deleteColumn("seq");
-					popMetaTable.deleteColumn("count");
-					addOtherVec(popMetaTable.columnNames_, aminoPositionsHeader);
-					for(auto & row : popMetaTable){
-						MetaDataInName::removeMetaDataInName(row[popMetaTable.getColPos("name")]);
-						auto popName = row[popMetaTable.getColPos("PopUID")];
-						VecStr aminos;
-						if(njh::in(popName, popHapAminoTypedRow)){
-							aminos = popHapAminoTypedRow[popName];
-						}else{
-							//pop uid was untypable, didn't align
-							aminos = VecStr{aminoPositionsHeader.size(), std::string("NA")};
-						}
-						addOtherVec(row, aminos);
-					}
-
-					popMetaTable.outPutContents(TableIOOpts::genTabFileOut(njh::files::make_path(variantInfoDir, varPerTrans.first + "-popSeqsWithMetaAndVariableAAInfoTable.tab.txt")));
-
-	//				for(auto & popHapSamp : outPopSeqsPerSamp){
-	//					MetaDataInName meta(popHapSamp.name_);
-	//					auto typed = popHapAminoTyped[meta.getMeta("PopUID")].substr(popHapAminoTyped[meta.getMeta("PopUID")].find("=") + 1);
-	//					if("" ==typed){
-	//						typed = "NONE";
-	//					}
-	//					meta.addMeta(varPerTrans.first, typed);
-	//					meta.resetMetaInName(popHapSamp.name_);
-	//				}
-				}
-			}
-
-			{
-				//snps
-				OutputStream outSnpDepthPerSample(njh::files::make_path(variantInfoDir, njh::pasteAsStr("snpDepthPerSample.tab.txt")));
-				outSnpDepthPerSample << "AnalysisName\tsample\tchromosome\tposition\trefBase\tbase\treadDepth" ;
-				VecStr metaLevels;
-				if(nullptr != sampColl.groupMetaData_){
-					metaLevels = getVectorOfMapKeys(sampColl.groupMetaData_->groupData_);
-					for(const auto & meta : metaLevels){
-						outSnpDepthPerSample << "\t" << meta;
-					}
-				}
-				outSnpDepthPerSample << std::endl;
-
-				for( auto & varPerChrom : translatedRes.seqVariants_){
-					varPerChrom.second.writeOutSNPsFinalInfo(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerChrom.first +  "-SNPs.tab.txt")), varPerChrom.first, false);
-					varPerChrom.second.writeOutSNPsAllInfo(  njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerChrom.first +  "-allBases.tab.txt")), varPerChrom.first, false);
-					if(!varPerChrom.second.variablePositons_.empty()){
-						GenomicRegion variableRegion = varPerChrom.second.getVariableRegion();
-						OutputStream bedVariableRegionOut(OutOptions(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerChrom.first +  "-chromosome_variableRegion.bed"))));
-						bedVariableRegionOut << variableRegion.genBedRecordCore().toDelimStrWithExtra() << std::endl;
-					}
-					std::map<std::string, MetaDataInName> snpMeta;
-					for(auto & seqName : translatedRes.seqAlns_){
-						for(const auto & variablePos : varPerChrom.second.snpsFinal){
-
-							if(variablePos.first < seqName.second.front().gRegion_.start_ || variablePos.first >= seqName.second.front().gRegion_.end_){
-								snpMeta[seqName.first].addMeta(estd::to_string(variablePos.first), "X", false);
-							} else {
-								auto aa = seqName.second.front().alnQuerySeq_.seq_[getAlnPosForRealPos(seqName.second.front().alnRefSeq_.seq_, variablePos.first - seqName.second.front().gRegion_.start_)];
-								snpMeta[seqName.first].addMeta(estd::to_string(variablePos.first), aa, false);
-							}
-						}
-					}
-	//				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-					OutputStream outPopHapAminos(njh::files::make_path(variantInfoDir, njh::pasteAsStr(varPerChrom.first +  "-popHapToSNPs.tab.txt")));
-					outPopHapAminos << "h_PopUID" ;
-					VecStr aminoPositionsHeader;
-					for(const auto & variablePos : varPerChrom.second.snpsFinal){
-						outPopHapAminos << "\t" << varPerChrom.first << "-" << variablePos.first;
-						aminoPositionsHeader.emplace_back(njh::pasteAsStr(varPerChrom.first, "-",  variablePos.first));
-					}
-					outPopHapAminos << std::endl;
-					std::unordered_map<std::string, std::string> popHapAminoTyped;
-					std::unordered_map<std::string, VecStr> popHapAminoTypedRow;
-
-					for(const auto & pop : snpMeta){
-						outPopHapAminos << pop.first.substr(0, pop.first.rfind("_f")) ;
-						std::string typed = varPerChrom.first + "=";
-						std::vector<std::string> aaPos;
-						std::vector<std::string> aa;
-
-						for(const auto & variablePos : varPerChrom.second.snpsFinal){
-							outPopHapAminos << "\t" << pop.second.getMeta(estd::to_string(variablePos.first));
-							aaPos.emplace_back(estd::to_string(variablePos.first) + "-" + pop.second.getMeta(estd::to_string(variablePos.first)));
-							aa.emplace_back(pop.second.getMeta(estd::to_string(variablePos.first)));
-						}
-						if (!aaPos.empty()) {
-							typed += njh::conToStr(aaPos, ":");
-						} else {
-							typed += "NONE";
-						}
-						//typed +=";";
-						popHapAminoTyped[pop.first.substr(0, pop.first.rfind("_f"))] = typed;
-						popHapAminoTypedRow[pop.first.substr(0, pop.first.rfind("_f"))] = aa;
-						outPopHapAminos << std::endl;
-					}
-
-
-	//				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-					auto popMetaTable = seqsToMetaTable(popSeqsPerSamp);
-					popMetaTable.deleteColumn("seq");
-					popMetaTable.deleteColumn("count");
-					addOtherVec(popMetaTable.columnNames_, aminoPositionsHeader);
-
-					std::map<std::string, std::map<std::string, std::map<uint32_t, std::map<std::string, double>>>> snpsPerSampleDepth;
-
-					for(auto & row : popMetaTable){
-						MetaDataInName::removeMetaDataInName(row[popMetaTable.getColPos("name")]);
-						auto popName = row[popMetaTable.getColPos("PopUID")];
-						VecStr aminos;
-						if(njh::in(popName, popHapAminoTypedRow)){
-							aminos = popHapAminoTypedRow[popName];
-							uint32_t snpPosition = 0;
-							for(const auto & snp : aminos){
-								if("X" == snp){
-									continue;
-								}
-								if("" == snp){
-									continue;
-								}
-								if(" " == snp){
-									continue;
-								}
-								auto sample = row[popMetaTable.getColPos("sample")];
-								auto chrom = aminoPositionsHeader[snpPosition].substr(0, aminoPositionsHeader[snpPosition].rfind("-"));
-	//							//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-	//							std::cout << "snpPosition: " << snpPosition << std::endl;
-	//							std::cout << "aminoPositionsHeader[snpPosition]: " <<  aminoPositionsHeader[snpPosition] << std::endl;
-	//							std::cout << "aminoPositionsHeader[snpPosition].substr(aminoPositionsHeader[snpPosition].rfind(\"-\") + 1): " << aminoPositionsHeader[snpPosition].substr(aminoPositionsHeader[snpPosition].rfind("-") + 1)<< std::endl;
-	//							std::cout << "row[popMetaTable.getColPos(\"readCount\")]: " << row[popMetaTable.getColPos("readCount")] << std::endl;
-								//std::cout << aminoPositionsHeader[snpPosition].substr(aminoPositionsHeader[snpPosition].rfind("-") + 1) << std::endl;
-								auto position = njh::StrToNumConverter::stoToNum<uint32_t>(aminoPositionsHeader[snpPosition].substr(aminoPositionsHeader[snpPosition].rfind("-") + 1));
-								double depth = njh::StrToNumConverter::stoToNum<double>(row[popMetaTable.getColPos("readCount")]);
-	//							//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-								snpsPerSampleDepth[sample][chrom][position][snp] += depth;
-								++snpPosition;
-							}
-						} else {
-							//pop uid was untypable, didn't align
-							aminos = VecStr{aminoPositionsHeader.size(), std::string("NA")};
-						}
-						addOtherVec(row, aminos);
-					}
-					////std::cout << __FILE__ << " " << __LINE__ << std::endl;
-					popMetaTable.outPutContents(TableIOOpts::genTabFileOut(njh::files::make_path(variantInfoDir, varPerChrom.first + "-popSeqsWithMetaAndVariableSNPInfoTable.tab.txt")));
-
-
-					for(const auto & sample : snpsPerSampleDepth){
-						for(const auto & chrom : sample.second){
-							for(const auto & position : chrom.second){
-								for(const auto & snp : position.second){
-									outSnpDepthPerSample
-											<< currentPars.experimentNames.populationName_
-											<< "\t" << sample.first
-											<< "\t" << chrom.first
-											<< "\t" << position.first
-											<< "\t" << varPerChrom.second.getBaseForGenomicRegion(position.first) //translatedRes.baseForPosition_[varPerChrom.first][position.first]
-											<< "\t" << snp.first
-											<< "\t" << snp.second ;
-
-									if (nullptr != sampColl.groupMetaData_) {
-										auto metaForSample = sampColl.groupMetaData_->getMetaForSample(sample.first, metaLevels);
-										for (const auto & meta : metaLevels) {
-											outSnpDepthPerSample << "\t" << metaForSample.getMeta(meta);
-										}
-									}
-									outSnpDepthPerSample << std::endl;
-								}
-							}
-						}
-					}
-	//				for(auto & popHapSamp : outPopSeqsPerSamp){
-	////					//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-	//					MetaDataInName meta(popHapSamp.name_);
-	//					auto typed = popHapAminoTyped[meta.getMeta("PopUID")].substr(popHapAminoTyped[meta.getMeta("PopUID")].find("=") + 1);
-	//					if("" ==typed){
-	//						typed = "NONE";
-	//					}
-	//					meta.addMeta(varPerChrom.first, typed);
-	//					meta.resetMetaInName(popHapSamp.name_);
-	//				}
-				}
-			}
-		}
 //		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		for(auto & clus : sampColl.popCollapse_->collapsed_.clusters_){
 			auto popName = clus.seqBase_.name_.substr(0, clus.seqBase_.name_.rfind("_f"));
-			std::string typed = "";
-	//		std::cout << "clus.seqBase_.name_: " << clus.seqBase_.name_ << std::endl;
-	//		std::cout << "clus.meta_.toJson(): " << clus.meta_.toJson() << std::endl;
-	//		std::cout << "popName: " << popName << std::endl;
-			for(const auto & tran : fullAATyped[popName]){
-				if("" != typed){
-					typed += ";";
-				}
-				typed += tran.first + "=" + tran.second;
-	//			std::cout << "\t" << tran.first << ":"<< tran.second << std::endl;
-	//			std::cout << "\t" << "typed:" << typed << std::endl;
-			}
+			std::string typed = fullAATyped[popName];
 			clus.meta_.addMeta("h_AATyped", typed);
 		}
 //		//std::cout << __FILE__ << " " << __LINE__ << std::endl;

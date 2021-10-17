@@ -28,7 +28,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		}
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
-		maxLen *=2;
+		maxLen *=1.5;
 		aligner baseAligner(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix::createDegenScoreMatrixCaseInsensitive(2,-2));
 		concurrent::AlignerPool alnPool(baseAligner, corePars_.numThreads);
 		alnPool.initAligners();
