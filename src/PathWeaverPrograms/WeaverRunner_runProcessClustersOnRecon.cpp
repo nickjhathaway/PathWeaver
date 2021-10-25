@@ -204,7 +204,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
   setUp.setOption(masterPopClusPars.collapseVarCallPars.noDiagAlnPairwiseComps, "--noDiagAlnPairwiseComps", "Use diagonal Alignment for Pairwise Comparisons");
   masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.diagAlnPairwiseComps = !noDiagAlnPairwiseComps;
 
-  //setOption(pars.collapseVarCallPars.ignoreSubFields, "--ignoreSubFields", "Meta Sub Field values to ignore when calculating variants, e.g. --ignoreSubFields \"isFieldSample:TRUE,PreferredSample:FALSE\"");
+  masterPopClusPars.collapseVarCallPars.ignoreSubFields = "site:LabCross,site:LabControl,site:LabContaminated"
+  setUp.setOption(masterPopClusPars.collapseVarCallPars.ignoreSubFields, "--ignoreSubFields", "Meta Sub Field values to ignore when calculating variants, e.g. --ignoreSubFields \"isFieldSample:TRUE,PreferredSample:FALSE\"");
 
   masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.numThreads = masterPopClusPars.numThreads;
  // masterPopClusPars.collapseVarCallPars.alnCacheDir = pars_.alnInfoDirName_;
