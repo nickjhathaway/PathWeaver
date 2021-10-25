@@ -415,6 +415,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			if(bfs::exists(basicFnp)){
 				TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 				firstTable = std::make_shared<TableReader>(currentTabOpts);
+				firstTable->doNotCheckRowSizes = true;
 				if(!skipRBind){
 					firstTable->header_.outPutContents(allBasicInfo, "\t");
 				}
@@ -443,6 +444,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					if(bfs::exists(basicFnp)){
 						TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 						TableReader currentTable(currentTabOpts);
+						currentTable.doNotCheckRowSizes = true;
 						if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
 							std::stringstream ss;
 							ss << __PRETTY_FUNCTION__ << ", error " << "table " << basicFnp << " header's doesn't match other's header"<< "\n";
