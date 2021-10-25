@@ -204,7 +204,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
   setUp.setOption(masterPopClusPars.collapseVarCallPars.noDiagAlnPairwiseComps, "--noDiagAlnPairwiseComps", "Use diagonal Alignment for Pairwise Comparisons");
   masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.diagAlnPairwiseComps = !noDiagAlnPairwiseComps;
 
-  masterPopClusPars.collapseVarCallPars.ignoreSubFields = "site:LabCross,site:LabControl,site:LabContaminated"
+  masterPopClusPars.collapseVarCallPars.ignoreSubFields = std::set<std::string>{"site:LabCross", "site:LabControl","site:LabContaminated"};
   setUp.setOption(masterPopClusPars.collapseVarCallPars.ignoreSubFields, "--ignoreSubFields", "Meta Sub Field values to ignore when calculating variants, e.g. --ignoreSubFields \"isFieldSample:TRUE,PreferredSample:FALSE\"");
 
   masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.numThreads = masterPopClusPars.numThreads;
