@@ -54,6 +54,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				if(bfs::exists(coiPerBedLocationFnp)){
 					std::unordered_map<std::string, uint32_t> readTotals;
 					TableReader readTab(TableIOOpts::genTabFileIn(coiPerBedLocationFnp,true));
+					readTab.doNotCheckRowSizes = true;
 					VecStr row;
 					uint32_t usedTotal = 0;
 					std::set<std::string> samplesInFile;
