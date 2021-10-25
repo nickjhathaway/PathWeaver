@@ -420,7 +420,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					firstTable->header_.outPutContents(allBasicInfo, "\t");
 				}
 				VecStr row;
-				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				while(firstTable->getNextRow(row)){
 //					if(!skipRBind){
 //						allBasicInfo << njh::conToStr(row, "\t") << "\n";
@@ -454,7 +454,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							throw std::runtime_error{ss.str()};
 						}
 						VecStr row;
-						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						while(currentTable.getNextRow(row)){
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
