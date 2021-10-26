@@ -87,6 +87,15 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
 								continue;
 							}
+							uint32_t count = 0;
+							if("reads" == corePars_.countField){
+								count += seq.cnt_;
+							}else{
+								count += seqMeta.getMeta<double>(corePars_.countField);
+							}
+							if(0 == count){
+								continue;
+							}
 							auto tarName = njh::replaceString(rawTarName, ".", "-");
 							//targetKey[tarName] = rawTarName;
 							if(njh::in(rawTarName,pars.trimSeqs)){
@@ -116,6 +125,15 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 								if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
 									if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
+										continue;
+									}
+									uint32_t count = 0;
+									if("reads" == corePars_.countField){
+										count += seq.cnt_;
+									}else{
+										count += seqMeta.getMeta<double>(corePars_.countField);
+									}
+									if(0 == count){
 										continue;
 									}
 									auto tarName = njh::replaceString(rawTarName, ".", "-");
