@@ -51,6 +51,9 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 	setUp.setOption(samples, "--samples", "Process input from only these samples");
 	setUp.setOption(targets, "--targets", "Process input for only these targets");
 	setUp.setOption(rawGatherPars.addPartial, "--addPartial", "Add Partial");
+	setUp.setOption(rawGatherPars.minInputSeqLen, "--minInputSeqLen", "Min Input Seq Len");
+
+
 	setUp.setOption(corePars.numThreads, "--numThreads", "number threads");
 	setUp.setOption(corePars.countField, "--countField", "countField");
 	setUp.setOption(processedPars.keepCommonSeqsWhenFiltering, "--keepCommonSeqsWhenFiltering", "Keep Common Seqs When Filtering");
