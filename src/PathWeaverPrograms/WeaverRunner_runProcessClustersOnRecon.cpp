@@ -152,7 +152,7 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 
 int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inputCommands) {
 	std::set<std::string> samples;
-	std::set<std::string> targets;
+//	std::set<std::string> targets;
 	bfs::path inputDirectory = "./";
 	std::string pat = "";
 	std::string countField = "estimatedPerBaseCoverage";
@@ -160,7 +160,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	bfs::path trimBedFnp = "";
 	bfs::path genomeFnp = "";
 
-	bool addPartial = false;
+//	bool addPartial = false;
 	bool keepCommonSeqsWhenFiltering = false;
 
 	SeekDeepSetUp setUp(inputCommands);
@@ -171,6 +171,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	bool swgaSampleClusErrorSet = false;
 	bool swgaPopClusErrorSet = false;
 	bool skipRBind = false;
+
+	SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetPars rawGatherPars;
+
+//	rawGatherPars.addPartial = addPartial;
+//	rawGatherPars.targets = targets;
 
 	setUp.processDebug();
 	setUp.processVerbose();
@@ -192,8 +197,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(pat, "--pat","The results directory pattern to process, directories must end with this, the prefix to this pattern will be treated as the sample name", true);
 	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
 	setUp.setOption(samples, "--samples", "Process input from only these samples");
-	setUp.setOption(targets, "--targets", "Process input for only these targets");
-	setUp.setOption(addPartial, "--addPartial", "Add Partial");
+	setUp.setOption(rawGatherPars.targets, "--targets", "Process input for only these targets");
+	setUp.setOption(rawGatherPars.addPartial, "--addPartial", "Add Partial");
+	setUp.setOption(rawGatherPars.minInputSeqLen, "--minInputSeqLen", "Min Input Seq Len");
 
 	setUp.setOption(countField, "--countField", "counts field (set equal to \"reads\" to use the total reads for a hap");
 	setUp.processDirectoryOutputName(pat+ "_populationClustering", true);
@@ -501,7 +507,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	//
 	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars gatherCorePars;
-	SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetPars rawGatherPars;
 	SeqGatheringFromPathWeaver::processedGatherSeqsMetaPars processGatherPars;
 
 	gatherCorePars.sampleField = sampleField;
@@ -510,10 +515,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	gatherCorePars.meta = meta;
 	gatherCorePars.numThreads = masterPopClusPars.numThreads;
 
-	rawGatherPars.addPartial = addPartial;
 	rawGatherPars.allSeqFnp = rawAllSeqsFnp;
 	rawGatherPars.directories = directories;
-	rawGatherPars.targets = targets;
+
 
 	if(trimBedSet){
 		TwoBit::TwoBitFile tReader(genomeFnp);
@@ -557,7 +561,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		VecStr noDataForTargets;
 		for(const auto & tar : allTargets){
 			auto rawTargetName = rawGatherRes.targetKey[tar];
-			if(!njh::in(rawTargetName, targetKeys) && (targets.empty() || njh::in(rawTargetName, targets))){
+			if(!njh::in(rawTargetName, targetKeys) && (rawGatherPars.targets.empty() || njh::in(rawTargetName, rawGatherPars.targets))){
 				noDataForTargets.emplace_back(tar);
 			}
 		}
