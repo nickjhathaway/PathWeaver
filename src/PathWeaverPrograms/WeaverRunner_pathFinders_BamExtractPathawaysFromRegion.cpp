@@ -194,7 +194,7 @@ int WeaverRunner::BamExtractPathawaysFromRegion(
 	auto inputRegions = gatherRegions(bedFile.string(), "", setUp.pars_.verbose_);
 
 	//replace any special characters with dashes
-	for(const auto & region : inputRegions){
+	for(auto & region : inputRegions){
 		region.uid_ = njh::replaceSpecialCharacters(region.uid_);
 	}
 	masterPars.region_ = inputRegions.front();
