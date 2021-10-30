@@ -225,7 +225,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			"The Fraction of a cluster to determine if it chimeric", false, "Chimeras");
 	setUp.setOption(masterPopClusPars.customCutOffs, "--custumCutOffs",
 			"Two Column Table, first column is sample name, second is a custom frac cut off, if sample not found will default to --fracCutOff", false, "Filtering");
-	setUp.setOption(masterPopClusPars.previousPopFilename, "--previousPop", "previousPopFilename", false, "Population");
+	bfs::path previousPopDir = "";
+	setUp.setOption(previousPopDir, "--previousPopDir", "Prevous Pop Dir, the expected seqs should be target TARGET_NAME.fasta", false, "Population");
+
+//	setUp.setOption(masterPopClusPars.previousPopFilename, "--previousPop", "previousPopFilename", false, "Population");
 	setUp.processComparison(masterPopClusPars.previousPopErrors, "previousPop");
 	setUp.setOption(masterPopClusPars.groupingsFile, "--groupingsFile,--meta",
 			"A file to sort samples into different groups", false, "Meta");
@@ -649,7 +652,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	std::function<void()> runPopClusOnTar = [&tarNamesQueue,&masterPopClusParsCopyConst,
 																					 &setUp,&processedGatherRes,
 																					 &allSeqsFnpIn,
-																					 &seqOpts,&numThreadsForSample](){
+																					 &seqOpts,&numThreadsForSample,
+																					 &previousPopDir](){
 		std::string tar = "";
 
 	while(tarNamesQueue.getVal(tar)){
@@ -678,6 +682,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 		auto currentPars = masterPopClusParsCopyConst;
 		currentPars.experimentNames.populationName_ = tar;
+		bfs::path previousPopName = njh::files::make_path(previousPopDir, tar + ".fasta");
+		if(bfs::exists(previousPopName)){
+			currentPars.previousPopFilename = previousPopName.string();
+		}
 		//make directory
 		auto currentMasterDir = njh::files::make_path(setUp.pars_.directoryName_, tar);
 		njh::files::makeDir(njh::files::MkdirPar{currentMasterDir});
@@ -701,10 +709,18 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				KmerMaps(setUp.pars_.colOpts_.kmerOpts_.kLength_),
 				setUp.pars_.qScorePars_, setUp.pars_.colOpts_.alignOpts_.countEndGaps_,
 				setUp.pars_.colOpts_.iTOpts_.weighHomopolyer_);
-		alignerObj.processAlnInfoInput(setUp.pars_.alnInfoDirName_);
+		std::string alnCacheInForTarget = "";
+		if("" != setUp.pars_.alnInfoDirName_){
+			alnCacheInForTarget = njh::files::make_path(setUp.pars_.alnInfoDirName_, tar).string();
+		}
+		std::string alnCacheOutForTarget = "";
+		if("" != setUp.pars_.outAlnInfoDirName_){
+			alnCacheOutForTarget = njh::files::make_path(setUp.pars_.outAlnInfoDirName_, tar).string();
+		}
+		alignerObj.processAlnInfoInput(alnCacheInForTarget);
 		njhseq::concurrent::AlignerPool alnPool(alignerObj,numThreadsForSample );
 		alnPool.initAligners();
-		alnPool.outAlnDir_ = setUp.pars_.outAlnInfoDirName_;
+		alnPool.outAlnDir_ = alnCacheOutForTarget;
 //		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		// create collapserObj used for clustering
 		collapser collapserObj(setUp.pars_.colOpts_);
@@ -863,7 +879,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		//if ("" != currentPars.previousPopFilename && !currentPars.noPopulation) {
 		if ("" != currentPars.previousPopFilename) {
 			auto previousPopSeqsRaw = getSeqs<readObject>(currentPars.previousPopFilename);
-			//collapse indentical seqs
+			//collapse identical seqs
 			std::vector<readObject> previousPopSeqs;
 			std::vector<std::set<std::string>> allNamesForPreviousPops;
 			for(const auto & seq : previousPopSeqsRaw){
