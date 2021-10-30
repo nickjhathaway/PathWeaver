@@ -242,7 +242,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			njh::sort(targetKeys);
 
 			for(const auto & target : targetKeys){
-				ret.targetKey[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
+				ret.targetKeyNewToOld[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
+				ret.targetKeyOldToNew[MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField)] = target;
+
 				ret.seqsLocations[target] = std::make_pair(seqCounts, allSeqsByTarget[target].size());
 				writer.write(allSeqsByTarget[target]);
 				seqCounts += allSeqsByTarget[target].size();

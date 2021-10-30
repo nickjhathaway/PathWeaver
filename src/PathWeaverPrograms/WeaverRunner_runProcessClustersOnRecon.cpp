@@ -560,8 +560,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 		VecStr noDataForTargets;
 		for(const auto & tar : allTargets){
-			auto rawTargetName = rawGatherRes.targetKey[tar];
-			if(!njh::in(rawTargetName, targetKeys) && (rawGatherPars.targets.empty() || njh::in(rawTargetName, rawGatherPars.targets))){
+
+			auto newTargetName = rawGatherRes.targetKeyOldToNew[tar];
+//			std::cout << "tar: " << tar << std::endl;
+//			std::cout << "newTargetName: " << newTargetName << std::endl;
+			if(!njh::in(newTargetName, targetKeys) && (rawGatherPars.targets.empty() || njh::in(newTargetName, rawGatherPars.targets))){
 				noDataForTargets.emplace_back(tar);
 			}
 		}
@@ -585,10 +588,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
 		outKey << "p_name\t" << targetField << std::endl;
-		auto keys = getVectorOfMapKeys(rawGatherRes.targetKey);
+		auto keys = getVectorOfMapKeys(rawGatherRes.targetKeyNewToOld);
 		njh::sort(keys);
 		for(const auto & key : keys){
-			outKey << key << '\t' << rawGatherRes.targetKey[key] << std::endl;
+			outKey << key << '\t' << rawGatherRes.targetKeyNewToOld[key] << std::endl;
 		}
 	}
 	{

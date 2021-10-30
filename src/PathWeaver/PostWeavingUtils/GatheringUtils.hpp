@@ -45,7 +45,9 @@ public:
 		std::set<std::string> missingOutput;
 		bfs::path allSeqFnp;
 		std::set<std::string> allSamples;
-		std::unordered_map<std::string, std::string> targetKey;//a key because "." can't be analyses names
+		//new name to old name
+		std::unordered_map<std::string, std::string> targetKeyOldToNew;//a key because "." can't be analyses names
+		std::unordered_map<std::string, std::string> targetKeyNewToOld;//a key because "." can't be analyses names
 
 	};
 
