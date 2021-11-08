@@ -416,12 +416,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 	std::unordered_set<std::string> allTargets;
 	//gather all basic info
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
-		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		for(const auto & dir : directories){
 			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
@@ -433,7 +433,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					firstTable->header_.outPutContents(allBasicInfo, "\t");
 				}
 				VecStr row;
-//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				while(firstTable->getNextRow(row)){
 //					if(!skipRBind){
 //						allBasicInfo << njh::conToStr(row, "\t") << "\n";
@@ -443,7 +443,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				break;
 			}
 		}
-		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		std::mutex allBasicInfoMut;
 		if(!skipRBind){
@@ -467,7 +467,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							throw std::runtime_error{ss.str()};
 						}
 						VecStr row;
-//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						while(currentTable.getNextRow(row)){
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
@@ -478,16 +478,16 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					}
 				}
 			};
-			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
-			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		}
 	}
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(skipRBind){
 		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 	}
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
@@ -497,7 +497,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	std::string sampleField = "sample";
 	std::string targetField = "regionUID";
@@ -506,7 +506,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	njh::stopWatch watch;
 	watch.setLapName("Gathering Raw Seqs");
 	auto rawAllSeqsFnp = njh::files::make_path(infoDir, "rawAllSeqsFile.fasta");
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	//
 	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars gatherCorePars;
@@ -532,14 +532,14 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	auto rawGatherRes = seqGatherer.gatherSeqsAndSortByTarget(rawGatherPars);
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	if(!rawGatherRes.missingOutput.empty()){
 		OutputStream missingOut(njh::files::make_path(reportsDir, "missingDataForSamples.txt"));
 		missingOut << njh::conToStr(rawGatherRes.missingOutput, "\n") << std::endl;
 	}
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	processGatherPars.keepCommonSeqsWhenFiltering = keepCommonSeqsWhenFiltering;
 	processGatherPars.allSeqFnp = rawGatherRes.allSeqFnp;
@@ -547,9 +547,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	watch.startNewLap("Filtering Seqs On Meta");
 
-//	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	auto processedGatherRes = seqGatherer.processedGatherSeqsMeta(processGatherPars, rawGatherRes);
-//	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	{
 		OutputStream targetsGatheredReport(njh::files::make_path(reportsDir, "seqsPerTargetGathered.txt"));
@@ -579,14 +579,14 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	if(bfs::exists(processGatherPars.outMetaFnp)){
 		masterPopClusPars.groupingsFile = processGatherPars.outMetaFnp.string();
 	}
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	auto allSeqsFnp = processedGatherRes.allSeqFnp;
 	auto allSeqsFnpIn = SeqIOOptions::genFastaIn(allSeqsFnp);
 	sleep(3); //have to sleep before building index
 	SeqInput::buildIndex(allSeqsFnpIn);
 	allSeqsFnpIn.processed_ = true;
-	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	{
 		OutputStream outKey(njh::files::make_path(infoDir, "targetToPNameKey.tab.txt"));
@@ -658,7 +658,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	while(tarNamesQueue.getVal(tar)){
 		uint64_t maxLen = 0;
-
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//read in seqs for target
 		std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>> seqsForSample;
 		{
@@ -679,13 +679,14 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				}
 			}
 		}
-
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		auto currentPars = masterPopClusParsCopyConst;
 		currentPars.experimentNames.populationName_ = tar;
 		bfs::path previousPopName = njh::files::make_path(previousPopDir, tar + ".fasta");
 		if(bfs::exists(previousPopName)){
 			currentPars.previousPopFilename = previousPopName.string();
 		}
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//make directory
 		auto currentMasterDir = njh::files::make_path(setUp.pars_.directoryName_, tar);
 		njh::files::makeDir(njh::files::MkdirPar{currentMasterDir});
@@ -703,7 +704,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //			expectedSeqs = SeqInput::getReferenceSeq(setUp.pars_.refIoOptions_, maxLen);
 //		}
 
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		// create aligner class object
 		aligner alignerObj(maxLen, setUp.pars_.gapInfo_, setUp.pars_.scoring_,
 				KmerMaps(setUp.pars_.colOpts_.kmerOpts_.kLength_),
@@ -717,11 +719,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		if("" != setUp.pars_.outAlnInfoDirName_){
 			alnCacheOutForTarget = njh::files::make_path(setUp.pars_.outAlnInfoDirName_, tar).string();
 		}
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		alignerObj.processAlnInfoInput(alnCacheInForTarget);
 		njhseq::concurrent::AlignerPool alnPool(alignerObj,numThreadsForSample );
 		alnPool.initAligners();
 		alnPool.outAlnDir_ = alnCacheOutForTarget;
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		// create collapserObj used for clustering
 		collapser collapserObj(setUp.pars_.colOpts_);
 		collapserObj.opts_.kmerOpts_.checkKmers_ = false;
@@ -732,25 +735,28 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				currentPars.preFiltCutOffs);
 
 		sampColl.keepSampleInfoInMemory_ = true;
-
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if("" != currentPars.groupingsFile){
 			sampColl.addGroupMetaData(currentPars.groupingsFile);
 		}
+		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//process custom cut offs
 		std::unordered_map<std::string, double> customCutOffsMap = collapse::SampleCollapseCollection::processCustomCutOffs(currentPars.customCutOffs, VecStr{processedGatherRes.allSamples.begin(), processedGatherRes.allSamples.end()}, currentPars.fracCutoff);
 		std::unordered_map<std::string, double> customCutOffsMapPerRep = collapse::SampleCollapseCollection::processCustomCutOffs(currentPars.customCutOffs, VecStr{processedGatherRes.allSamples.begin(), processedGatherRes.allSamples.end()}, currentPars.withinReplicateFracCutOff);
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		{
 			njh::concurrent::LockableQueue<std::string> sampleQueue(processedGatherRes.allSamples);
 //			std::cout << njh::conToStr(processedGatherRes.allSamples, ",") << std::endl;
-//			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			std::function<void()> setupClusterSamples = [
 																									 &sampleQueue,&alnPool,&collapserObj,&currentPars,&setUp,
 																	&sampColl,&customCutOffsMap,
 																	&customCutOffsMapPerRep, &seqsForSample](){
+				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::string samp = "";
 				auto currentAligner = alnPool.popAligner();
 				while(sampleQueue.getVal(samp)){
+					//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 					if(setUp.pars_.verbose_){
 						std::cout << "Starting: " << samp << std::endl;
 					}
@@ -824,21 +830,23 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					if(setUp.pars_.verbose_){
 						std::cout << "Ending: " << samp << std::endl;
 					}
+					//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				}
+				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			};
-//			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			njh::concurrent::runVoidFunctionThreaded(setupClusterSamples,numThreadsForSample );
-//			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		}
 		if(setUp.pars_.verbose_){
 			std::cout << njh::bashCT::boldGreen("Pop Clustering") << std::endl;
 		}
 
 
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//first population clustering createSharedPathwaysFromReads
 //		auto popInput = sampColl.createPopInput();
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 //		std::cout << "popInput.size() : "<< popInput.size() << std::endl;
 		{
 
@@ -847,10 +855,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //			std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
 //			using namespace std::chrono_literals;
 //			std::this_thread::sleep_for(100000s);
+
 			sampColl.doPopulationClustering(populationInput, alignerObj, collapserObj, currentPars.popIteratorMap);
 
 		}
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if (setUp.pars_.debug_) {
 			std::cout << "sampColl.popCollapse_->input_.info_.numberOfClusters_: " << sampColl.popCollapse_->input_.info_.numberOfClusters_ << std::endl;
 			std::cout << "sampColl.popCollapse_->input_.info_.totalReadCount_: " << sampColl.popCollapse_->input_.info_.totalReadCount_ << std::endl;
@@ -858,9 +867,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		if(setUp.pars_.verbose_){
 			std::cout << njh::bashCT::boldGreen("Done Initial Population Clustering") << std::endl;
 		}
-		if(setUp.pars_.verbose_){
 
-		}
 
 
 		if(currentPars.rescuePars_.performResuce()){
@@ -871,11 +878,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		if(currentPars.rescueMatchingExpected && !expectedSeqs.empty()){
 //			sampColl.rescueMatchingSeqs(expectedSeqs, alignerObj, collapserObj, currentPars.popIteratorMap);
 //		}
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if(setUp.pars_.verbose_){
 			std::cout << njh::bashCT::boldRed("Done Pop Clustering") << std::endl;
 		}
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		//if ("" != currentPars.previousPopFilename && !currentPars.noPopulation) {
 		if ("" != currentPars.previousPopFilename) {
 			auto previousPopSeqsRaw = getSeqs<readObject>(currentPars.previousPopFilename);
@@ -908,7 +915,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //		if (!expectedSeqs.empty()) {
 //			sampColl.comparePopToRefSeqs(expectedSeqs, alignerObj);
 //		}
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		std::vector<seqInfo> popSeqsPerSamp;
 		std::vector<seqInfo> outPopSeqsPerSamp;
 
@@ -918,9 +925,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		uint32_t totalPopCount = 0;
 		std::set<std::string> samplesCount;
 //		std::cout << njh::conToStr(processedGatherRes.allSamples) << std::endl;
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		popSeqsPerSamp = sampColl.genOutPopSeqsPerSample();
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		outPopSeqsPerSamp = popSeqsPerSamp;
 		for(const auto & popClus : sampColl.popCollapse_->collapsed_.clusters_){
 			sampCountsForPopHaps[popClus.seqBase_.name_] = popClus.sampleClusters().size();
@@ -968,23 +975,23 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	    }
 	  }
 
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		for(auto & clus : sampColl.popCollapse_->collapsed_.clusters_){
 			auto popName = clus.seqBase_.name_.substr(0, clus.seqBase_.name_.rfind("_f"));
 			std::string typed = fullAATyped[popName];
 			clus.meta_.addMeta("h_AATyped", typed);
 		}
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		sampColl.printSampleCollapseInfo(
 				njh::files::make_path(sampColl.masterOutputDir_,
 						"selectedClustersInfo.tab.txt.gz"));
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 //		table hapIdTab = sampColl.genHapIdTable();
 //		hapIdTab.outPutContents(TableIOOpts::genTabFileOut(njh::files::make_path(sampColl.masterOutputDir_,
 //				"hapIdTable.tab.txt.gz"), true));
 		sampColl.dumpPopulation();
-//		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		SeqOutput::write(outPopSeqsPerSamp,SeqIOOptions(njh::files::make_path(sampColl.masterOutputDir_, "population", "popSeqsWithMetaWtihSampleName"), seqOpts.outFormat_));
 
 		auto popMetaTable = seqsToMetaTable(outPopSeqsPerSamp);
