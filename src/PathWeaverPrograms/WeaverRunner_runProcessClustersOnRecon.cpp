@@ -416,12 +416,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 	std::unordered_set<std::string> allTargets;
 	//gather all basic info
-	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
-
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
-		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		for(const auto & dir : directories){
 			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
@@ -433,28 +430,21 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					firstTable->header_.outPutContents(allBasicInfo, "\t");
 				}
 				VecStr row;
-//				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				while(firstTable->getNextRow(row)){
-//					if(!skipRBind){
-//						allBasicInfo << njh::conToStr(row, "\t") << "\n";
-//					}
 					allTargets.emplace(row[firstTable->header_.getColPos("name")]);
 				}
 				break;
 			}
 		}
-		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		std::mutex allBasicInfoMut;
 		if(!skipRBind){
 			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
-
-			std::function<void()> gatherAllBasicInfoFiles= [&allBasicInfo,&allBasicInfoMut,&dirQueue, &firstTable](){
+			std::function<void()> gatherAllBasicInfoFiles = [&allBasicInfo,&allBasicInfoMut,&dirQueue, &firstTable](){
 				bfs::path dir;
+				std::stringstream tabOut;
 				while(dirQueue.getVal(dir)){
 					auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
-					std::stringstream tabOut;
-
 					if(bfs::exists(basicFnp)){
 						TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 						TableReader currentTable(currentTabOpts);
@@ -467,37 +457,27 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							throw std::runtime_error{ss.str()};
 						}
 						VecStr row;
-//						//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 						while(currentTable.getNextRow(row)){
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
 					}
-					{
-						std::lock_guard<std::mutex> lock(allBasicInfoMut);
-						allBasicInfo << tabOut.str();
-					}
+				}
+				{
+					std::lock_guard<std::mutex> lock(allBasicInfoMut);
+					allBasicInfo << tabOut.str();
 				}
 			};
-			////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
-			////std::cout << __FILE__ << " " << __LINE__ << std::endl;
+		}
+		if(skipRBind){
+			bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		}
 	}
-	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
-	if(skipRBind){
-		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
-	}
-	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
-
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
 	if("" != masterPopClusPars.groupingsFile){
 		meta = std::make_shared<MultipleGroupMetaData>(masterPopClusPars.groupingsFile);
 	}
-
-
-
-	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	std::string sampleField = "sample";
 	std::string targetField = "regionUID";
@@ -506,7 +486,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	njh::stopWatch watch;
 	watch.setLapName("Gathering Raw Seqs");
 	auto rawAllSeqsFnp = njh::files::make_path(infoDir, "rawAllSeqsFile.fasta");
-	////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 	//
 	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars gatherCorePars;
