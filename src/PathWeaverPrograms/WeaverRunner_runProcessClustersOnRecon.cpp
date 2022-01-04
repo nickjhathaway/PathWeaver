@@ -991,9 +991,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	//gather all selected cluster info
 	{
-
+		std::unordered_map<std::string, std::set<std::string>> samplesPerTarget;
+		std::unordered_map<std::string, std::vector<uint32_t>> samplesCOIsPerTarget;
 		OutputStream allSelectedInfo(njh::files::make_path(reportsDir, "allSelectedClustersInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
+
 		for(const auto & tar : tarNames){
 
 			auto resultsFnp = njh::files::make_path(setUp.pars_.directoryName_, tar, "selectedClustersInfo.tab.txt.gz");
@@ -1005,6 +1007,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					VecStr row;
 					while(firstTable->getNextRow(row)){
 						allSelectedInfo << njh::conToStr(row, "\t") << "\n";
+						std::string sample =  row[firstTable->header_.getColPos("s_Sample")];
+						uint32_t coi = njh::StrToNumConverter::stoToNum<uint32_t>(row[firstTable->header_.getColPos("s_COI")]);
+						if(!njh::in(sample, samplesPerTarget[tar])){
+							samplesCOIsPerTarget[tar].emplace_back(coi);
+						}
+						samplesPerTarget[tar].emplace(sample);
 					}
 				}else{
 					TableReader currentTable(currentTabOpts);
@@ -1016,12 +1024,43 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						throw std::runtime_error{ss.str()};
 					}
 					VecStr row;
-
 					while(currentTable.getNextRow(row)){
 						allSelectedInfo << njh::conToStr(row, "\t") << "\n";
+						std::string sample = row[currentTable.header_.getColPos("s_Sample")];
+						uint32_t coi = njh::StrToNumConverter::stoToNum<uint32_t>(row[currentTable.header_.getColPos("s_COI")]);
+						if(!njh::in(sample, samplesPerTarget[tar])){
+							samplesCOIsPerTarget[tar].emplace_back(coi);
+						}
+						samplesPerTarget[tar].emplace(sample);
 					}
 				}
 			}
+		}
+		OutputStream seqsPerTargetGatheredDetailed(njh::files::make_path(reportsDir, "seqsPerTargetGatheredDetailed.tab.txt"));
+		seqsPerTargetGatheredDetailed << "target\tnSamples\ttotalHaplotypes\tminCOI\tmaxCOI\tmeanCOI\tmedianCOI" << std::endl;
+		for(const auto & tar : tarNames){
+			uint32_t numSamps = samplesPerTarget[tar].size();
+
+			double totalHaps = 0;
+			double minHaps = 0;
+			double maxHaps = 0;
+			double meanHaps = 0;
+			double medianHaps = 0;
+			if(samplesCOIsPerTarget[tar].size() > 0){
+				totalHaps = vectorSum(samplesCOIsPerTarget[tar]);
+				minHaps = vectorMinimum(samplesCOIsPerTarget[tar]);
+				maxHaps = vectorMaximum(samplesCOIsPerTarget[tar]);
+				meanHaps = vectorMean(samplesCOIsPerTarget[tar]);
+				medianHaps = vectorMedianRef(samplesCOIsPerTarget[tar]);
+			}
+			seqsPerTargetGatheredDetailed << tar
+					<< "\t" << numSamps
+					<< "\t" << totalHaps
+					<< "\t" << minHaps
+					<< "\t" << maxHaps
+					<< "\t" << meanHaps
+					<< "\t" << medianHaps
+					<< std::endl;
 		}
 	}
 
