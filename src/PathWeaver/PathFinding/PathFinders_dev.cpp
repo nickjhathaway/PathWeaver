@@ -744,10 +744,12 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				//headlessTaillessLenCutOff
 				auto headlessTaillessLenCutOff = extractionPars.headlessTailessLenCutOff;
 				if(0 == headlessTaillessLenCutOff){
-					headlessTaillessLenCutOff = medReadLeng;
+					headlessTaillessLenCutOff = medReadLeng - 1;
 				}else if(headlessTaillessLenCutOff < currentKLen){
 					headlessTaillessLenCutOff = currentKLen + shortTipNumber;
 				}
+				std::cout << "medReadLeng: " << medReadLeng << std::endl;
+				std::cout << "headlessTaillessLenCutOff: " << headlessTaillessLenCutOff << std::endl;
 				shortTipLog["headlessTaillessLenCutOff"] =  headlessTaillessLenCutOff;
 				std::stringstream shortTipLogErrorLog;
 				OptimizationReconResult optRunRes(OptimizationReconResult::Params(currentKLen, kmerOccurenceCutOff, shortTipNumber),
@@ -3389,7 +3391,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 					}
 #endif
-				} else{
+				} else if (estimatingGraph.klen_ > seq.seq_.size()){
+					meta.addMeta("estimatedPerBaseCoverage", seq.cnt_, true);
+				} else {
 					meta.addMeta("estimatedPerBaseCoverage", "NA", true);
 				}
 
