@@ -748,8 +748,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				}else if(headlessTaillessLenCutOff < currentKLen){
 					headlessTaillessLenCutOff = currentKLen + shortTipNumber;
 				}
-				std::cout << "medReadLeng: " << medReadLeng << std::endl;
-				std::cout << "headlessTaillessLenCutOff: " << headlessTaillessLenCutOff << std::endl;
+//				std::cout << "medReadLeng: " << medReadLeng << std::endl;
+//				std::cout << "headlessTaillessLenCutOff: " << headlessTaillessLenCutOff << std::endl;
 				shortTipLog["headlessTaillessLenCutOff"] =  headlessTaillessLenCutOff;
 				std::stringstream shortTipLogErrorLog;
 				OptimizationReconResult optRunRes(OptimizationReconResult::Params(currentKLen, kmerOccurenceCutOff, shortTipNumber),
