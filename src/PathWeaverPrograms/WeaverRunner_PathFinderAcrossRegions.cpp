@@ -871,6 +871,10 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 
 	uint32_t iterCountAfterReOptimization = 0;
 	while(iterate){
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		std::cout << "iterate: " << njh::colorBool(iterate) << std::endl;
+//		std::cout << "keepDiscordant: " << njh::colorBool(keepDiscordant) << std::endl;
+//		std::cout << "iterNumber: " << iterNumber << std::endl;
 		//need to add re-pairing
 		pars.pFinderPars_.needToRePair_ = true;
 
@@ -890,6 +894,11 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			if(rextractedSeqs.inPairsUnMapped_.inExists()){
 				firstMates.emplace_back(rextractedSeqs.inPairsUnMapped_.firstName_);
 				secondMates.emplace_back(rextractedSeqs.inPairsUnMapped_.secondName_);
+			}
+
+			if(rextractedSeqs.inDiscordant_.inExists() && !keepDiscordant){
+				firstMates.emplace_back(rextractedSeqs.inDiscordant_.firstName_);
+				secondMates.emplace_back(rextractedSeqs.inDiscordant_.secondName_);
 			}
 
 			if(rextractedSeqs.inUnpairedUnMapped_.inExists()){
@@ -1458,12 +1467,16 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				lastIterationPwRes = currentPwRes;
 			}
 		}
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		std::cout << "iterate: " << njh::colorBool(iterate) << std::endl;
+//		std::cout << "iterNumber: " << iterNumber << std::endl;
 		if(iterNumber >= maxIteration){
 			break;
 		}
 		++iterNumber;
-
+//		std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//		std::cout << "iterate: " << njh::colorBool(iterate) << std::endl;
+//		std::cout << "iterNumber: " << iterNumber << std::endl;
 	}
 
 
