@@ -362,8 +362,27 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 	//pars.pFinderPars_.debug = setUp.pars_.debug_;
 	spanningReadsPar.numThreads = pars.pFinderPars_.numThreads;
 	spanningReadsPar.countDuplicates = pars.bamExtractPars_.keepMarkedDuplicate_;
-
-
+	std::vector<bfs::path> oldInputFiles{
+					"extractedPairsWithNoTandems_R1.fastq",
+					"extractedPairsWithNoTandems_R2.fastq",
+					"extractedPairsWithTandems_R1.fastq",
+					"extractedPairsWithTandems_R2.fastq",
+					"extractedPairs_R1.fastq",
+					"extractedPairs_R2.fastq",
+					"extractedSingles.fastq",
+					"extractedSinglesWithNoTandems.fastq",
+					"extractedSinglesWithTandems.fastq",
+					"filteredExtractedPairs_R1.fastq",
+					"filteredExtractedPairs_R2.fastq",
+					"filteredSingles.fastq",
+					"filteredOff_extractedSingles.fastq",
+					"filteredOff_extractedPairs_R1.fastq",
+					"filteredOff_extractedPairs_R2.fastq",
+					"filteredOffDups_extractedSingles.fastq",
+					"filteredOffDups_extractedPairs_R1.fastq",
+					"filteredOffDups_extractedPairs_R2.fastq",
+					"outlierFilteredOff_extractedPairs",
+					"outlierFilteredOff_extractedSingles"};
 	if(setUp.pars_.verbose_){
 		std::cout << "Kmer Lengths      : " << njh::conToStr(pars.pFinderPars_.kmerLengths) << std::endl;
 		std::cout << "Occurence Cut Offs: " << njh::conToStr(pars.pFinderPars_.kmerKOcurrenceCutOffs) << std::endl;
@@ -451,61 +470,59 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 		}
 
 
-		if(true){
-			bfs::path logFnp = njh::files::make_path(realignmentBamDir, "alignTrimoOutputs_" + sampName + "_" + njh::getCurrentDate() + "_log.json");
-			logFnp = njh::files::findNonexitantFile(logFnp);
-			OutOptions logOpts(logFnp);
-			std::ofstream logFile;
-			logOpts.openFile(logFile);
-			std::unordered_map<std::string, njh::sys::RunOutput> runOutputs;
-			if(bfs::exists(inputSingles)){
-				auto singlesRunOutput = njh::sys::run({singlesCmd.str()});
-				BioCmdsUtils::checkRunOutThrow(singlesRunOutput, __PRETTY_FUNCTION__);
-				runOutputs["bwa-singles"] = singlesRunOutput;
-			}
-			if(bfs::exists(inputPairedFirstMates)){
-				auto pairedRunOutput = njh::sys::run({pairedCmd.str()});
-				BioCmdsUtils::checkRunOutThrow(pairedRunOutput, __PRETTY_FUNCTION__);
-				runOutputs["bwa-paired"] = pairedRunOutput;
-			}
-			if(bfs::exists(singlesSortedBam) && bfs::exists(pairedSortedBam)){
-				auto bamtoolsMergeAndIndexRunOutput = njh::sys::run({bamtoolsMergeAndIndexCmd.str()});
-				BioCmdsUtils::checkRunOutThrow(bamtoolsMergeAndIndexRunOutput, __PRETTY_FUNCTION__);
-				runOutputs["bamtools-merge-index"] = bamtoolsMergeAndIndexRunOutput;
-			} else {
-				if(bfs::exists(pairedSortedBam)){
-					bfs::rename(pairedSortedBam, outputFnp);
-					if(useSambamba){
-						bfs::rename(pairedSortedBam.string() + ".bai", outputFnp.string() + ".bai");
-					} else {
-						std::stringstream ss;
-						ss << "samtools index " << outputFnp;
-						auto indexRunOutput = njh::sys::run({ss.str()});
-						BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
-						runOutputs["index"] = indexRunOutput;
-					}
-				}else if(bfs::exists(singlesSortedBam) ){
-					bfs::rename(singlesSortedBam, outputFnp);
-					if(useSambamba){
-						bfs::rename(singlesSortedBam.string() + ".bai", outputFnp.string() + ".bai");
-					} else {
-						std::stringstream ss;
-						ss << "samtools index " << outputFnp;
-						auto indexRunOutput = njh::sys::run({ss.str()});
-						BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
-						runOutputs["index"] = indexRunOutput;
-					}
+		bfs::path logFnp = njh::files::make_path(realignmentBamDir,
+																						 "alignTrimoOutputs_" + sampName + "_" + njh::getCurrentDate() +
+																						 "_log.json");
+		logFnp = njh::files::findNonexitantFile(logFnp);
+		OutOptions logOpts(logFnp);
+		std::ofstream logFile;
+		logOpts.openFile(logFile);
+		std::unordered_map<std::string, njh::sys::RunOutput> runOutputs;
+		if (bfs::exists(inputSingles)) {
+			auto singlesRunOutput = njh::sys::run({singlesCmd.str()});
+			BioCmdsUtils::checkRunOutThrow(singlesRunOutput, __PRETTY_FUNCTION__);
+			runOutputs["bwa-singles"] = singlesRunOutput;
+		}
+		if (bfs::exists(inputPairedFirstMates)) {
+			auto pairedRunOutput = njh::sys::run({pairedCmd.str()});
+			BioCmdsUtils::checkRunOutThrow(pairedRunOutput, __PRETTY_FUNCTION__);
+			runOutputs["bwa-paired"] = pairedRunOutput;
+		}
+		if (bfs::exists(singlesSortedBam) && bfs::exists(pairedSortedBam)) {
+			auto bamtoolsMergeAndIndexRunOutput = njh::sys::run({bamtoolsMergeAndIndexCmd.str()});
+			BioCmdsUtils::checkRunOutThrow(bamtoolsMergeAndIndexRunOutput, __PRETTY_FUNCTION__);
+			runOutputs["bamtools-merge-index"] = bamtoolsMergeAndIndexRunOutput;
+		} else {
+			if (bfs::exists(pairedSortedBam)) {
+				bfs::rename(pairedSortedBam, outputFnp);
+				if (useSambamba) {
+					bfs::rename(pairedSortedBam.string() + ".bai", outputFnp.string() + ".bai");
+				} else {
+					std::stringstream ss;
+					ss << "samtools index " << outputFnp;
+					auto indexRunOutput = njh::sys::run({ss.str()});
+					BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
+					runOutputs["index"] = indexRunOutput;
+				}
+			} else if (bfs::exists(singlesSortedBam)) {
+				bfs::rename(singlesSortedBam, outputFnp);
+				if (useSambamba) {
+					bfs::rename(singlesSortedBam.string() + ".bai", outputFnp.string() + ".bai");
+				} else {
+					std::stringstream ss;
+					ss << "samtools index " << outputFnp;
+					auto indexRunOutput = njh::sys::run({ss.str()});
+					BioCmdsUtils::checkRunOutThrow(indexRunOutput, __PRETTY_FUNCTION__);
+					runOutputs["index"] = indexRunOutput;
 				}
 			}
-			logFile << njh::json::toJson(runOutputs) << std::endl;
-			if(true){
-				if(bfs::exists(pairedSortedBam)){
-					bfs::remove(pairedSortedBam);
-				}
-				if(bfs::exists(singlesSortedBam)){
-					bfs::remove(singlesSortedBam);
-				}
-			}
+		}
+		logFile << njh::json::toJson(runOutputs) << std::endl;
+		if (bfs::exists(pairedSortedBam)) {
+			bfs::remove(pairedSortedBam);
+		}
+		if (bfs::exists(singlesSortedBam)) {
+			bfs::remove(singlesSortedBam);
 		}
 		setUp.pars_.ioOptions_.firstName_ = outputFnp;
 		pars.genomeFnp = genomeFnp;
@@ -803,24 +820,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			//clean up
 			iterationOpts.removeAllInFiles();
 
-			std::vector<bfs::path> oldInputFiles{
-				"extractedPairsWithNoTandems_R1.fastq",
-				"extractedPairsWithNoTandems_R2.fastq",
-				"extractedPairsWithTandems_R1.fastq",
-				"extractedPairsWithTandems_R2.fastq",
-				"extractedPairs_R1.fastq",
-				"extractedPairs_R2.fastq",
-				"extractedSingles.fastq",
-				"extractedSinglesWithNoTandems.fastq",
-				"extractedSinglesWithTandems.fastq",
-				"filteredExtractedPairs_R1.fastq",
-				"filteredExtractedPairs_R2.fastq",
-				"filteredSingles.fastq",
-			  "filteredOff_extractedSingles.fastq",
-				"filteredOff_extractedPairs_R1.fastq",
-				"filteredOff_extractedPairs_R2.fastq",
-			  "outlierFilteredOff_extractedPairs",
-			  "outlierFilteredOff_extractedSingles"};
+
 
 			for(const auto & fn : oldInputFiles){
 				auto fnp = njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, fn);
@@ -1310,20 +1310,6 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			singlesInputs.insert(singlesInputs.begin(), lastIteractionSinglesMarkedDups.firstName_);
 		}
 
-
-//		if(print){
-//			std::cout << "first mates: " << std::endl;
-//			for(const auto & firstMate : firstMatesInput){
-//				std::cout << firstMate << std::endl;
-//			}
-//			std::cout << "singles: " << std::endl;
-//			for(const auto & single : singlesInputs){
-//				std::cout << single << std::endl;
-//			}
-//			exit(1);
-//		}
-
-
 		if(!firstMatesInput.empty()){
 			concatenateFiles(firstMatesInput, OutOptions(nextInteractionPairedInput.firstName_));
 			concatenateFiles(secondMatesInput, OutOptions(nextInteractionPairedInput.secondName_));
@@ -1374,29 +1360,6 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 		if(!keepIntermediateFiles){
 			//clean up
 			iterationOpts.removeAllInFiles();
-
-			std::vector<bfs::path> oldInputFiles{
-				"extractedPairsWithNoTandems_R1.fastq",
-				"extractedPairsWithNoTandems_R2.fastq",
-				"extractedPairsWithTandems_R1.fastq",
-				"extractedPairsWithTandems_R2.fastq",
-				"extractedPairs_R1.fastq",
-				"extractedPairs_R2.fastq",
-				"extractedSingles.fastq",
-				"extractedSinglesWithNoTandems.fastq",
-				"extractedSinglesWithTandems.fastq",
-				"filteredExtractedPairs_R1.fastq",
-				"filteredExtractedPairs_R2.fastq",
-				"filteredSingles.fastq",
-			  "filteredOff_extractedSingles.fastq",
-				"filteredOff_extractedPairs_R1.fastq",
-				"filteredOff_extractedPairs_R2.fastq",
-			  "filteredOffDups_extractedSingles.fastq",
-			  "filteredOffDups_extractedPairs_R1.fastq",
-				"filteredOffDups_extractedPairs_R2.fastq",
-			  "outlierFilteredOff_extractedPairs",
-			  "outlierFilteredOff_extractedSingles"};
-
 			for(const auto & fn : oldInputFiles){
 				auto fnp = njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, fn);
 				if(bfs::exists(fnp)){
@@ -1413,26 +1376,26 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 
 		if(alreadyTriedToOptimizedAgain && 1 == iterCountAfterReOptimization ){
 			if(pars.pFinderPars_.removePossibleOutliersKSim && pars.pFinderPars_.filterOffOutlierInputSeqs){
-				//reoptimize if seqs for possible outliers were removed
-				auto lastIteractionPaired = SeqIOOptions::genPairedIn(
+				//re-optimize if the seqs for possible outliers were removed
+				auto reoptimized_lastIteractionPaired = SeqIOOptions::genPairedIn(
 				njh::files::make_path(
 						setUp.pars_.directoryName_, lastIterationSampName, "filteredExtractedPairs_R1.fastq"),
 				njh::files::make_path(
 						setUp.pars_.directoryName_, lastIterationSampName, "filteredExtractedPairs_R2.fastq"));
-				auto lastIteractionSingles = SeqIOOptions::genFastqIn(njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, "filteredSingles.fastq"));
+				auto reoptimized_lastIteractionSingles = SeqIOOptions::genFastqIn(njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, "filteredSingles.fastq"));
 
-				std::string currentIterationSampleName = njh::pasteAsStr(lastIterationSampName, "-reoptimized");
-				BamExtractor::ExtractedFilesOpts iterationOpts;
-				iterationOpts.inPairs_ = lastIteractionPaired;
-				iterationOpts.inUnpaired_ = lastIteractionSingles;
-				auto currentPwRes = PathFinderFromSeqsDev(iterationOpts, setUp.pars_.directoryName_, currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
-				iterationDirectories.emplace_back(njh::files::make_path(setUp.pars_.directoryName_, currentIterationSampleName));
-				bestKmerCut = currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
-				bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
-				bestShortTip = currentPwRes.log_["bestShortTipNumber"].asInt();
+				std::string reoptimized_currentIterationSampleName = njh::pasteAsStr(lastIterationSampName, "-reoptimized");
+				BamExtractor::ExtractedFilesOpts reoptimized_iterationOpts;
+				reoptimized_iterationOpts.inPairs_ = reoptimized_lastIteractionPaired;
+				reoptimized_iterationOpts.inUnpaired_ = reoptimized_lastIteractionSingles;
+				auto reoptimized_currentPwRes = PathFinderFromSeqsDev(reoptimized_iterationOpts, setUp.pars_.directoryName_, reoptimized_currentIterationSampleName, pars.pFinderPars_, meta, lastIterationPwRes);
+				iterationDirectories.emplace_back(njh::files::make_path(setUp.pars_.directoryName_, reoptimized_currentIterationSampleName));
+				bestKmerCut = reoptimized_currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
+				bestKmerLength = reoptimized_currentPwRes.log_["bestKmerLength"].asInt();
+				bestShortTip = reoptimized_currentPwRes.log_["bestShortTipNumber"].asInt();
 				if(!keepIntermediateFiles){
 					//clean up
-					iterationOpts.removeAllInFiles();
+					reoptimized_iterationOpts.removeAllInFiles();
 
 					std::vector<bfs::path> oldInputFiles{
 						"extractedPairsWithNoTandems_R1.fastq",
@@ -1463,9 +1426,9 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 						}
 					}
 				}
-				fullLog[currentIterationSampleName] = currentPwRes.log_;
-				lastIterationSampName = currentIterationSampleName;
-				lastIterationPwRes = currentPwRes;
+				fullLog[reoptimized_currentIterationSampleName] = reoptimized_currentPwRes.log_;
+				lastIterationSampName = reoptimized_currentIterationSampleName;
+				lastIterationPwRes = reoptimized_currentPwRes;
 			}
 		}
 //		std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -1610,7 +1573,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 		}
 		//sort and put longest contig on top
 		njh::sort(finalSeqs,
-				[](const readObject & clus1, const readObject clus2) {
+				[](const readObject & clus1, const readObject & clus2) {
 					return len(clus1) > len(clus2);
 				});
 		if(redetermineReadCounts){
@@ -1620,16 +1583,16 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			auto r1Fnp = njh::files::make_path(lastIterationDir,       "filteredExtractedPairs_R1.fastq");
 			auto r2Fnp = njh::files::make_path(lastIterationDir,       "filteredExtractedPairs_R2.fastq");
 			auto singlesFnp = njh::files::make_path(lastIterationDir,  "filteredSingles.fastq");
-			uint64_t maxLen = 0;
-			readVec::getMaxLength(finalSeqs, maxLen);
+			uint64_t maxLen_forReadCounts = 0;
+			readVec::getMaxLength(finalSeqs, maxLen_forReadCounts);
 
-			auto getMaxLenFromFile = [&maxLen](const bfs::path & seqFnp){
+			auto getMaxLenFromFile = [&maxLen_forReadCounts](const bfs::path & seqFnp){
 				if(bfs::exists(seqFnp)){
 					SeqInput reader(SeqIOOptions::genFastqIn(seqFnp));
 					reader.openIn();
 					seqInfo seq;
 					while(reader.readNextRead(seq)){
-						readVec::getMaxLength(seq, maxLen);
+						readVec::getMaxLength(seq, maxLen_forReadCounts);
 					}
 				}
 			};
@@ -1637,7 +1600,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			getMaxLenFromFile(r2Fnp);
 			getMaxLenFromFile(singlesFnp);
 
-			aligner alignerObj(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix(2,-2), false);
+			aligner alignerObj(maxLen_forReadCounts, gapScoringParameters(5, 1, 0, 0, 0, 0), substituteMatrix(2, -2), false);
 
 			std::vector<refVariants> refVariationInfo;
 			for (const auto refPos : iter::range(finalSeqs.size())) {
@@ -1659,6 +1622,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			std::vector<kmerInfo> refInfos;
 			double matchingKmerCutOff = 0.90;
 			uint32_t matchingKmerLen = 5;
+			refInfos.reserve(finalSeqs.size());
 			for (const auto& clus : finalSeqs){
 				refInfos.emplace_back(clus.seqBase_.seq_, matchingKmerLen, false);
 			}
@@ -1672,7 +1636,8 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			std::set<std::string> allReadInSamples;
 			std::unordered_map<std::string, std::map<uint32_t, std::unordered_map<std::string, double>>> baseCoverrage;
 			bfs::path finalDirectoryOut = setUp.pars_.directoryName_;
-			auto increaseMapCounts = [&unmappable,&indeterminate,&uniqueSeqs,&multiMappingSeqs, & refInfos,&finalSeqs,&alignerObj,
+			std::function<void(const seqInfo&)> increaseMapCounts;
+			increaseMapCounts = [&unmappable,&indeterminate,&uniqueSeqs,&multiMappingSeqs, & refInfos,&finalSeqs,&alignerObj,
 															 &mapAllowableErrors,&refVariationInfo,&matchingKmerLen,&matchingKmerCutOff,&allReadInSamples,&multiMapping,
 															 &baseCoverrage](const seqInfo & reMapSeq){
 				allReadInSamples.emplace(reMapSeq.name_);
@@ -1680,7 +1645,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 				double bestScore = 0;
 				kmerInfo reMappingSeqInfo(reMapSeq.seq_, matchingKmerLen, false);
 				std::vector<uint64_t> bestRefs;
-				uint32_t subSize = len(reMapSeq) * mapAllowableErrors.distances_.query_.coverage_;
+				uint64_t subSize = len(reMapSeq) * mapAllowableErrors.distances_.query_.coverage_;
 
 
 				for (const auto refPos : iter::range(finalSeqs.size())) {
@@ -1734,7 +1699,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 						}
 					}
 					//tempWriter.openWrite(reMapSeq);
-				} else if (bestRefs.size() == 0) {
+				} else if (bestRefs.empty()) {
 					//if no mappable candidates found, put into un-mappable
 					++unmappable;
 				} else {
@@ -1822,7 +1787,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 							}
 						}
 						//tempWriter.openWrite(reMapSeq);
-					} else if(matchingRefs.size() == 0) {
+					} else if(matchingRefs.empty()) {
 						//if none of the ref work out, put it in indeterminate
 						++indeterminate;
 					} else {
@@ -1915,19 +1880,21 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 					}
 				}
 			}
-			uint32_t totalReadCount = 0;
+			double totalReadCount = 0;
 			for(auto & outSeq : finalSeqs){
 				outSeq.seqBase_.cnt_ = std::round(finalTotals[outSeq.seqBase_.name_]);
 				totalReadCount+= outSeq.seqBase_.cnt_;
 			}
 			std::unordered_map<std::string, uint32_t> nameKey;
-			uint32_t pos = 0;
-			for(auto & outSeq : finalSeqs){
-				std::string oldName = outSeq.seqBase_.name_;
-				outSeq.seqBase_.frac_ = outSeq.seqBase_.cnt_/totalReadCount;
-				outSeq.updateName();
-				nameKey[oldName] = pos;
-				++pos;
+			{
+				uint32_t pos = 0;
+				for(auto & outSeq : finalSeqs){
+					std::string oldName = outSeq.seqBase_.name_;
+					outSeq.seqBase_.frac_ = outSeq.seqBase_.cnt_/totalReadCount;
+					outSeq.updateName();
+					nameKey[oldName] = pos;
+					++pos;
+				}
 			}
 			std::unordered_map<uint32_t, std::vector<double>> baseCoveragesFinal;
 			for(const auto & b : baseCoverrage){
