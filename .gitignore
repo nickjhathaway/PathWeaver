@@ -41,3 +41,4 @@ bin/*
 build/*
 
 compfile.mk
+.idea

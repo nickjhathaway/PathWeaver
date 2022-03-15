@@ -100,9 +100,9 @@ void setExtractPathWaysDefault(HaploPathFinder::ExtractParams & pars, seqSetUp &
 }
 
 
-int WeaverRunner::SeqsExtractPathaways(const njh::progutils::CmdArgs & inputCommands){
+int WeaverRunner::SeqsExtractPathways(const njh::progutils::CmdArgs & inputCommands){
 	HaploPathFinder::ExtractParams pars;
-	std::string sampName = "";
+	std::string sampName;
 	seqSetUp setUp(inputCommands);
 	setUp.processVerbose();
 	setUp.processDebug();
@@ -154,7 +154,7 @@ int WeaverRunner::SeqsExtractPathaways(const njh::progutils::CmdArgs & inputComm
 	BamExtractor::ExtractedFilesOpts inputOpts;
 	inputOpts.inPairs_ = pairedIn;
 	inputOpts.inUnpaired_ = singleIn;
-	if("" != setUp.pars_.refIoOptions_.firstName_.string()){
+	if(!setUp.pars_.refIoOptions_.firstName_.string().empty()){
 		pars.pFinderPars_.inputSeqs = SeqInput::getSeqVec<seqInfo>(setUp.pars_.refIoOptions_);
 	}
 	Json::Value currentLog;
@@ -167,12 +167,12 @@ int WeaverRunner::SeqsExtractPathaways(const njh::progutils::CmdArgs & inputComm
 	return 0;
 }
 
-int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands){
+int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands){
 	bool development = false;
 
 	HaploPathFinder::ExtractParams pars;
 
-	std::string sampName = "";
+	std::string sampName;
 	bool optimizeAgainAndRecruitBeforeFinal = false;
 	uint32_t maxIteration = 20;
 	uint32_t finalLenCutOff = 0;
@@ -189,7 +189,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	lzPars.identity = 80;
 	lzPars.coverage = 90;
 	bool keepBestOnly = false;
-	bool keepIntermediatefiles = false;
+	bool keepIntermediateFiles = false;
 
 	BamExtractor::extractReadsFromBamToSameOrientationContigsPars bamContigsExtractPars;
 
@@ -315,7 +315,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	setUp.setOption(lzPars.coverage, "--coverage", "Coverage to use for when searching with lastz");
 	setUp.setOption(keepBestOnly, "--keepBestOnly", "Keep best hits only");
 
-	setUp.setOption(keepIntermediatefiles, "--keepIntermediatefiles", "Keep the intermediate files from ther iterative remapping process");
+	setUp.setOption(keepIntermediateFiles, "--keepIntermediateFiles", "Keep the intermediate files from ther iterative remapping process");
 
 	setUp.setOption(addRefsForSingleRegions, "--addRefsForSingleRegions", "Add Refs seqs For Single Regions");
 	setUp.setOption(refSeqExtractsDir, "--refSeqExtractsDir", "A directory where reference sequences have already been extracted to");
@@ -354,7 +354,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 
 	seqInfo realignToSeq("realign");
 	setUp.processSeq(realignToSeq, "--realignToSeq", "realign raw extract To input Seq");
-	std::string extraBwaArgsForReAlign = "";
+	std::string extraBwaArgsForReAlign;
 
 	setUp.finishSetUp(std::cout);
 	setUp.startARunLog(setUp.pars_.directoryName_);
@@ -371,7 +371,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	}
 
 
-	if("" != realignToSeq.seq_){
+	if(!realignToSeq.seq_.empty()){
 		BamExtractor bExtractor(setUp.pars_.verbose_);
 		auto realignmentDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"realignment"});
 		OutOptions extractRegion(njh::files::make_path(setUp.pars_.directoryName_));
@@ -392,8 +392,8 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			bExtractor.writeExtractReadsFromBamRegion(setUp.pars_.ioOptions_.firstName_, region, pars.bamExtractPars_.percInRegion_, seqOutOpts);
 		}
 		bfs::path inputSingles = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract.fastq"));
-		bfs::path inputPairedFirstMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R1.fastq"));;
-		bfs::path inputPairedSecondMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R2.fastq"));;
+		bfs::path inputPairedFirstMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R1.fastq"));
+		bfs::path inputPairedSecondMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R2.fastq"));
 		njh::files::checkExistenceThrow(genomeFnp,__PRETTY_FUNCTION__);
 		bfs::path outputFnp = njh::files::make_path(realignmentBamDir, "realigned.sorted.bam");
 
@@ -701,7 +701,8 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 
 	if((pars.pFinderPars_.kmerKOcurrenceCutOffs.size()> 1 || pars.pFinderPars_.forceDetermineKCuts)  && (pars.pFinderPars_.autoDetermineKCuts || pars.pFinderPars_.forceDetermineKCuts)){
 		std::vector<double> perBaseCoverages;
-		for(const auto & regInfo : regInfos){
+		perBaseCoverages.reserve(regInfos.size());
+    for(const auto & regInfo : regInfos){
 			perBaseCoverages.emplace_back(regInfo->getPerBaseCov());
 		}
 		auto perBaseCoverage = vectorMean(perBaseCoverages);
@@ -798,7 +799,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		bestKmerCut = currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
 		bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
 		bestShortTip = currentPwRes.log_["bestShortTipNumber"].asInt();
-		if(!keepIntermediatefiles){
+		if(!keepIntermediateFiles){
 			//clean up
 			iterationOpts.removeAllInFiles();
 
@@ -1046,7 +1047,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				bwaLog["bwa-map-sinlges"] = bwaMappCmdOutput.toJson();
 			}
 
-			if(!keepIntermediatefiles){
+			if(!keepIntermediateFiles){
 				//clean up
 				for(const auto & fnp : singlesReMappInput){
 					bfs::remove(fnp);
@@ -1121,7 +1122,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				BioCmdsUtils::checkRunOutThrow(bwaMappCmdOutput, __PRETTY_FUNCTION__);
 				bwaLog["bwa-map-paired"] = bwaMappCmdOutput.toJson();
 			}
-			if(!keepIntermediatefiles){
+			if(!keepIntermediateFiles){
 				//clean up
 				if(bfs::exists(unmappedFiles.inPairsUnMapped_.firstName_)){
 					bfs::remove(unmappedFiles.inPairsUnMapped_.firstName_);
@@ -1133,7 +1134,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				}
 			}
 		}
-		if(!keepIntermediatefiles){
+		if(!keepIntermediateFiles){
 			//clean up
 			if(bfs::exists(unmappedOpts.out_.outName())){
 				bfs::remove(unmappedOpts.out_.outName());
@@ -1163,7 +1164,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 
 		std::vector<bfs::path> singlesInputs;
 
-		if(!keepIntermediatefiles){
+		if(!keepIntermediateFiles){
 			//clean up
 			rextractedSeqs.removeAllInFiles();
 			rextractedSeqsSingles.removeAllInFiles();
@@ -1180,7 +1181,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			OutOptions outSinglesReMappedFileOpts(njh::files::make_path(extractionStatsDir, leftPadNumStr(iterNumber, maxIteration)  + "_unmappedSinglesExtractedReadStats.tab.txt"));
 			OutputStream outSinglesReMappedFile(outSinglesReMappedFileOpts);
 			rextractedSeqsSingles.log(outSinglesReMappedFile,sortedReMappedBamFnpUnpaired);
-			if(!keepIntermediatefiles){
+			if(!keepIntermediateFiles){
 				//clean up
 				bfs::remove(sortedReMappedBamFnpUnpaired);
 				auto bamWithMappedSingles = njh::files::make_path(setUp.pars_.directoryName_, "mapped_reExtracted_fromSingles_" + leftPadNumStr(iterNumber, maxIteration) + ".bam");
@@ -1228,7 +1229,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 			OutOptions outPairsReMappedFileOpts(njh::files::make_path(extractionStatsDir, leftPadNumStr(iterNumber, maxIteration)  + "_unmappedPairsExtractedReadStats.tab.txt"));
 			OutputStream outPairsReMappedFile(outPairsReMappedFileOpts);
 			rextractedSeqs.log(outPairsReMappedFile, sortedReMappedBamFnp);
-			if(!keepIntermediatefiles){
+			if(!keepIntermediateFiles){
 				//clean up
 				bfs::remove(sortedReMappedBamFnp);
 				auto bamWithMappedPairs = njh::files::make_path(setUp.pars_.directoryName_, "mapped_reExtracted_fromPairs_" + leftPadNumStr(iterNumber, maxIteration) + ".bam");
@@ -1326,7 +1327,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		if(!firstMatesInput.empty()){
 			concatenateFiles(firstMatesInput, OutOptions(nextInteractionPairedInput.firstName_));
 			concatenateFiles(secondMatesInput, OutOptions(nextInteractionPairedInput.secondName_));
-			if(!keepIntermediatefiles){
+			if(!keepIntermediateFiles){
 				//clean up
 				for(const auto & fnp : firstMatesInput){
 					if(fnp != lastIteractionPaired.firstName_){
@@ -1342,7 +1343,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		}
 		if(!singlesInputs.empty()){
 			concatenateFiles(singlesInputs, OutOptions(nextInteractionSinglesInput.firstName_));
-			if(!keepIntermediatefiles){
+			if(!keepIntermediateFiles){
 				//clean up
 				for(const auto & fnp : singlesInputs){
 					if (fnp != lastIteractionSingles.firstName_
@@ -1370,7 +1371,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 		bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
 		bestShortTip = currentPwRes.log_["bestShortTipNumber"].asInt();
 
-		if(!keepIntermediatefiles){
+		if(!keepIntermediateFiles){
 			//clean up
 			iterationOpts.removeAllInFiles();
 
@@ -1429,7 +1430,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 				bestKmerCut = currentPwRes.log_["bestKmerOccurenceCutOff"].asInt();
 				bestKmerLength = currentPwRes.log_["bestKmerLength"].asInt();
 				bestShortTip = currentPwRes.log_["bestShortTipNumber"].asInt();
-				if(!keepIntermediatefiles){
+				if(!keepIntermediateFiles){
 					//clean up
 					iterationOpts.removeAllInFiles();
 
@@ -1480,7 +1481,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	}
 
 
-	if(!keepIntermediatefiles){
+	if(!keepIntermediateFiles){
 		//clean up
 		rextractedSeqs.removeAllInFiles();
 		rextractedSeqsSingles.removeAllInFiles();
@@ -1535,7 +1536,7 @@ int WeaverRunner::ExtractPathWaysReadsFallingInMultipleRegions(const njh::progut
 	fullLog["final-bestShortTipNumber"] = currentPwRes.log_["bestShortTipNumber"].asInt();
 
 
-	if(!keepIntermediatefiles){
+	if(!keepIntermediateFiles){
 		std::vector<bfs::path> oldInputFiles{
 			"extractedPairsWithNoTandems_R1.fastq",
 			"extractedPairsWithNoTandems_R2.fastq",

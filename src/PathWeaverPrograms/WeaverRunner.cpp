@@ -36,13 +36,12 @@ namespace njhseq {
 WeaverRunner::WeaverRunner()
     : njh::progutils::ProgramRunner(
           {
-					 addFunc("BamExtractPathawaysFromRegion", BamExtractPathawaysFromRegion, false),
-					 addFunc("SeqsExtractPathaways", SeqsExtractPathaways, false),
-					 addFunc("ExtractPathWaysReadsFallingInMultipleRegions", ExtractPathWaysReadsFallingInMultipleRegions, false),
-
+					 addFunc("BamExtractPathwaysFromRegion", BamExtractPathwaysFromRegion, false),
+					 addFunc("SeqsExtractPathways", SeqsExtractPathways, false),
+					 addFunc("ExtractPathwaysReadsFallingInMultipleRegions", ExtractPathwaysReadsFallingInMultipleRegions, false),
 					 addFunc("runProcessClustersOnRecon", runProcessClustersOnRecon, false),
 					 addFunc("rawGatherSeqs", rawGatherSeqs, false),
-					 addFunc("MergeMultipleBamExtractPathawaysFromRegion", MergeMultipleBamExtractPathawaysFromRegion, false),
+					 addFunc("MergeMultipleBamExtractPathwaysFromRegion", MergeMultipleBamExtractPathwaysFromRegion, false),
 
           }, //
 				"Weaver") {

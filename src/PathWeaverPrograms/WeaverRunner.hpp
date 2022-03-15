@@ -34,13 +34,13 @@ class WeaverRunner : public njh::progutils::ProgramRunner {
  public:
 	WeaverRunner();
 
-	static int SeqsExtractPathaways(const njh::progutils::CmdArgs & inputCommands);
-	static int BamExtractPathawaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
+	static int SeqsExtractPathways(const njh::progutils::CmdArgs & inputCommands);
+	static int BamExtractPathwaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
 
-	static int MergeMultipleBamExtractPathawaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
+	static int MergeMultipleBamExtractPathwaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
 
 
-	static int ExtractPathWaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands);
+	static int ExtractPathwaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands);
 
 	static int runProcessClustersOnRecon(const njh::progutils::CmdArgs & inputCommands);
 	static int rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands);

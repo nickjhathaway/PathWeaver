@@ -47,7 +47,7 @@
 
 namespace njhseq {
 
-int WeaverRunner::MergeMultipleBamExtractPathawaysFromRegion(
+int WeaverRunner::MergeMultipleBamExtractPathwaysFromRegion(
 		const njh::progutils::CmdArgs & inputCommands) {
 
 	std::vector<bfs::path> weavedResultsDirs;

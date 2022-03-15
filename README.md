@@ -45,12 +45,12 @@ Bed file can be one region or multiple, if multiple regions are given then a sep
 One region  
 
 ```bash
-PathWeaver BamExtractPathawaysFromRegion --bed PF3D7_1133400-1.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout Pf3D7_11_v3-1293855-1295724_ama1/7G8_Pf3D7_09_v3-1201811-1206974_msp1
+PathWeaver BamExtractPathwaysFromRegion --bed PF3D7_1133400-1.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout Pf3D7_11_v3-1293855-1295724_ama1/7G8_Pf3D7_09_v3-1201811-1206974_msp1
 ```
 
 Multiple regions  
 ```bash
-PathWeaver BamExtractPathawaysFromRegion --bed ama1_cps_trap.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout ama1_cps_trap/7G8_ama1_cps_trap  
+PathWeaver BamExtractPathwaysFromRegion --bed ama1_cps_trap.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout ama1_cps_trap/7G8_ama1_cps_trap  
 ```
 
 ## Regions with additional recruit of unmapped reads
@@ -60,19 +60,19 @@ Bed file can one region or multiple regions, reads will be pulled from all provi
 One region 
 
 ```bash
-PathWeaver ExtractPathWaysReadsFallingInMultipleRegions --bed PF3D7_0930300-1.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout Pf3D7_09_v3-1201811-1206974_msp1/7G8-02_Pf3D7_09_v3-1201811-1206974_msp1 --maxIteration 20
+PathWeaver ExtractPathwaysReadsFallingInMultipleRegions --bed PF3D7_0930300-1.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout Pf3D7_09_v3-1201811-1206974_msp1/7G8-02_Pf3D7_09_v3-1201811-1206974_msp1 --maxIteration 20
 ```
 
 Multiple regions
 
 ```bash
-PathWeaver ExtractPathWaysReadsFallingInMultipleRegions --bed pfvars_exon1_withUpstream.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout VarExon1ShortUpstream/7G8-02_VarExon1ShortUpstream --maxIteration 20
+PathWeaver ExtractPathwaysReadsFallingInMultipleRegions --bed pfvars_exon1_withUpstream.bed --primaryGenome Pf3D7 --genomeDir pfGenomes/genomes/ --bam 7G8.sorted.bam --dout VarExon1ShortUpstream/7G8-02_VarExon1ShortUpstream --maxIteration 20
 ```
 
 ## From raw sequence files
 
 ```bash
-PathWeaver SeqsExtractPathaways --fastq1 out_R1.fastq --fastq2 out_R2.fastq --sampName example --dout outExample --overWriteDir --revCompMate
+PathWeaver SeqsExtractPathways --fastq1 out_R1.fastq --fastq2 out_R2.fastq --sampName example --dout outExample --overWriteDir --revCompMate
 ```
 
 
