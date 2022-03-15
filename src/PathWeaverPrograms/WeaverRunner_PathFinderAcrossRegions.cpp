@@ -79,14 +79,14 @@ void setExtractPathWaysDefault(HaploPathFinder::ExtractParams & pars, seqSetUp &
 	//outliers
 	pars.pFinderPars_.setOutlierRemovalOptions(setUp);
 
-	//post processing of collapsing contigs;
+	//post-processing of collapsing contigs;
 	pars.pFinderPars_.setPostProcessContigHandlingOpts(setUp);
 
 	//adding meta to the final seqs
 	setUp.setOption(pars.metaDataFnp, "--metaDataFnp", "Name of the meta data fnp");
 
 	//// specific for here
-	//length cut offs
+	//length cutoffs
 	pars.pFinderPars_.setFinalLengthCutOffs(setUp);
 	//trimming
 	pars.pFinderPars_.setPostProcessTrimmingOpts(setUp);
@@ -1152,9 +1152,6 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 		std::string currentIterationSampleName = sampName + "-"
 				+ leftPadNumStr(iterNumber, maxIteration) ;
 		//extract all seqs
-
-
-
 		//merge with the last iteration seqs
 		//singles
 		auto lastIteractionSingles = SeqIOOptions::genFastqIn(njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, "filteredSingles.fastq"));
@@ -1181,6 +1178,10 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			OutOptions outSinglesReMappedFileOpts(njh::files::make_path(extractionStatsDir, leftPadNumStr(iterNumber, maxIteration)  + "_unmappedSinglesExtractedReadStats.tab.txt"));
 			OutputStream outSinglesReMappedFile(outSinglesReMappedFileOpts);
 			rextractedSeqsSingles.log(outSinglesReMappedFile,sortedReMappedBamFnpUnpaired);
+
+			/*
+			 * @todo add the extracted seqs names
+			 */
 			if(!keepIntermediateFiles){
 				//clean up
 				bfs::remove(sortedReMappedBamFnpUnpaired);
@@ -1229,6 +1230,9 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			OutOptions outPairsReMappedFileOpts(njh::files::make_path(extractionStatsDir, leftPadNumStr(iterNumber, maxIteration)  + "_unmappedPairsExtractedReadStats.tab.txt"));
 			OutputStream outPairsReMappedFile(outPairsReMappedFileOpts);
 			rextractedSeqs.log(outPairsReMappedFile, sortedReMappedBamFnp);
+			/*
+			 * @todo add the extracted seqs names
+			 */
 			if(!keepIntermediateFiles){
 				//clean up
 				bfs::remove(sortedReMappedBamFnp);
@@ -1396,29 +1400,6 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 				if(!keepIntermediateFiles){
 					//clean up
 					reoptimized_iterationOpts.removeAllInFiles();
-
-					std::vector<bfs::path> oldInputFiles{
-						"extractedPairsWithNoTandems_R1.fastq",
-						"extractedPairsWithNoTandems_R2.fastq",
-						"extractedPairsWithTandems_R1.fastq",
-						"extractedPairsWithTandems_R2.fastq",
-						"extractedPairs_R1.fastq",
-						"extractedPairs_R2.fastq",
-						"extractedSingles.fastq",
-						"extractedSinglesWithNoTandems.fastq",
-						"extractedSinglesWithTandems.fastq",
-						"filteredExtractedPairs_R1.fastq",
-						"filteredExtractedPairs_R2.fastq",
-						"filteredSingles.fastq",
-					  "filteredOff_extractedSingles.fastq",
-						"filteredOff_extractedPairs_R1.fastq",
-						"filteredOff_extractedPairs_R2.fastq",
-					  "filteredOffDups_extractedSingles.fastq",
-					  "filteredOffDups_extractedPairs_R1.fastq",
-						"filteredOffDups_extractedPairs_R2.fastq",
-					  "outlierFilteredOff_extractedPairs",
-					  "outlierFilteredOff_extractedSingles"};
-
 					for(const auto & fn : oldInputFiles){
 						auto fnp = njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, fn);
 						if(bfs::exists(fnp)){
@@ -1500,29 +1481,6 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 
 
 	if(!keepIntermediateFiles){
-		std::vector<bfs::path> oldInputFiles{
-			"extractedPairsWithNoTandems_R1.fastq",
-			"extractedPairsWithNoTandems_R2.fastq",
-			"extractedPairsWithTandems_R1.fastq",
-			"extractedPairsWithTandems_R2.fastq",
-			"extractedPairs_R1.fastq",
-			"extractedPairs_R2.fastq",
-			"extractedSingles.fastq",
-			"extractedSinglesWithNoTandems.fastq",
-			"extractedSinglesWithTandems.fastq",
-			"filteredExtractedPairs_R1.fastq",
-			"filteredExtractedPairs_R2.fastq",
-			"filteredSingles.fastq",
-		  "filteredOff_extractedSingles.fastq",
-			"filteredOff_extractedPairs_R1.fastq",
-			"filteredOff_extractedPairs_R2.fastq",
-		  "filteredOffDups_extractedSingles.fastq",
-		  "filteredOffDups_extractedPairs_R1.fastq",
-			"filteredOffDups_extractedPairs_R2.fastq",
-		  "outlierFilteredOff_extractedPairs",
-		  "outlierFilteredOff_extractedSingles"};
-
-
 		for(const auto & fn : oldInputFiles){
 			auto fnp = njh::files::make_path(setUp.pars_.directoryName_, lastIterationSampName, fn);
 			if(bfs::exists(fnp)){
@@ -1726,8 +1684,8 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 //													std::cout << "\t" << njh::conToStr(seqSnps.second) << std::endl;
 //												}
 						bool pass = true;
-						uint32_t queryStart = alignerObj.getSeqPosForAlnAPos(alignerObj.alignObjectB_.seqBase_.seq_.find_first_not_of("-"));
-						uint32_t queryStop = alignerObj.getSeqPosForAlnAPos(alignerObj.alignObjectB_.seqBase_.seq_.find_last_not_of("-"));
+						uint32_t queryStart = alignerObj.getSeqPosForAlnAPos(alignerObj.alignObjectB_.seqBase_.seq_.find_first_not_of('-'));
+						uint32_t queryStop = alignerObj.getSeqPosForAlnAPos(alignerObj.alignObjectB_.seqBase_.seq_.find_last_not_of('-'));
 //												std::cout << "queryStart: " << queryStart << std::endl;
 //												std::cout << "queryStop:  "  << queryStop << std::endl;
 						//iterate over segregating snps locations
