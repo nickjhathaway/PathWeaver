@@ -356,7 +356,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					masterPopClusPars.stopAfter, masterPopClusPars.hqMismatches, masterPopClusPars.illumina);
 		}
 
-		if (masterPopClusPars.binParameters != "") {
+		if (!masterPopClusPars.binParameters.empty()) {
 			if (masterPopClusPars.onPerId) {
 				masterPopClusPars.binIteratorMap = setUp.processIteratorMapOnPerId(masterPopClusPars.binParameters);
 			} else {
@@ -475,7 +475,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	}
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
-	if("" != masterPopClusPars.groupingsFile){
+	if(!masterPopClusPars.groupingsFile.empty()){
 		meta = std::make_shared<MultipleGroupMetaData>(masterPopClusPars.groupingsFile);
 	}
 

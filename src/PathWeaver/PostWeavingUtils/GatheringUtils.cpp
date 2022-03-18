@@ -290,7 +290,7 @@ SeqGatheringFromPathWeaver::processedGatherSeqsMetaRes SeqGatheringFromPathWeave
 																							 this](){
 			SeqInput reader(seqInputOpts);
 
-			std::string tarKey="";
+			std::string tarKey;
 			std::set<std::string> currentAllSamples;
 			std::unordered_map<std::string,std::unordered_map<std::string, VecStr>> currentFailedToCombine;
 			while(tarKeysQueue.getVal(tarKey)){

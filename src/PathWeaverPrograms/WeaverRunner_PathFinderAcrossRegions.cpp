@@ -1974,6 +1974,30 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			auto bamFnp = njh::files::make_path(setUp.pars_.directoryName_, "extracted.bam");
 			auto mvBamFnp = njh::files::make_path(originalExtractionFilesDir, "extracted.bam");
 			bfs::rename(bamFnp, mvBamFnp);
+
+			//collect raw sequences
+			std::unordered_set<std::string> finalNames;
+			auto finalSinglesInOpts = SeqIOOptions::genFastqIn(njh::files::make_path(
+							setUp.pars_.directoryName_, lastIterationSampName,
+							"filteredSingles.fastq"));
+			auto finalPairedR1InOpts = SeqIOOptions::genFastqIn(njh::files::make_path(
+							setUp.pars_.directoryName_, lastIterationSampName,
+							"filteredExtractedPairs_R1.fastq"));
+			std::function<void(SeqIOOptions)> getFinalNames;
+			getFinalNames = [&finalNames](const SeqIOOptions & opts){
+				if(opts.inExists()){
+					SeqInput reader(opts);
+					reader.openIn();
+					seqInfo seq;
+					while(reader.readNextRead(seq)){
+						finalNames.emplace(seq.name_);
+					}
+				}
+			};
+			getFinalNames(finalSinglesInOpts);
+			getFinalNames(finalPairedR1InOpts);
+			OutOptions rawOut(njh::files::make_path(originalExtractionFilesDir, "allRaw"));
+			bExtractor.writeExtractReadsFromBam(setUp.pars_.ioOptions_.firstName_, rawOut, finalNames);
 		}else{
 			bfs::path fnp;
 			while(fileQueque.getVal(fnp)){
