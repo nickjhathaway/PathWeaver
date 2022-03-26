@@ -3215,6 +3215,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									subSeq.reverseComplementRead(false, true);
 								}
 								MetaDataInName meta;
+								if(MetaDataInName::nameHasMetaData(seq.name_)){
+									meta = MetaDataInName(seq.name_);
+								}
 								meta.addMeta("hmmAcc", hit.acc_, true);
 								meta.addMeta("hmmFrom", hit.hmmFrom_, true);
 								meta.addMeta("hmmTo", hit.hmmTo_, true);
@@ -3247,6 +3250,10 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //					njh::files::rmDirForce(hmmWorkSpaceDir);
 //				}
 				outSeqs = hits;
+				//sort by length
+				njh::sort(outSeqs, [](const seqInfo & seq1, const seqInfo & seq2){
+					return len(seq1) == len(seq2) ? seq1.cnt_ > seq2.cnt_ : len(seq1) > len(seq2);
+				});
 			}
 
 
