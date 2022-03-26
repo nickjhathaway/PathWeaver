@@ -99,7 +99,8 @@ void HaploPathFinder::ExtractParams::setGenomeOpts(seqSetUp & setUp, bool genome
 
 HaploPathFinder::PathFinderCorePars::PathFinderCorePars(){
 	errorsToAllow_.hqMismatches_ = 1;
-	trimEdgesOfEndNodesPars_.entropyCutOff = 1.50;
+	trimEdgesOfEndNodesPars_.kLen = 2;
+	trimEdgesOfEndNodesPars_.entropyCutOff = 0.75;
 	pairProcessorParams_.minOverlap_ = 10;
 
 
