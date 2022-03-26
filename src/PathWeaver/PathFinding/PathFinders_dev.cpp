@@ -3154,6 +3154,102 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				SeqOutput::write(keptDebugSeqs, outSeqOptsKept);
 			};
 #endif
+
+			//hmm model
+
+			if(!extractionPars.hmmModelFnp_.empty()) {
+				njh::files::checkExistenceThrow(extractionPars.hmmModelFnp_);
+				std::vector<seqInfo> hits;
+
+				auto hmmWorkSpaceDir = njh::files::makeDir(bestResult.runDirs_.klenDir_,
+																									 njh::files::MkdirPar("hmm_work_space"));
+				{
+					auto inputSeqFnp = njh::files::make_path(hmmWorkSpaceDir, "inputSeqs.fasta");
+					auto hmmModelFnp = njh::files::make_path(hmmWorkSpaceDir, "hmmModel.txt");
+					auto seqKey = SeqIO::rewriteSeqsWithIndexAsName(
+									outSeqs,
+									SeqIOOptions::genFastaOut(inputSeqFnp),
+									njh::files::make_path(hmmWorkSpaceDir, "inputSeqNameKey.tab.txt"));
+
+					//write out the model, this way you can supply it in gzip format but this will unzip it
+					njh::files::reWriteFile(extractionPars.hmmModelFnp_, hmmModelFnp);
+					nhmmscanOutput::run_hmmpress_ifNeed(hmmModelFnp);
+
+					std::stringstream cmdSs;
+					cmdSs << "nhmmscan " << extractionPars.hmmDefaultParameters_
+								<< " " << "--tblout " << "raw_all_domain_hits_table.txt"
+								<< " " << "hmmModel.txt"
+								<< " " << "inputSeqs.fasta"
+								<< " " << " > " << "nhmmscan_raw_output.txt";
+					std::string cdCmd = "cd " + hmmWorkSpaceDir.string() + " && ";
+					auto cmdOutput = njh::sys::run({cdCmd, cmdSs.str()});
+					if (!cmdOutput.success_) {
+						std::stringstream ss;
+						ss << __PRETTY_FUNCTION__ << ", error " << "failed to run hmmsearch "
+							 << "\n";
+						ss << cmdOutput.toJson() << "\n";
+						throw std::runtime_error{ss.str()};
+					} else if (extractionPars.writeOutAll_) {
+						OutputStream nhmmscanOutput(
+										njh::files::make_path(hmmWorkSpaceDir,
+																					"nhmmscanCmdRunDetails.json"));
+						nhmmscanOutput << cmdOutput.toJson() << std::endl;
+					}
+					auto nhmmscan_raw_outputFnp = njh::files::make_path(hmmWorkSpaceDir, "nhmmscan_raw_output.txt");
+					auto seqsWithNoDomainHitsFnp = njh::files::make_path(hmmWorkSpaceDir, "seqsWithNoDomainHits.tab.txt");
+
+					nhmmscanOutput outputParsed = nhmmscanOutput::parseRawOutput(nhmmscan_raw_outputFnp, seqKey);
+					auto postProcessResults = outputParsed.postProcessHits(extractionPars.hmmProcessPars_);
+					if (extractionPars.writeOutAll_) {
+						outputParsed.writeInfoFiles(postProcessResults, hmmWorkSpaceDir);
+					}
+					//trim seqs to best overlapping positions sub seqs
+					VecStr seqsWithNoDomains;
+
+					for (const auto &seq: outSeqs) {
+						if (njh::in(seq.name_, postProcessResults.filteredNonOverlapHitsByQuery_)) {
+							for (const auto &hit: postProcessResults.filteredNonOverlapHitsByQuery_[seq.name_]) {
+								Bed6RecordCore region = hit.genBed6_env();
+								auto subSeq = seq.getSubRead(region.chromStart_, region.length());
+								if (region.reverseStrand()) {
+									subSeq.reverseComplementRead(false, true);
+								}
+								MetaDataInName meta;
+								meta.addMeta("hmmAcc", hit.acc_, true);
+								meta.addMeta("hmmFrom", hit.hmmFrom_, true);
+								meta.addMeta("hmmTo", hit.hmmTo_, true);
+								meta.addMeta("hmmCovered", hit.modelCoverage());
+								meta.addMeta("hmmTrimStart", region.chromStart_, true);
+								meta.addMeta("hmmTrimEnd", region.chromEnd_, true);
+								meta.addMeta("hmmTrimLen", region.length(), true);
+								meta.addMeta("hmmTrimCov", region.length() / static_cast<double>(len(seq)), true);
+								meta.addMeta("hmmRevStrand", region.reverseStrand(), true);
+								meta.addMeta("hmmScore", hit.modelScore_, true);
+								meta.addMeta("hmmScoreNorm", hit.modelScore_ / region.length(), true);
+								meta.addMeta("hmmEvalue", hit.modelEvalue_, true);
+								meta.addMeta("hmmModel", hit.targetName_);
+								meta.addMeta("hmmID", hit.targetDesc_);
+								meta.resetMetaInName(subSeq.name_);
+								hits.emplace_back(subSeq);
+							}
+						} else {
+							seqsWithNoDomains.emplace_back(seq.name_);
+						}
+					}
+					if (extractionPars.writeOutAll_) {
+						OutputStream noDomainHits(seqsWithNoDomainHitsFnp);
+						for (const auto &name: seqsWithNoDomains) {
+							noDomainHits << name << std::endl;
+						}
+					}
+				}
+//				if (!extractionPars.writeOutAll_) {
+//					njh::files::rmDirForce(hmmWorkSpaceDir);
+//				}
+				outSeqs = hits;
+			}
+
+
 			if(extractionPars.trimToInputSeqs && !outSeqs.empty()){
 				double finalReadLengthCutOff = extractionPars.lenCutOff;
 				if(0 == finalReadLengthCutOff){

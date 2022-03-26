@@ -35,7 +35,7 @@ namespace njhseq {
 bool KmerPathwayGraphDev::trimEdgesNodeTipsWithLowEntropy(const readVecTrimmer::TrimEdgesByLowEntropyPars & pars){
 	std::vector<std::shared_ptr<node>> nodesToProcess;
 	for(const auto & n : nodes_){
-		if(n->on_ && (n->tailless() || n->headless())){
+			if(n->on_ && (n->tailless() || n->headless())){
 			nodesToProcess.emplace_back(n);
 		}
 	}
@@ -43,6 +43,7 @@ bool KmerPathwayGraphDev::trimEdgesNodeTipsWithLowEntropy(const readVecTrimmer::
 		bool modifiedNodes = false;
 		bool trimmedNodes = false;
 		for(const auto & n : nodesToProcess){
+
 			auto trimPos = readVecTrimmer::determineTrimPostionsByLowEntropy(n->k_, pars);
 			if(0 == trimPos.start_ && n->k_.size() == trimPos.end_){
 				//nothing to trim

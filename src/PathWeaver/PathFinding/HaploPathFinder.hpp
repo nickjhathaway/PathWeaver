@@ -29,6 +29,7 @@
 #include <njhseq/programUtils/seqSetUp.hpp>
 #include <njhseq/BamToolsUtils.h>
 #include <SeekDeep/objects/IlluminaUtils/PairedReadProcessor.hpp>
+#include <njhseq/objects/BioDataObject/BioRecordsUtils/HmmerUtility.hpp>
 
 //#define PATHWEAVERSUPERDEBUG
 //#define PATHWEAVERDEBUG
@@ -109,6 +110,10 @@ public:
 
 		bool trimTipsOfLowEntropyNodes_{false};
 		double trimTipsOfLowEntropyNodesCutOff_{1.5};
+
+		nhmmscanOutput::PostProcessHitsPars hmmProcessPars_;
+		bfs::path hmmModelFnp_;
+		std::string hmmDefaultParameters_ = "--nonull2 --incT 20 --incdomT 20 -T 20 --notextw";
 
 
 		bool trimEdgesNodeTipsWithLowEntropy_{false};

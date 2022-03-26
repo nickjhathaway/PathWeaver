@@ -501,6 +501,17 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 	setUp.setOption(trimEnds, "--trimEnds", "Trim the ends of called haplotypes");
 	setUp.setOption(trimEndsByCoverage, "--trimEndsByCoverage", "Trim Ends By low coverage");
 	setUp.setOption(trimEndsBy, "--trimEndsBy", "Trim Ends By this length when trimming, rather than the kmer length");
+
+	//hmm processing
+	setUp.setOption(hmmModelFnp_, "--hmmModelFnp", "Trim and keep sequences matching hmm models supplied");
+	setUp.setOption(hmmDefaultParameters_, "--hmmDefaultParameters", "hmm Default Parameters");
+	setUp.setOption(hmmProcessPars_.hmmStartFilter, "--hmmStartFilter", "hmm Start Filter");
+	hmmProcessPars_.scoreCutOff = 100;
+	setUp.setOption(hmmProcessPars_.scoreCutOff   , "--hmmSoreCutOff", "hmm Sore Cut Off");
+	hmmProcessPars_.accCutOff = 0.80;
+	setUp.setOption(hmmProcessPars_.accCutOff     , "--hmmAccCutOff", "hmm Acc Cut Off");
+	setUp.setOption(hmmProcessPars_.minLength     , "--hmmMinLength", "hmm Min Length");
+
 }
 
 void HaploPathFinder::PathFinderCorePars::setPostProcessContigHandlingOpts(seqSetUp & setUp){

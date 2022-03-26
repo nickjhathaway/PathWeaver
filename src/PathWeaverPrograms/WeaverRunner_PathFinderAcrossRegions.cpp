@@ -42,6 +42,7 @@
 #include "PathWeaver/objects/bam/RegionInvestigatorInBam.hpp"
 
 
+
 namespace njhseq {
 
 void setExtractPathWaysDefault(HaploPathFinder::ExtractParams & pars, seqSetUp & setUp, bool needGenome = true ){
