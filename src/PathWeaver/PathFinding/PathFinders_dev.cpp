@@ -3232,7 +3232,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								meta.addMeta("hmmEvalue", hit.modelEvalue_, true);
 								meta.addMeta("hmmModel", hit.targetName_);
 								meta.addMeta("hmmID", hit.targetDesc_);
-								meta.addMeta("length", len(seq), true);
+								meta.addMeta("length", len(subSeq), true);
 								meta.resetMetaInName(subSeq.name_);
 								hits.emplace_back(subSeq);
 							}
