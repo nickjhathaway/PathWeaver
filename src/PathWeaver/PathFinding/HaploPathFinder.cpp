@@ -510,6 +510,8 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 	setUp.setOption(hmmProcessPars_.scoreCutOff   , "--hmmSoreCutOff", "hmm Sore Cut Off");
 	hmmProcessPars_.accCutOff = 0.80;
 	setUp.setOption(hmmProcessPars_.accCutOff     , "--hmmAccCutOff", "hmm Acc Cut Off");
+	hmmProcessPars_.hardAccCutOff = 0.65;
+	setUp.setOption(hmmProcessPars_.hardAccCutOff , "--hmmHardAccCutOff", "hmm Hard Acc Cut Off");
 	setUp.setOption(hmmProcessPars_.minLength     , "--hmmMinLength", "hmm Min Length");
 
 }
