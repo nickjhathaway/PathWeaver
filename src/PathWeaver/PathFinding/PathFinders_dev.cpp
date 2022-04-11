@@ -3207,37 +3207,59 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					VecStr seqsWithNoDomains;
 
 					for (const auto &seq: outSeqs) {
-						if (njh::in(seq.name_, postProcessResults.filteredNonOverlapHitsByQuery_)) {
-							for (const auto &hit: postProcessResults.filteredNonOverlapHitsByQuery_[seq.name_]) {
-								Bed6RecordCore region = hit.genBed6_env();
-								auto subSeq = seq.getSubRead(region.chromStart_, region.length());
-								if (region.reverseStrand()) {
-									subSeq.reverseComplementRead(false, true);
+						if(extractionPars.hmmUseUnMergedHits_){
+							if (njh::in(seq.name_, postProcessResults.filteredNonOverlapHitsByQuery_)) {
+								for (const auto &hit: postProcessResults.filteredNonOverlapHitsByQuery_[seq.name_]) {
+									Bed6RecordCore region = hit.genBed6_env();
+									auto subSeq = seq.getSubRead(region.chromStart_, region.length());
+									if (region.reverseStrand()) {
+										subSeq.reverseComplementRead(false, true);
+									}
+									MetaDataInName meta;
+									if(MetaDataInName::nameHasMetaData(seq.name_)){
+										meta = MetaDataInName(seq.name_);
+									}
+									meta.addMeta("hmmAcc", hit.acc_, true);
+									meta.addMeta("hmmFrom", hit.hmmFrom_, true);
+									meta.addMeta("hmmTo", hit.hmmTo_, true);
+									meta.addMeta("hmmCovered", hit.modelCoverage());
+									meta.addMeta("hmmTrimStart", region.chromStart_, true);
+									meta.addMeta("hmmTrimEnd", region.chromEnd_, true);
+									meta.addMeta("hmmTrimLen", region.length(), true);
+									meta.addMeta("hmmTrimCov", region.length() / static_cast<double>(len(seq)), true);
+									meta.addMeta("hmmRevStrand", region.reverseStrand(), true);
+									meta.addMeta("hmmScore", hit.modelScore_, true);
+									meta.addMeta("hmmScoreNorm", hit.modelScore_ / region.length(), true);
+									meta.addMeta("hmmEvalue", hit.modelEvalue_, true);
+									meta.addMeta("hmmModel", hit.targetName_);
+									meta.addMeta("hmmID", hit.targetDesc_);
+									meta.addMeta("length", len(subSeq), true);
+									meta.resetMetaInName(subSeq.name_);
+									hits.emplace_back(subSeq);
 								}
-								MetaDataInName meta;
-								if(MetaDataInName::nameHasMetaData(seq.name_)){
-									meta = MetaDataInName(seq.name_);
-								}
-								meta.addMeta("hmmAcc", hit.acc_, true);
-								meta.addMeta("hmmFrom", hit.hmmFrom_, true);
-								meta.addMeta("hmmTo", hit.hmmTo_, true);
-								meta.addMeta("hmmCovered", hit.modelCoverage());
-								meta.addMeta("hmmTrimStart", region.chromStart_, true);
-								meta.addMeta("hmmTrimEnd", region.chromEnd_, true);
-								meta.addMeta("hmmTrimLen", region.length(), true);
-								meta.addMeta("hmmTrimCov", region.length() / static_cast<double>(len(seq)), true);
-								meta.addMeta("hmmRevStrand", region.reverseStrand(), true);
-								meta.addMeta("hmmScore", hit.modelScore_, true);
-								meta.addMeta("hmmScoreNorm", hit.modelScore_ / region.length(), true);
-								meta.addMeta("hmmEvalue", hit.modelEvalue_, true);
-								meta.addMeta("hmmModel", hit.targetName_);
-								meta.addMeta("hmmID", hit.targetDesc_);
-								meta.addMeta("length", len(subSeq), true);
-								meta.resetMetaInName(subSeq.name_);
-								hits.emplace_back(subSeq);
+							} else {
+								seqsWithNoDomains.emplace_back(seq.name_);
 							}
 						} else {
-							seqsWithNoDomains.emplace_back(seq.name_);
+							if(njh::in(seq.name_, postProcessResults.filteredHitsMergedNonOverlapByQuery_)){
+								for(const auto & hitGroup : postProcessResults.filteredHitsMergedNonOverlapByQuery_[seq.name_]){
+									Bed6RecordCore region = hitGroup.region_.genBedRecordCore();
+									auto subSeq = seq.getSubRead(region.chromStart_, region.length());
+									if(region.reverseStrand()){
+										subSeq.reverseComplementRead(false, true);
+									}
+									MetaDataInName meta = hitGroup.genOutRegion().meta_;
+									meta.addMeta("trimStart", region.chromStart_, true);
+									meta.addMeta("trimEnd", region.chromEnd_, true);
+									meta.addMeta("trimLen", region.length(), true);
+									meta.addMeta("trimCov", region.length()/static_cast<double>(len(seq)), true);
+									meta.addMeta("revStrand", region.reverseStrand(), true);
+									meta.resetMetaInName(subSeq.name_);
+									hits.emplace_back(subSeq);
+								}
+							}else{
+								seqsWithNoDomains.emplace_back(seq.name_);
+							}
 						}
 					}
 					if (extractionPars.writeOutAll_) {

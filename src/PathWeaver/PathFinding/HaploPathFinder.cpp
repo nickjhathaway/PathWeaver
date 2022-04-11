@@ -505,6 +505,7 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 	//hmm processing
 	setUp.setOption(hmmModelFnp_, "--hmmModelFnp", "Trim and keep sequences matching hmm models supplied");
 	setUp.setOption(hmmDefaultParameters_, "--hmmDefaultParameters", "hmm Default Parameters");
+	setUp.setOption(hmmUseUnMergedHits_, "--hmmUseUnMergedHits", "hmm Use the un-merged hits");
 	setUp.setOption(hmmProcessPars_.hmmStartFilter, "--hmmStartFilter", "hmm Start Filter");
 	hmmProcessPars_.scoreCutOff = 100;
 	setUp.setOption(hmmProcessPars_.scoreCutOff   , "--hmmSoreCutOff", "hmm Sore Cut Off");
