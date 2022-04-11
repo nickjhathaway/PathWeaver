@@ -3177,6 +3177,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 
 					std::stringstream cmdSs;
 					cmdSs << "nhmmscan " << extractionPars.hmmDefaultParameters_
+								<< " " << "--cpu " << extractionPars.numThreads
 								<< " " << "--tblout " << "raw_all_domain_hits_table.txt"
 								<< " " << "hmmModel.txt"
 								<< " " << "inputSeqs.fasta"

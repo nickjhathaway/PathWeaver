@@ -114,7 +114,7 @@ public:
 		nhmmscanOutput::PostProcessHitsPars hmmProcessPars_;
 		bfs::path hmmModelFnp_;
 		std::string hmmDefaultParameters_ = "--nonull2 --incT 50 --incdomT 50 -T 50 --notextw";
-		bool hmmUseUnMergedHits_ = true;
+		bool hmmUseUnMergedHits_ = false;
 
 		bool trimEdgesNodeTipsWithLowEntropy_{false};
 		//double trimEdgesNodeTipsWithLowEntropyCutOff{1.25};
