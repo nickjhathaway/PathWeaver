@@ -514,6 +514,27 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 	setUp.setOption(hmmProcessPars_.hardAccCutOff , "--hmmHardAccCutOff", "hmm Hard Acc Cut Off");
 	setUp.setOption(hmmProcessPars_.minLength     , "--hmmMinLength", "hmm Min Length");
 
+	setUp.setOption(hmmProcessPars_.accCutOff, "--hmmAccCutOff", "hmm soft accuracy cut off");
+	setUp.setOption(hmmProcessPars_.scoreCutOff, "--hmmScoreCutOff", "hmm soft score cut off");
+	setUp.setOption(hmmProcessPars_.evalueCutOff, "--hmmEvalueCutOff", "hmm soft evalue cut off");
+	setUp.setOption(hmmProcessPars_.scoreNormCutOff, "--hmmScoreNormCutOff", "hmm soft scoreNorm cut off");
+
+	setUp.setOption(hmmProcessPars_.hardAccCutOff, "--hmmHardAccCutOff", "hmm hard accuracy cut off");
+	if(hmmProcessPars_.hardAccCutOff > hmmProcessPars_.accCutOff){
+		hmmProcessPars_.accCutOff = hmmProcessPars_.hardAccCutOff;
+	}
+	setUp.setOption(hmmProcessPars_.hardScoreCutOff, "--hmmHardScoreCutOff", "hmm hard score cut off");
+	if(hmmProcessPars_.hardScoreCutOff > hmmProcessPars_.scoreCutOff){
+		hmmProcessPars_.scoreCutOff = hmmProcessPars_.hardScoreCutOff;
+	}
+	setUp.setOption(hmmProcessPars_.hardEvalueCutOff, "--hmmHardEvalueCutOff", "hmm hard evalue cut off");
+	if(hmmProcessPars_.hardEvalueCutOff > hmmProcessPars_.evalueCutOff){
+		hmmProcessPars_.evalueCutOff = hmmProcessPars_.hardEvalueCutOff;
+	}
+	setUp.setOption(hmmProcessPars_.hardScoreNormCutOff, "--hmmHardScoreNormCutOff", "hmm hard scoreNorm cut off");
+	if(hmmProcessPars_.hardScoreNormCutOff > hmmProcessPars_.scoreNormCutOff){
+		hmmProcessPars_.scoreNormCutOff = hmmProcessPars_.hardScoreNormCutOff;
+	}
 }
 
 void HaploPathFinder::PathFinderCorePars::setPostProcessContigHandlingOpts(seqSetUp & setUp){
