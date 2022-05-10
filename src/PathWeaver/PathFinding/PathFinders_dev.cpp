@@ -3216,26 +3216,32 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									if (region.reverseStrand()) {
 										subSeq.reverseComplementRead(false, true);
 									}
-									MetaDataInName meta;
+									MetaDataInName seqMeta;
 									if(MetaDataInName::nameHasMetaData(seq.name_)){
-										meta = MetaDataInName(seq.name_);
+                    seqMeta = MetaDataInName(seq.name_);
 									}
-									meta.addMeta("hmmAcc", hit.acc_, true);
-									meta.addMeta("hmmFrom", hit.hmmFrom_, true);
-									meta.addMeta("hmmTo", hit.hmmTo_, true);
-									meta.addMeta("hmmCovered", hit.modelCoverage());
-									meta.addMeta("hmmTrimStart", region.chromStart_, true);
-									meta.addMeta("hmmTrimEnd", region.chromEnd_, true);
-									meta.addMeta("hmmTrimLen", region.length(), true);
-									meta.addMeta("hmmTrimCov", region.length() / static_cast<double>(len(seq)), true);
-									meta.addMeta("hmmRevStrand", region.reverseStrand(), true);
-									meta.addMeta("hmmScore", hit.modelScore_, true);
-									meta.addMeta("hmmScoreNorm", hit.modelScore_ / region.length(), true);
-									meta.addMeta("hmmEvalue", hit.modelEvalue_, true);
-									meta.addMeta("hmmModel", hit.targetName_);
-									meta.addMeta("hmmID", hit.targetDesc_);
-									meta.addMeta("length", len(subSeq), true);
-									meta.resetMetaInName(subSeq.name_);
+                  if("[]" == hit.hmmEdgeInfo_ ){
+                    subSeq.on_ = true;
+                  }else{
+                    subSeq.on_ = false;
+                  }
+                  seqMeta.addMeta("trimStatus", seq.on_, true);
+									seqMeta.addMeta("hmmAcc", hit.acc_, true);
+									seqMeta.addMeta("hmmFrom", hit.hmmFrom_, true);
+									seqMeta.addMeta("hmmTo", hit.hmmTo_, true);
+									seqMeta.addMeta("hmmCovered", hit.modelCoverage());
+									seqMeta.addMeta("hmmTrimStart", region.chromStart_, true);
+									seqMeta.addMeta("hmmTrimEnd", region.chromEnd_, true);
+									seqMeta.addMeta("hmmTrimLen", region.length(), true);
+									seqMeta.addMeta("hmmTrimCov", region.length() / static_cast<double>(len(seq)), true);
+									seqMeta.addMeta("hmmRevStrand", region.reverseStrand(), true);
+									seqMeta.addMeta("hmmScore", hit.modelScore_, true);
+									seqMeta.addMeta("hmmScoreNorm", hit.modelScore_ / region.length(), true);
+									seqMeta.addMeta("hmmEvalue", hit.modelEvalue_, true);
+									seqMeta.addMeta("hmmModel", hit.targetName_);
+									seqMeta.addMeta("hmmID", hit.targetDesc_);
+									seqMeta.addMeta("length", len(subSeq), true);
+									seqMeta.resetMetaInName(subSeq.name_);
 									hits.emplace_back(subSeq);
 								}
 							} else {
@@ -3249,13 +3255,26 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									if(region.reverseStrand()){
 										subSeq.reverseComplementRead(false, true);
 									}
-									MetaDataInName meta = hitGroup.genOutRegion().meta_;
-									meta.addMeta("trimStart", region.chromStart_, true);
-									meta.addMeta("trimEnd", region.chromEnd_, true);
-									meta.addMeta("trimLen", region.length(), true);
-									meta.addMeta("trimCov", region.length()/static_cast<double>(len(seq)), true);
-									meta.addMeta("revStrand", region.reverseStrand(), true);
-									meta.resetMetaInName(subSeq.name_);
+                  MetaDataInName seqMeta;
+                  if(MetaDataInName::nameHasMetaData(seq.name_)){
+                    seqMeta = MetaDataInName(seq.name_);
+                  }
+									MetaDataInName regionMeta = hitGroup.genOutRegion().meta_;
+                  seqMeta.addMeta(regionMeta, true);
+
+                  if("[]" == hitGroup.hmmEdgeInfo()){
+                    subSeq.on_ = true;
+                  }else{
+                    subSeq.on_ = false;
+                  }
+                  seqMeta.addMeta("trimStatus", seq.on_, true);
+
+                  seqMeta.addMeta("hmmTrimStart", region.chromStart_, true);
+                  seqMeta.addMeta("hmmTrimEnd", region.chromEnd_, true);
+                  seqMeta.addMeta("hmmTrimLen", region.length(), true);
+                  seqMeta.addMeta("hmmTrimCov", region.length()/static_cast<double>(len(seq)), true);
+                  seqMeta.addMeta("hmmRevStrand", region.reverseStrand(), true);
+                  seqMeta.resetMetaInName(subSeq.name_);
 									hits.emplace_back(subSeq);
 								}
 							}else{
@@ -3302,14 +3321,15 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					aligner alignerObj(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix(2,-2), false);
 					//alignerObj.processAlnInfoInputNoCheck(njh::files::make_path(workingDir, "trimAlnCache").string(), extractionPars.verbose);
 					std::vector<kmerInfo> inputSeqsKmerInfos;
-					for(const auto & input : trimSeqsVec){
+					inputSeqsKmerInfos.reserve(trimSeqsVec.size());
+          for(const auto & input : trimSeqsVec){
 						inputSeqsKmerInfos.emplace_back(input.seq_, extractionPars.circularTrimPars_.kmerLength_, false);
 					}
 					for(auto & seq : outSeqs){
 						//find best matching ref and trim to that
 						uint32_t bestRefPos = 0;
 						double bestRefScore = 0;
-						if(trimSeqsVec.size() > 0){
+						if(!trimSeqsVec.empty()){
 							kmerInfo seqKInfo(seq.seq_, extractionPars.circularTrimPars_.kmerLength_, true);
 							for(const auto pos : iter::range(trimSeqsVec.size())){
 								auto forComp = inputSeqsKmerInfos[pos].compareKmers(seqKInfo);
@@ -3426,6 +3446,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				njh::sort(outSeqs, [](const seqInfo & seq1, const seqInfo & seq2){
 					return len(seq1) == len(seq2) ? seq1.cnt_ > seq2.cnt_ : len(seq1) > len(seq2);
 				});
+
+
 				for(auto & seq : outSeqs){
 					MetaDataInName meta(seq.name_);
 					meta.addMeta("length", len(seq), true);
