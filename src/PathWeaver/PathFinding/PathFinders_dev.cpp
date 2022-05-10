@@ -3225,7 +3225,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
                   }else{
                     subSeq.on_ = false;
                   }
-                  seqMeta.addMeta("trimStatus", seq.on_, true);
+                  seqMeta.addMeta("trimStatus", subSeq.on_, true);
 									seqMeta.addMeta("hmmAcc", hit.acc_, true);
 									seqMeta.addMeta("hmmFrom", hit.hmmFrom_, true);
 									seqMeta.addMeta("hmmTo", hit.hmmTo_, true);
@@ -3267,7 +3267,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
                   }else{
                     subSeq.on_ = false;
                   }
-                  seqMeta.addMeta("trimStatus", seq.on_, true);
+                  seqMeta.addMeta("trimStatus", subSeq.on_, true);
 
                   seqMeta.addMeta("hmmTrimStart", region.chromStart_, true);
                   seqMeta.addMeta("hmmTrimEnd", region.chromEnd_, true);
