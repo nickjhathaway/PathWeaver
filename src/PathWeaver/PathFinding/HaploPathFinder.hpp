@@ -127,6 +127,8 @@ public:
 		double homopolymerIndelCollapseFreqMultiplier_ = 1.01;
 
 		bool initialBreakingSinglePaths_ = false;
+		bool startWithRemoveShortTips_ = false;
+
 
 		bool splitTailed_ = false;
 		bool splitEnds_ = false;
@@ -145,6 +147,9 @@ public:
 		bool addGroups_ = false;
 		bool writeGroupInputNames_ = false;
 
+
+		bool disentangleByNodeCounts_ = false;
+		bool addByEdgeDisentangleByNodeCounts_ = false;
 		bool removeHeadlessTaillessAfterDisentaglement = false;
 		bool removeHeadlessTaillessAlongTheWay = false;
 		uint32_t headlessTailessLenCutOff = 0; //good default is same size of kmer length so should change with klen change

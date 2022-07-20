@@ -803,6 +803,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 #endif
 					}
+
 					watch.startNewLap(
 							njh::pasteAsStr(genPrefixForWatchLapName(), "- Collapse paths"));
 					currentGraph->collapseSingleLinkedPaths(true);
@@ -904,6 +905,34 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 					}
 
+					if(extractionPars.startWithRemoveShortTips_ && extractionPars.trimShortTips_) {
+						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
+																							"- Removing Short tips"));
+						uint32_t removeShortTipRunNumber = 0;
+						while (currentGraph->removeShortTips(shortTipNumber, tipCutOff)) {
+#if defined(PATHWEAVERDEBUG)
+							{
+								std::cout << "Removing short tips run: " << removeShortTipRunNumber << std::endl;
+							}
+#endif
+#if defined(PATHWEAVERDEBUG)
+							{
+								graphWriter.writeOutDotsAndSeqs(
+												njh::pasteAsStr("fullCollapse-initialRemoveShortTips", "-", removeShortTipRunNumber));
+							}
+#endif
+							//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
+							currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+							{
+								graphWriter.writeOutDotsAndSeqs(
+												njh::pasteAsStr("fullCollapse-initialRemoveShortTips", "-", removeShortTipRunNumber, "-collapsed"));
+							}
+#endif
+							++removeShortTipRunNumber;
+						}
+					}
+
 
 //					if(extractionPars.collapseNodesWithAllowableError_){
 //						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(), "- Collapsing nodes with allowable error immediately after initial collapse"));
@@ -944,15 +973,6 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-Conservative-", disentagleCount));
 							}
 #endif
-							//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
-//							if(extractionPars.trimShortTips_){
-//								bool removedTips = currentGraph->removeShortTips_after_disentangleInternalNodes(shortTipNumber, tipCutOff);
-//								if(removedTips){
-//									if(extractionPars.debug){
-//										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-Conservative-", disentagleCount, "-removeShortTips"));
-//									}
-//								}
-//							}
 							currentGraph->collapseSingleLinkedPaths();
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -1019,6 +1039,83 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								std::cout << "conservative disentagleCount: " << disentagleCount << std::endl;
 							}
 #endif
+						}
+						if(extractionPars.disentangleByNodeCounts_ && extractionPars.addByEdgeDisentangleByNodeCounts_){
+							auto byEdgeDistPars  = disPars;
+							byEdgeDistPars.byNodeReadCounts_ = false;
+							while(currentGraph->disentangleInternalNodes(byEdgeDistPars)){
+#if defined(PATHWEAVERDEBUG)
+								{
+								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-", disentagleCount));
+							}
+#endif
+								currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+								{
+								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-", disentagleCount, "-collapsed"));
+							}
+#endif
+								//break self pointing paths;
+								if(currentGraph->breakSelfPointingPaths()){
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-", disentagleCount, "-collapsed-breakSelfPointingPaths"));
+								}
+#endif
+									currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-", disentagleCount, "-collapsed-breakSelfPointingPaths-collapsed"));
+								}
+#endif
+								}
+
+								if(extractionPars.collapseOneBaseIndelsNodes_){
+									watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
+																										"- Collapsing One Base Indel nodes while Split Internals Conservative"));
+									//if(currentGraph->collapseOneBaseIndelsNodes()){
+									uint32_t collapseOneBaseIndelsNodesCount = 0;
+									while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount ));
+									}
+#endif
+										currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
+									}
+#endif
+										++collapseOneBaseIndelsNodesCount;
+									}
+
+									uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+									if(currentGraph->collapseOneBaseIndelsNodesComplex()){
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex));
+									}
+#endif
+										currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
+									}
+#endif
+										++collapseOneBaseIndelsNodesCountComplex;
+									}
+								}
+
+
+								++disentagleCount;
+#if defined(PATHWEAVERDEBUG)
+								{
+								std::cout << __FILE__ << " " << __LINE__ << std::endl;
+								std::cout << "conservative disentagleCount: " << disentagleCount << std::endl;
+							}
+#endif
+							}
 						}
 					}
 					watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes"));
@@ -1106,6 +1203,94 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 #endif
 					}
+
+					if(extractionPars.disentangleByNodeCounts_ && extractionPars.addByEdgeDisentangleByNodeCounts_){
+						auto byEdgeDistPar = disPars;
+						byEdgeDistPar.byNodeReadCounts_ = false;
+						while(currentGraph->disentangleInternalNodes(byEdgeDistPar)){
+#if defined(PATHWEAVERDEBUG)
+							{
+							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-", disentagleCount));
+						}
+#endif
+							//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
+							if(extractionPars.trimShortTips_){
+								bool removedTips = currentGraph->removeShortTips_after_disentangleInternalNodes(shortTipNumber, tipCutOff);
+								if(removedTips){
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-", disentagleCount, "-removeShortTips"));
+								}
+#endif
+								}
+							}
+							currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+							{
+							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-", disentagleCount, "-collapsed"));
+						}
+#endif
+							//break self pointing paths;
+							if(currentGraph->breakSelfPointingPaths()){
+#if defined(PATHWEAVERDEBUG)
+								{
+								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-", disentagleCount, "-collapsed-breakSelfPointingPaths"));
+							}
+#endif
+								currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+								{
+								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-", disentagleCount, "-collapsed-breakSelfPointingPaths-collapsed"));
+							}
+#endif
+							}
+							if(extractionPars.collapseOneBaseIndelsNodes_){
+								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
+																									"- Collapsing One Base Indel nodes while Split Internals Conservative"));
+								//if(currentGraph->collapseOneBaseIndelsNodes()){
+								uint32_t collapseOneBaseIndelsNodesCount = 0;
+								while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount ));
+								}
+#endif
+									currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
+								}
+#endif
+									++collapseOneBaseIndelsNodesCount;
+								}
+
+								uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+								if(currentGraph->collapseOneBaseIndelsNodesComplex()){
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex));
+								}
+#endif
+									currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
+								}
+#endif
+									++collapseOneBaseIndelsNodesCountComplex;
+								}
+							}
+
+							++disentagleCount;
+#if defined(PATHWEAVERDEBUG)
+							{
+							std::cout << __FILE__ << " " << __LINE__ << std::endl;
+							std::cout << "disentagleCount: " << disentagleCount << std::endl;
+						}
+#endif
+						}
+					}
+
 
 					if(extractionPars.collapsePossibleSimpleLoops_){
 						currentGraph->collapseSingleLinkedPathsForPossibleLoops();
@@ -1285,15 +1470,6 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-Conservative-", disentagleCount));
 									}
 #endif
-									//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
-//									if(extractionPars.trimShortTips_){
-//										bool removedTips = currentGraph->removeShortTips_after_disentangleInternalNodes(shortTipNumber, tipCutOff);
-//										if(removedTips){
-//											if(extractionPars.debug){
-//												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-Conservative-", disentagleCount, "-removeShortTips"));
-//											}
-//										}
-//									}
 									currentGraph->collapseSingleLinkedPaths();
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1357,6 +1533,80 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
 									}
 #endif
+								}
+								if(extractionPars.disentangleByNodeCounts_ && extractionPars.addByEdgeDisentangleByNodeCounts_){
+									auto byEdgeDisPar = disPars;
+									byEdgeDisPar.byNodeReadCounts_ = false;
+									while(currentGraph->disentangleInternalNodes(byEdgeDisPar)){
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-", disentagleCount));
+									}
+#endif
+										currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-", disentagleCount, "-collapsed"));
+									}
+#endif
+										//break self pointing paths;
+										if(currentGraph->breakSelfPointingPaths()){
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-", disentagleCount, "-collapsed-breakSelfPointingPaths"));
+										}
+#endif
+											currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-", disentagleCount, "-collapsed-breakSelfPointingPaths-collapsed"));
+										}
+#endif
+										}
+										if(extractionPars.collapseOneBaseIndelsNodes_){
+											watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
+																												"- Collapsing One Base Indel nodes while Split Internals Conservative"));
+											//if(currentGraph->collapseOneBaseIndelsNodes()){
+											uint32_t collapseOneBaseIndelsNodesCount = 0;
+											while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
+#if defined(PATHWEAVERDEBUG)
+												{
+												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount ));
+											}
+#endif
+												currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+												{
+												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
+											}
+#endif
+												++collapseOneBaseIndelsNodesCount;
+											}
+
+											uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+											if(currentGraph->collapseOneBaseIndelsNodesComplex()){
+#if defined(PATHWEAVERDEBUG)
+												{
+												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex));
+											}
+#endif
+												currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+												{
+												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
+											}
+#endif
+												++collapseOneBaseIndelsNodesCountComplex;
+											}
+										}
+										++disentagleCount;
+#if defined(PATHWEAVERDEBUG)
+										{
+										std::cout << __FILE__ << " " << __LINE__ << std::endl;
+										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
+									}
+#endif
+									}
 								}
 							}
 
@@ -1433,6 +1683,80 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
 								}
 #endif
+							}
+							if(extractionPars.disentangleByNodeCounts_ && extractionPars.addByEdgeDisentangleByNodeCounts_){
+								auto byEdgeDisPar = disPars;
+								byEdgeDisPar.byNodeReadCounts_ = false;
+								while(currentGraph->disentangleInternalNodes(byEdgeDisPar)){
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-", disentagleCount));
+								}
+#endif
+									currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-", disentagleCount,"-collapsed"));
+								}
+#endif
+									//break self pointing paths;
+									if(currentGraph->breakSelfPointingPaths()){
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-", disentagleCount,"-collapsed-breakSelfPointingPaths"));
+									}
+#endif
+										currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval", "-", disentagleCount, "-collapsed-breakSelfPointingPaths-collapsed"));
+									}
+#endif
+									}
+									if(extractionPars.collapseOneBaseIndelsNodes_){
+										watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
+																											"- Collapsing One Base Indel nodes while Split Internals Conservative"));
+										//if(currentGraph->collapseOneBaseIndelsNodes()){
+										uint32_t collapseOneBaseIndelsNodesCount = 0;
+										while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount ));
+										}
+#endif
+											currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
+										}
+#endif
+											++collapseOneBaseIndelsNodesCount;
+										}
+
+										uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+										if(currentGraph->collapseOneBaseIndelsNodesComplex()){
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex));
+										}
+#endif
+											currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
+										}
+#endif
+											++collapseOneBaseIndelsNodesCountComplex;
+										}
+									}
+									++disentagleCount;
+#if defined(PATHWEAVERDEBUG)
+									{
+									std::cout << __FILE__ << " " << __LINE__ << std::endl;
+									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
+								}
+#endif
+								}
 							}
 
 							if(extractionPars.collapsePossibleSimpleLoops_){
@@ -1587,15 +1911,6 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-final-Conservative-", disentagleCount));
 									}
 #endif
-									//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
-//									if(extractionPars.trimShortTips_){
-//										bool removedTips = currentGraph->removeShortTips_after_disentangleInternalNodes(shortTipNumber, tipCutOff);
-//										if(removedTips){
-//											if(extractionPars.debug){
-//												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-final-Conservative-", disentagleCount, "-removeShortTips"));
-//											}
-//										}
-//									}
 									currentGraph->collapseSingleLinkedPaths();
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1623,6 +1938,44 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
 									}
 #endif
+								}
+								if(extractionPars.disentangleByNodeCounts_ && extractionPars.addByEdgeDisentangleByNodeCounts_){
+									auto byEdgeDisPars = disPars;
+									byEdgeDisPars.byNodeReadCounts_ = false;
+									while(currentGraph->disentangleInternalNodes(byEdgeDisPars)){
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-Conservative-", disentagleCount));
+									}
+#endif
+										currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-Conservative-", disentagleCount, "-collapsed"));
+									}
+#endif
+										//break self pointing paths;
+										if(currentGraph->breakSelfPointingPaths()){
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-Conservative-", disentagleCount, "-collapsed-breakSelfPointingPaths"));
+										}
+#endif
+											currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+											{
+											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-Conservative-", disentagleCount, "-collapsed-breakSelfPointingPaths-collapsed"));
+										}
+#endif
+										}
+										++disentagleCount;
+#if defined(PATHWEAVERDEBUG)
+										{
+										std::cout << __FILE__ << " " << __LINE__ << std::endl;
+										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
+									}
+#endif
+									}
 								}
 							}
 
@@ -1665,11 +2018,51 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								}
 #endif
 							}
+							if(extractionPars.disentangleByNodeCounts_ && extractionPars.addByEdgeDisentangleByNodeCounts_){
+								auto byEdgeDisPars = disPars;
+								byEdgeDisPars.byNodeReadCounts_ = false;
+								while(currentGraph->disentangleInternalNodes(byEdgeDisPars)){
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-", disentagleCount));
+								}
+#endif
+									//currentGraph->breakSingleHeadSingleTailNodesLowCoverage();
+									currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+									{
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-", disentagleCount,"-collapsed"));
+								}
+#endif
+									//break self pointing paths;
+									if(currentGraph->breakSelfPointingPaths()){
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-", disentagleCount,"-collapsed-breakSelfPointingPaths"));
+									}
+#endif
+										currentGraph->collapseSingleLinkedPaths();
+#if defined(PATHWEAVERDEBUG)
+										{
+										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-", disentagleCount, "-collapsed-breakSelfPointingPaths-collapsed"));
+									}
+#endif
+									}
+									++disentagleCount;
+#if defined(PATHWEAVERDEBUG)
+									{
+									std::cout << __FILE__ << " " << __LINE__ << std::endl;
+									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
+								}
+#endif
+								}
+							}
+
 							if(extractionPars.collapsePossibleSimpleLoops_){
 								currentGraph->collapseSingleLinkedPathsForPossibleLoops();
 #if defined(PATHWEAVERDEBUG)
 								{
-									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-final-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops"));
+									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-final-", disentagleCount, "-collapsed-collapseSingleLinkedPathsForPossibleLoops"));
 								}
 #endif
 								if(currentGraph->hasSelfPointingPaths()){
@@ -2342,7 +2735,10 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 						"- Creating out seqs - rest after creating groups"));
 					}
+//					std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//					std::cout << "currentGraph->nodes_.size(): " << currentGraph->nodes_.size() << std::endl;
 					for(const auto & node : currentGraph->nodes_){
+
 						//if not keeping cycles, and the group is not set (which only happens with cycles) and we did add gropups
 						if(!extractionPars.keepCycles_ && std::numeric_limits<uint32_t>::max() == node->group_ && extractionPars.addGroups_){
 							continue;
@@ -2406,6 +2802,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 						++nodeCount;
 					}
+//					std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << "outSeqs.size(): " << outSeqs.size() << std::endl;
 					if(extractionPars.addSeqOfSingleHeadAndTailSeqs_){
 						njh::sort(outSeqs, [](const seqInfo & seq1, const seqInfo & seq2){
 							return len(seq1) > len(seq2);
@@ -2780,11 +3178,22 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									<< std::endl;
 						}
 #endif
+//						std::cout << njh::bashCT::red << std::endl;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//
+//						std::cout << "totalReadsAboveCutOff: " << totalReadsAboveCutOff << std::endl;
+//						std::cout << "totalReads: " << totalReads << std::endl;
+//						std::cout << njh::bashCT::reset << std::endl;
 						optRunRes.percentOfInputUsed_ = static_cast<double>(totalReadsAboveCutOff)/totalReads;
 						optRunRes.totalInputReads_ = totalReads;
 						shortTipLog["percentOfInputReadsUsed"] = njh::json::toJson(optRunRes.percentOfInputUsed_);
 						shortTipLog["totalReadsAboveKmersUsedCutOff"] = njh::json::toJson(totalReadsAboveCutOff);
 					}else{
+//						std::cout << njh::bashCT::blue << std::endl;
+//						std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//						std::cout << "finalNodeReadCounts.size(): " << finalNodeReadCounts.size() << std::endl;
+//						std::cout << "totalInputSequences: " << totalInputSequences << std::endl;
+//						std::cout << njh::bashCT::reset << std::endl;
 						optRunRes.percentOfInputUsed_ = static_cast<double>(finalNodeReadCounts.size())/totalInputSequences;
 						optRunRes.totalInputReads_ = totalInputSequences;
 						shortTipLog["percentOfInputReadsUsed"] = njh::json::toJson(optRunRes.percentOfInputUsed_);
@@ -3009,6 +3418,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 //	std::cout << "all allOptRunResults" << std::endl;
 //	for(const auto & opt : allOptRunResults){
+//		std::cout << njh::json::writeAsOneLine(opt.toJson()) << std::endl;
 //		std::cout << "\t" << njh::json::writeAsOneLine(opt.runParams_.toJson()) << " keepNames.size(): " << opt.keepSeqNames_.size() << std::endl;
 //	}
 	auto bestOptResults = OptimizationReconResult::getBestResults(
@@ -3018,6 +3428,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			extractionPars.useFullOptimalCount_);
 //	std::cout << "best allOptRunResults" << std::endl;
 //	for(const auto & opt : bestOptResults){
+//
 //		std::cout << "\t" << njh::json::writeAsOneLine(opt.runParams_.toJson()) << " keepNames.size(): " << opt.keepSeqNames_.size() << std::endl;
 //	}
 //	std::cout << "bestOptResults.empty(): " << njh::boolToStr(bestOptResults.empty()) << std::endl;
@@ -3126,6 +3537,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					}
 				}
 			}
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			//process best result
 			watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": Processing out seqs - collapsing and trimming"));
 			//read in the final filtered seqs
@@ -3133,6 +3545,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //			finalSeqOpts.processed_ = true;
 //			auto outSeqs = SeqInput::getSeqVec<seqInfo>(finalSeqOpts);
 
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//			std::cout << bestResult.finalFilteredOutSeqs_.size() << std::endl;
 			std::vector<seqInfo> outSeqs = bestResult.finalFilteredOutSeqs_;
 			//sort by length
 			njh::sort(outSeqs, [](const seqInfo & seq1, const seqInfo & seq2){
@@ -3156,7 +3570,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 #endif
 
 			//hmm model
-
+//			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			if(!extractionPars.hmmModelFnp_.empty()) {
 				njh::files::checkExistenceThrow(extractionPars.hmmModelFnp_);
 				std::vector<seqInfo> hits;

@@ -127,6 +127,8 @@ std::vector<OptimizationReconResult> OptimizationReconResult::getBestResults(con
 //			std::cout << __FILE__ << " " << __LINE__ << std::endl;
 			for(const auto & optResTest : allResults){
 //				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << "percentUsed: " << percentUsed << std::endl;
+//				std::cout << "optResTest.percentOfInputUsed_: " << optResTest.percentOfInputUsed_ << std::endl;
 //				std::cout << "\t"<< njh::json::writeAsOneLine(optResTest.runParams_.toJson()) << std::endl;
 				if(optResTest.percentOfInputUsed_ > percentUsed && 0 != optResTest.numberOfFinalFilteredSeqs_ ){
 					uint32_t currentOptCount = useFullOptimalCount ? optResTest.optimalCount_ : optResTest.optimalCountBelowLen_;

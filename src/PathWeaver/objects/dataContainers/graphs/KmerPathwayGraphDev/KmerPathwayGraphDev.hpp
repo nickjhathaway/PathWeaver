@@ -177,6 +177,7 @@ public:
 			trimShortTips_ = extractionPars.trimShortTips_;
 			throwAwayConservedAddNodesDuringDisentaglement_ = extractionPars.throwAwayConservedAddNodesDuringDisentaglement;
 			removeHeadlessTaillessAfterDisentaglement_ = extractionPars.removeHeadlessTaillessAfterDisentaglement;
+			byNodeReadCounts_ = extractionPars.disentangleByNodeCounts_;
 		}
 		bool conservative_ = false;
 		uint32_t shortTipNumber_ { 2 };
@@ -186,9 +187,12 @@ public:
 		bool trimShortTips_{false};
 
 		bool removeHeadlessTaillessAfterDisentaglement_{false};
+		bool byNodeReadCounts_{false};
 	};
 
 	bool disentangleInternalNodes(const disentangleInternalNodesPars & pars);
+	bool disentangleInternalNodesByEdgeReadCounts(const disentangleInternalNodesPars & pars);
+	bool disentangleInternalNodesByNodeReadCounts(const disentangleInternalNodesPars & pars);
 
 	bool breakSelfPointingPathsKeepOtherEdges();
   bool breakSelfPointingPaths();

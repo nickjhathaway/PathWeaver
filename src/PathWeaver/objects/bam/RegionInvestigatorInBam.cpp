@@ -52,6 +52,7 @@ namespace njhseq {
 		setUp.setOption(countDuplicates, "--countDuplicates", "Skip reads marked as duplicates");
 		setUp.setOption(totalCountCutOff, "--totalCountCutOff", "Total Count Cut Off");
 		setUp.setOption(perBaseCountCutOff, "--perBaseCountCutOff", "Per Base Count Cut Off");
+		setUp.setOption(spanByTrueTrim, "--determineSpanByTrueTrim", "Determine Spanning By True Trim");
 
 	}
 
@@ -425,16 +426,21 @@ void BamRegionInvestigator::updateFullSpanningCountForRegion(
 			}else{
 				++currentInfo.totalReads_;
 				if(bAln.Position <= currentInfo.region_.start_ && bAln.GetEndPosition() >= currentInfo.region_.end_){
-					//spanning read
-					seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
-					if(bAln.IsReverseStrand() != currentInfo.region_.reverseSrand_){
-						querySeq.reverseComplementRead(false, true);
-					}
-					readVec::getMaxLength(querySeq, maxlen);
-					alignerObj.parts_.setMaxSize(maxlen);
-					readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq, trimPars, alignerObj);
-					if(querySeq.on_){
+
+					if(spanningReadsPar.spanByTrueTrim){
 						//spanning read
+						seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
+						if(bAln.IsReverseStrand() != currentInfo.region_.reverseSrand_){
+							querySeq.reverseComplementRead(false, true);
+						}
+						readVec::getMaxLength(querySeq, maxlen);
+						alignerObj.parts_.setMaxSize(maxlen);
+						readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq, trimPars, alignerObj);
+						if(querySeq.on_){
+							//spanning read
+							++currentInfo.totalFullySpanningReads_;
+						}
+					}else{
 						++currentInfo.totalFullySpanningReads_;
 					}
 				}
@@ -559,17 +565,22 @@ BamRegionInvestigator::ReadCountsResSingle BamRegionInvestigator::getFullSpannin
 				}
 			}else{
 				++ret.totalReadCount_;
+
 				if(bAln.Position <= currentRegion.start_ && bAln.GetEndPosition() >= currentRegion.end_){
-					//spanning read
-					seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
-					if(bAln.IsReverseStrand() != currentRegion.reverseSrand_){
-						querySeq.reverseComplementRead(false, true);
-					}
-					readVec::getMaxLength(querySeq, maxlen);
-					alignerObj.parts_.setMaxSize(maxlen);
-					readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq, trimPars, alignerObj);
-					if(querySeq.on_){
+					if(spanningReadsPar.spanByTrueTrim){
 						//spanning read
+						seqInfo querySeq = bamAlnToSeqInfo(bAln, false);
+						if(bAln.IsReverseStrand() != currentRegion.reverseSrand_){
+							querySeq.reverseComplementRead(false, true);
+						}
+						readVec::getMaxLength(querySeq, maxlen);
+						alignerObj.parts_.setMaxSize(maxlen);
+						readVecTrimmer::trimSeqToRefByGlobalAln(querySeq, refSeq, trimPars, alignerObj);
+						if(querySeq.on_){
+							//spanning read
+							++ret.spanningReadCount_;
+						}
+					}else{
 						++ret.spanningReadCount_;
 					}
 				}

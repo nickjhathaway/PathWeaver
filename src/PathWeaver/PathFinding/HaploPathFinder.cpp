@@ -155,6 +155,7 @@ void HaploPathFinder::PathFinderCorePars::setOptimizationParameters(seqSetUp & s
 	}
 	setUp.setOption(kmerLengths, "--kmerLengths", "K-mer Lengths to use in reconstructions");
 	njh::sort(kmerLengths);
+	estimatorKlen = std::min(vectorMinimum(kmerLengths), estimatorKlen);
 
 	//kmer occurrence cut off and optimization
 	optKcutStart = 2;
@@ -387,8 +388,8 @@ void HaploPathFinder::PathFinderCorePars::setFurtherSplittingOpts(seqSetUp & set
 		setUp.setOption(splitEndsOnce_, "--splitEndsOnce", "Split Ends Nodes Once");
 	}
 
-
-
+	setUp.setOption(disentangleByNodeCounts_, "--disentangleByNodeCounts", "Disentangle By Node Counts");
+	setUp.setOption(addByEdgeDisentangleByNodeCounts_, "--addByEdgeDisentangleByNodeCounts", "Add by Edge Disentangle after Disentangle By Node Counts");
 	setUp.setOption(splitTailed_, "--splitTailed", "Split Tailed Nodes");
 	setUp.setOption(splitEnds_, "--splitEnds", "Split End Nodes");
 	setUp.setOption(maxSplitEndNodeSize_, "--maxSplitEndNodeSize", "Max Split End Node Size");
@@ -396,6 +397,9 @@ void HaploPathFinder::PathFinderCorePars::setFurtherSplittingOpts(seqSetUp & set
 	setUp.setOption(splitToRecruit_, "--splitToRecruit", "Split To Recruit");
 	setUp.setOption(addHeadTailSeqsToRecruit, "--addHeadTailSeqsToRecruit", "Add Head Tail Seqs To Recruit, this allows longer pieces to map to");
 	setUp.setOption(initialBreakingSinglePaths_, "--initialBreakingSinglePaths_", "Initial Breaking Single Paths");
+	setUp.setOption(startWithRemoveShortTips_, "--startWithRemoveShortTips", "Initial Began With Remove Short Tips");
+
+
 }
 
 void HaploPathFinder::PathFinderCorePars::setHeadlessTaillessNodesOpts(seqSetUp & setUp){
@@ -563,7 +567,10 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	if(setUp.setOption(bamExtractPars_.percentSubSample_, "--percentSubSample", "A number between 0 and 1 for sub sampling", false, "BamExtracting", njh::progutils::ProgramSetUp::flagCheckFrom0To1<double>("percentSubSample"))){
 		maxPerBaseCoverage = std::numeric_limits<double>::max();
 	}
-
+	setUp.setOption(bamExtractPars_.renameSingles_, "--bamExtractRenameSingles",
+									"When extracting singles from region rename", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.trimToRegion_, "--bamExtractTrimToRegion",
+									"When extracting from region trim to the region", false, "BamExtracting");
 	if (bamExtractPars_.keepMarkedDuplicate_) {
 		bool removeMakredDups = false;
 		setUp.setOption(removeMakredDups, "--removeMakredDuplicate",

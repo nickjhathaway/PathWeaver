@@ -48,6 +48,7 @@ public:
 		uint32_t baseQuality = 25;
 		double matchIDCutOff = 0.70;
 
+		bool spanByTrueTrim = false;
 		uint32_t totalCountCutOff = 5;
 		uint32_t perBaseCountCutOff = 3;
 		bool forcePlusStrand = false;

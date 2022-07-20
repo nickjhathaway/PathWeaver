@@ -955,6 +955,7 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
           }
         }
       } catch (std::exception &e) {
+//				std::cout << e.what() << std::endl;
         try {
           auto finalInfoRegionDir = njh::files::make_path(finalDirectory,
                                                           regionName);
