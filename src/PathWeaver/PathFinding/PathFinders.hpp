@@ -31,6 +31,7 @@
 #include <njhseq/objects/BioDataObject.h>
 #include <njhseq/GenomeUtils.h>
 #include <njhcpp/concurrency/LockableJsonLog.hpp>
+#include <njhseq/objects/Meta/MultipleGroupMetaData.hpp>
 
 #include "PathWeaver/objects/dataContainers/graphs.h"
 #include "PathWeaver/PathFinding/HaploPathFinder.hpp"
