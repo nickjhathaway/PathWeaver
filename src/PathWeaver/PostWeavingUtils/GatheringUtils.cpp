@@ -35,7 +35,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		std::function<void()> collectSeqs = [&inputDirQueue,
-																				 &allSeqsByTarget, &allSeqsByTargetMut,
+																				 &allSeqsByTarget,
+																				 &allSeqsByTargetMut,
 																				 &alnPool,
 																				 &pars,&ret,this](){
 			bfs::path inputDir;
@@ -202,6 +203,11 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								tarSeqs.emplace_back(seq);
 							}
 							//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//							if(njh::in(tar.first, VecStr{"Pf3D7_13_v3-2842076-2842151__var-0", "Pf3D7_13_v3-2842076-2842151.var-0"})){
+//								std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//								std::cout << "target: " << tar.first << std::endl;
+//								std::cout << "tarSeqs.size(): " << tarSeqs.size() << std::endl;
+//							}
 							addOtherVec(currentAllSeqsByTarget[tar.first], tarSeqs);
 							//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
@@ -242,6 +248,10 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			njh::sort(targetKeys);
 
 			for(const auto & target : targetKeys){
+//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
+//				std::cout << target << std::endl;
+//				std::cout << "allSeqsByTarget[target].size(): " << allSeqsByTarget[target].size() << std::endl;
+
 				ret.targetKeyNewToOld[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
 				ret.targetKeyOldToNew[MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField)] = target;
 

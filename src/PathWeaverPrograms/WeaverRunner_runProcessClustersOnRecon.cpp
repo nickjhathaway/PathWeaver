@@ -177,6 +177,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //	rawGatherPars.addPartial = addPartial;
 //	rawGatherPars.targets = targets;
 
+
+	/*
+	 * PathWeaver runProcessClustersOnRecon --swgaSampleClusErrorSet --overWriteDir  --dout popClusteringSWGAErrors --pat _fullDrugResistanceGenes --numThreads 5  --groupingsFile /tank/data/plasmodium/falciparum/pfdata/metadata/meta.tab.txt --alnInfoDir alnCache
+	 */
+
 	setUp.processDebug();
 	setUp.processVerbose();
 	bool trimBedSet = setUp.setOption(trimBedFnp, "--trimBedFnp", "Bed File of trim locations, 4th column must match the name of the input targets");
@@ -198,7 +203,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
 	setUp.setOption(samples, "--samples", "Process input from only these samples");
 	setUp.setOption(rawGatherPars.targets, "--targets", "Process input for only these targets");
-	setUp.setOption(rawGatherPars.addPartial, "--addPartial", "Add Partial");
+	bool noPartial = false;
+
+	setUp.setOption(noPartial, "--doNotAddPartial", "Don't Add Partial sequences, seqs that were able to be trimmed but there was left over sequence (which sometimes is consistent with artifact)");
+	rawGatherPars.addPartial = !noPartial;
 	setUp.setOption(rawGatherPars.minInputSeqLen, "--minInputSeqLen", "Min Input Seq Len");
 
 	setUp.setOption(countField, "--countField", "counts field (set equal to \"reads\" to use the total reads for a hap");
@@ -245,9 +253,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		masterPopClusPars.hqMismatches = 1;
 	}
 
-
-	setUp.setOption(swgaSampleClusErrorSet, "--swgaSampleClusErrorSet", "Collapse parameters for each sample with SWGA data (collapsing on homopolymer indel)s", false, "Clustering");
-
+	bool doNotUseSwgaSampleClusErrorSet = false;
+	setUp.setOption(doNotUseSwgaSampleClusErrorSet, "--doNotUseSwgaSampleClusErrorSet", "By default collapse parameters for each sample with SWGA data (collapsing on homopolymer indel)s, this will turn this off and another clustering or parameters can be set for the clustering", false, "Clustering");
+	swgaSampleClusErrorSet = !doNotUseSwgaSampleClusErrorSet;
 	setUp.setOption(masterPopClusPars.strictErrorsSet, "--strictErrors", "Collapse parameters with a several low quality mismatches", false, "Clustering");
 	setUp.setOption(masterPopClusPars.hqMismatches, "--hq", "Number of high quality mismatches to allow", false, "Clustering");
 	setUp.setOption(masterPopClusPars.stopAfter, "--stopAfter", "Number of top haplotypes to check", false, "Clustering");
@@ -257,30 +265,38 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(masterPopClusPars.binParameters, "--binPar", "bin Parameters Filename", false, "Clustering");
 
 
-	masterPopClusPars.preFiltCutOffs.sampleMinReadCount = 250;
+	masterPopClusPars.preFiltCutOffs.sampleMinReadCount = 10;
 	bool sampMinSet = setUp.setOption(masterPopClusPars.preFiltCutOffs.sampleMinReadCount, "--sampleMinTotalReadCutOff",
 			"Sample Minimum Total Read Cut Off, if the total read count for the sample is below this it will be thrown out", false, "Filtering");
 
 	masterPopClusPars.preFiltCutOffs.replicateMinReadCount = masterPopClusPars.preFiltCutOffs.sampleMinReadCount;
+
 	bool repMinSet = setUp.setOption(masterPopClusPars.preFiltCutOffs.replicateMinReadCount, "--replicateMinTotalReadCutOff",
 				"Replicate Minimum Total Read Cut Off, if the total read count for the replicate is below this it will be thrown out", false, "Filtering");
 	if(repMinSet && !sampMinSet){
 		masterPopClusPars.preFiltCutOffs.sampleMinReadCount = masterPopClusPars.preFiltCutOffs.replicateMinReadCount;
 	}
 	setUp.setOption(masterPopClusPars.runsRequired, "--runsRequired", "Number of PCR runs Required for a haplotype to be kept", false, "Filtering");
-	masterPopClusPars.preFiltCutOffs.clusterSizeCutOff = 10;
+	masterPopClusPars.preFiltCutOffs.clusterSizeCutOff = 5;
 	setUp.setOption(masterPopClusPars.preFiltCutOffs.clusterSizeCutOff, "--clusterCutOff", "Input Cluster Size Cut Off", false, "Filtering");
 	setUp.setOption(masterPopClusPars.excludeSamples, "--excludeSamples", "Samples to Exclude from analysis", false, "Filtering");
-	setUp.setOption(masterPopClusPars.lowLevelPopFiltPars_.removeCommonlyLowFreqHaplotypes_, "--excludeCommonlyLowFreqHaplotypes", "Remove Commonly Low Freq Haplotypes", false, "Filtering");
+	bool keepCommonlyLowFreqHaplotypes = false;
+	setUp.setOption(keepCommonlyLowFreqHaplotypes, "--keepCommonlyLowFreqHaplotypes", "Keep Commonly Low Freq Haplotypes", false, "Filtering");
+	masterPopClusPars.lowLevelPopFiltPars_.removeCommonlyLowFreqHaplotypes_ = !keepCommonlyLowFreqHaplotypes;
 	setUp.setOption(masterPopClusPars.lowLevelPopFiltPars_.lowFreqHaplotypeFracCutOff_, "--lowFreqHaplotypeFracCutOff", "Low Freq Haplotype Frac Cut Off", false, "Filtering");
 	setUp.setOption(masterPopClusPars.experimentNames.controlSamples_, "--controlSamples", "Samples that shouldn't be included in frequency filtering calcs", false, "Filtering");
-	setUp.setOption(masterPopClusPars.collapseLowFreqOneOffs, "--excludeLowFreqOneOffs",
-			"Collapse any haplotypes that are low frequency compared to another haplotype (determined by lowFreqMultiplier) and only differs by 1 base", false, "Filtering");
+	bool keepLowFreqOneOffs = false;
+	setUp.setOption(keepLowFreqOneOffs, "--keepLowFreqOneOffs",
+			"Keep any haplotypes that are low frequency compared to another haplotype (determined by lowFreqMultiplier) and only differs by 1 base (defualt is to remove them)", false, "Filtering");
+	masterPopClusPars.collapseLowFreqOneOffs = !keepLowFreqOneOffs;
 	setUp.setOption(masterPopClusPars.lowFreqMultiplier, "--oneOffLowFreqMultiplier",
 			"Low Freq Multiplier used for --excludeLowFreqOneOffs, considered low frequency if haplotype frac is less than its fraction times this number than the other haplotype", false, "Filtering");
 
-	setUp.setOption(masterPopClusPars.lowLevelPopFiltPars_.removeOneSampOnlyOneOffHaps_, "--removeOneSampOnlyOneOffHaps",
-			"Remove haplotypes that are below --oneSampOnlyOneOffHapsFrac fraction(default 0.20) that only appear in one sample that is one off of another haplotype within sample", false, "Filtering");
+	bool keepOneSampOnlyOneOffHaps = false;
+	setUp.setOption(masterPopClusPars.lowLevelPopFiltPars_.removeOneSampOnlyOneOffHaps_, "--keepOneSampOnlyOneOffHaps",
+			"Keep haplotypes that are below --oneSampOnlyOneOffHapsFrac fraction(default 0.20) that only appear in one sample that is one off of another haplotype within sample", false, "Filtering");
+	masterPopClusPars.lowLevelPopFiltPars_.removeOneSampOnlyOneOffHaps_ = !keepOneSampOnlyOneOffHaps;
+	masterPopClusPars.lowLevelPopFiltPars_.oneSampOnlyOneOffHapsFrac_ = 0.21;
 	setUp.setOption(masterPopClusPars.lowLevelPopFiltPars_.oneSampOnlyOneOffHapsFrac_, "--oneSampOnlyOneOffHapsFrac",
 			"Fraction for --removeOneSampOnlyOneOffHaps", false, "Filtering");
 
@@ -291,7 +307,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	setUp.setOption(masterPopClusPars.rescuePars_.majorHaplotypeFracForRescue_, "--majorHaplotypeFracForRescue", "In order to be considered a major haplotype in a sample for comparing during rescue");
 	setUp.setOption(masterPopClusPars.rescuePars_.rescueExcludedChimericHaplotypes, "--rescueExcludedChimericHaplotypes", "Rescue Excluded chimeric Haplotypes if they appear as a major haplotype in another sample");
-	setUp.setOption(masterPopClusPars.rescuePars_.rescueExcludedOneOffLowFreqHaplotypes, "--rescueExcludedOneOffLowFreqHaplotypes", "Rescue Excluded one off low freq Haplotypes if they appear as a major haplotype in another sample");
+	bool doNotRescueExcludedOneOffLowFreqHaplotypes;
+	setUp.setOption(doNotRescueExcludedOneOffLowFreqHaplotypes, "--doNotRescueExcludedOneOffLowFreqHaplotypes", "Do Not Rescue Excluded one off low freq Haplotypes if they appear as a major haplotype in another sample");
+	masterPopClusPars.rescuePars_.rescueExcludedOneOffLowFreqHaplotypes = !doNotRescueExcludedOneOffLowFreqHaplotypes;
 	setUp.setOption(masterPopClusPars.rescuePars_.rescueExcludedLowFreqHaplotypes, "--rescueExcludedLowFreqHaplotypes", "Rescue Excluded Haplotypes for falling below frequency cut off if they appear as a major haplotype in another sample");
 	setUp.setOption(masterPopClusPars.rescueMatchingExpected, "--rescueMatchingExpected", "Rescue Haplotypes that match expected sequences if they have been read using --ref");
 	setUp.setOption(masterPopClusPars.fracCutoff, "--fracCutOff", "Final cluster Fraction Cut off", false, "Filtering");
@@ -505,7 +523,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		TwoBit::TwoBitFile tReader(genomeFnp);
 		auto locations = bedPtrsToGenomicRegs(getBeds(trimBedFnp));
 		for(const auto & loc : locations){
-			rawGatherPars.trimSeqs[loc.uid_].emplace_back(seqWithKmerInfo(loc.extractSeq(tReader),7, false));
+			rawGatherPars.trimSeqs[loc.uid_].emplace_back(loc.extractSeq(tReader),7, false);
 		}
 	}
 
@@ -1046,7 +1064,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			double maxHaps = 0;
 			double meanHaps = 0;
 			double medianHaps = 0;
-			if(samplesCOIsPerTarget[tar].size() > 0){
+			if(!samplesCOIsPerTarget[tar].empty()){
 				totalHaps = vectorSum(samplesCOIsPerTarget[tar]);
 				minHaps = vectorMinimum(samplesCOIsPerTarget[tar]);
 				maxHaps = vectorMaximum(samplesCOIsPerTarget[tar]);
@@ -1074,6 +1092,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	bfs::path outAllSeqsFnp = allSeqsFnp.string() + ".gz";
 	njh::gzZipFile(IoOptions(InOptions(allSeqsFnp), OutOptions(outAllSeqsFnp)));
 	bfs::remove(allSeqsFnp);
+
+
+
 
 
 	return 0;

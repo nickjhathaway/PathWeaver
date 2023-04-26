@@ -57,7 +57,7 @@ public:
 		std::set<std::string> targets;
 		bool addPartial = false;
 		std::unordered_map<std::string, std::vector<seqWithKmerInfo>> trimSeqs;
-		uint32_t minInputSeqLen = 25;
+		uint32_t minInputSeqLen = 12;
 	};
 
 	gatherSeqsAndSortByTargetRes gatherSeqsAndSortByTarget(const gatherSeqsAndSortByTargetPars & pars);
