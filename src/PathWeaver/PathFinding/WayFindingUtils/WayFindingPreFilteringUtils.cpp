@@ -85,6 +85,7 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 		SeqInput pairedReader(inOpts.inPairs_);
 		pairedReader.openIn();
 		while (pairedReader.readNextRead(pSeq)) {
+//			std::cout << "pSeq.mateRComplemented_: " << njh::colorBool(pSeq.mateRComplemented_) << std::endl;
 			readVec::getMaxLength(pSeq.seqBase_, ret.maxInputSeqLen);
 			readVec::getMaxLength(pSeq.mateSeqBase_, ret.maxInputSeqLen);
 			if(extractionPars.trimOnQual_){
@@ -177,7 +178,7 @@ preprocessSeqsForWayFindingRes preprocessSeqsForWayFinding(
 				if(extractionPars.writeOutAll_){
 					dup_writer.openWrite(pSeq);
 				}
-			}else	if (!firstSkipped && !secondSkipped) {
+			} else	if (!firstSkipped && !secondSkipped) {
 				writer.openWrite(pSeq);
 				if(extractionPars.filterbyKmerCommonLoc_){
 					if(len(pSeq.seqBase_) > extractionPars.kmerCommonLocKmerLength){

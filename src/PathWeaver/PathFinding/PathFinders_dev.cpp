@@ -133,7 +133,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				SeqInput pairedReader(findTanStitchPars.usedFilteredPairedOpts);
 				pairedReader.openIn();
 				while (pairedReader.readNextRead(pSeq)) {
-
+//					std::cout << __LINE__ << " pSeq.mateRComplemented_: " << njh::colorBool(pSeq.mateRComplemented_) << std::endl;
 					bool firstSkipped = KmerPathwayGraphDev::skipInputSeqForKCount(pSeq.seqBase_.seq_, currentKLen);
 					bool secondSkipped = KmerPathwayGraphDev::skipInputSeqForKCount(pSeq.mateSeqBase_.seq_, currentKLen);
 					if(extractionPars.trimSeqsWithNs_){
@@ -229,9 +229,10 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			unused_writer.closeOut();
 			unused_singleWriter.closeOut();
 		}
-		SeqInput pairedReader(
-				SeqIOOptions::genPairedIn(pairedOpts.getPriamryOutName(),
-						pairedOpts.getSecondaryOutName()));
+		auto finalPairedInOpts = SeqIOOptions::genPairedIn(pairedOpts.getPriamryOutName(),
+																											 pairedOpts.getSecondaryOutName());
+		finalPairedInOpts.revComplMate_ = inOpts.inPairs_.revComplMate_;
+		SeqInput pairedReader(finalPairedInOpts);
 		SeqInput singleReader(
 				SeqIOOptions::genFastqIn(singletOuts.getPriamryOutName()));
 
@@ -371,14 +372,15 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			//debugEstimatingGraph.setOccurenceCutOff(kmerOccurenceCutOff);
 //			debugEstimatingGraph.debug_ = extractionPars.graphDebug_;
 //			debugEstimatingGraph.verbose_ = extractionPars.graphVerbose_;
-//			auto usedSinglesFnp = singletOuts.getPriamryOutName();
-//			auto usedPairedR1Fnp = pairedOpts.getPriamryOutName();
-//			auto usedPairedR2Fnp = pairedOpts.getSecondaryOutName();
-			auto usedSinglesFnp =  njh::files::make_path(finalCurrentDir, "filteredSingles.fastq");
-			auto usedPairedR1Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R1.fastq");
-			auto usedPairedR2Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R2.fastq");
-			if(bfs::exists(usedPairedR1Fnp)){
-				SeqInput reader(SeqIOOptions::genPairedIn(usedPairedR1Fnp, usedPairedR2Fnp));
+//			auto usedFilteredSinglesFnp = singletOuts.getPriamryOutName();
+//			auto usedFilteredPairedR1Fnp = pairedOpts.getPriamryOutName();
+//			auto usedFilteredPairedR2Fnp = pairedOpts.getSecondaryOutName();
+			auto usedFilteredSinglesFnp =  njh::files::make_path(finalCurrentDir, "filteredSingles.fastq");
+			auto usedFilteredPairedR1Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R1.fastq");
+			auto usedFilteredPairedR2Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R2.fastq");
+			if(bfs::exists(usedFilteredPairedR1Fnp)){
+				SeqInput reader(SeqIOOptions::genPairedIn(usedFilteredPairedR1Fnp, usedFilteredPairedR2Fnp));
+				reader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
 				reader.openIn();
 				PairedRead seq;
 				while(reader.readNextRead(seq)){
@@ -401,8 +403,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					}
 				}
 			}
-			if(bfs::exists(usedSinglesFnp)){
-				SeqInput reader(SeqIOOptions::genFastqIn(usedSinglesFnp));
+			if(bfs::exists(usedFilteredSinglesFnp)){
+				SeqInput reader(SeqIOOptions::genFastqIn(usedFilteredSinglesFnp));
 				reader.openIn();
 				seqInfo seq;
 				while(reader.readNextRead(seq)){
@@ -439,6 +441,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			PairedRead pSeq;
 			SeqInput noTandemPairReader(
 					SeqIOOptions::genPairedIn(notandemR1Fnp, notandemR2Fnp));
+			noTandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
 			noTandemPairReader.openIn();
 			while (noTandemPairReader.readNextRead(pSeq)) {
 				++totalInputSequences;
@@ -471,6 +474,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 
 			if(bfs::exists(tandemR1Fnp)){
 				SeqInput tandemPairReader(SeqIOOptions::genPairedIn(tandemR1Fnp, tandemR2Fnp ));
+				tandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
 				PairedRead pSeq;
 				tandemPairReader.openIn();
 				while(tandemPairReader.readNextRead(pSeq)){
@@ -489,10 +493,10 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			}
 			//singles
 			if(bfs::exists(tandemSingleFnp)){
-				SeqInput singleReader(SeqIOOptions::genFastqIn(tandemSingleFnp ));
+				SeqInput singleTandemReader(SeqIOOptions::genFastqIn(tandemSingleFnp ));
 				seqInfo seq;
-				singleReader.openIn();
-				while(singleReader.readNextRead(seq)){
+				singleTandemReader.openIn();
+				while(singleTandemReader.readNextRead(seq)){
 					//single
 					{
 						auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
@@ -614,6 +618,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 			PairedRead pSeq;
 			SeqInput noTandemPairReader(
 					SeqIOOptions::genPairedIn(notandemR1Fnp, notandemR2Fnp));
+			noTandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
 			noTandemPairReader.openIn();
 			while (noTandemPairReader.readNextRead(pSeq)) {
 				firstGraph->threadThroughSequence(pSeq);
@@ -633,6 +638,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		//pairs
 		if(bfs::exists(tandemR1Fnp)){
 			SeqInput tandemPairReader(SeqIOOptions::genPairedIn(tandemR1Fnp, tandemR2Fnp ));
+			tandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
 			PairedRead pSeq;
 			tandemPairReader.openIn();
 			while(tandemPairReader.readNextRead(pSeq)){
@@ -647,10 +653,10 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		}
 		//singles
 		if(bfs::exists(tandemSingleFnp)){
-			SeqInput singleReader(SeqIOOptions::genFastqIn(tandemSingleFnp ));
+			SeqInput singleTandemReader(SeqIOOptions::genFastqIn(tandemSingleFnp ));
 			seqInfo seq;
-			singleReader.openIn();
-			while(singleReader.readNextRead(seq)){
+			singleTandemReader.openIn();
+			while(singleTandemReader.readNextRead(seq)){
 				//single
 				{
 					++totalInputSequences;
@@ -661,7 +667,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		}
 		uint32_t kCutIter = 0;
 		std::vector<OptimizationReconResult> allCurrentKCutOffOptResults;
-		//get max k occurence cut
+		//get max k occurrence cut
 		auto maxKCut = vectorMaximum(used_kmerKOcurrenceCutOffs);
 		for(const auto kmerOccurenceCutOff : used_kmerKOcurrenceCutOffs){
 			auto genPrefixForWatchLapNameKCut = [&watch,&currentKLen,&kmerOccurenceCutOff,
@@ -3097,6 +3103,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 
 						auto usedSinglesOpts =  SeqIOOptions::genFastqIn(njh::files::make_path(finalCurrentDir, "filteredSingles.fastq"));
 						auto usedPairedOpts = SeqIOOptions::genPairedIn(njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R1.fastq"), njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R2.fastq"));
+						usedPairedOpts.revComplMate_ = inOpts.inPairs_.revComplMate_;
 						if(usedSinglesOpts.inExists()){
 							SeqInput reader(usedSinglesOpts);
 							seqInfo seq;
@@ -3504,6 +3511,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				auto usedPairedR2Fnp = njh::files::make_path(finalCurrentDir, "filteredExtractedPairs_R2.fastq");
 				if(bfs::exists(usedPairedR1Fnp)){
 					SeqInput reader(SeqIOOptions::genPairedIn(usedPairedR1Fnp, usedPairedR2Fnp));
+					reader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
 					reader.openIn();
 					PairedRead seq;
 					while(reader.readNextRead(seq)){

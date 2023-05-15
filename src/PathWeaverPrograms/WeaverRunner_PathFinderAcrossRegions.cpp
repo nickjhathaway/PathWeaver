@@ -139,7 +139,7 @@ int WeaverRunner::SeqsExtractPathways(const njh::progutils::CmdArgs & inputComma
 	pars.pFinderPars_.verbose = setUp.pars_.verbose_;
 	//pars.pFinderPars_.debug = setUp.pars_.debug_;
 	std::unique_ptr<MultipleGroupMetaData> meta;
-	if ("" != pars.metaDataFnp) {
+	if (!pars.metaDataFnp.empty()) {
 		meta = std::make_unique<MultipleGroupMetaData>(pars.metaDataFnp,
 				std::set<std::string> { sampName });
 	} else {
