@@ -32,8 +32,8 @@ namespace njhseq {
 
 std::string getPossibleSampleNameFromFnp(const bfs::path & fnp){
 	std::string bName = bfs::basename(fnp);
-	if(std::string::npos != bName.find(".")){
-		bName = bName.substr(0, bName.find("."));
+	if(std::string::npos != bName.find('.')){
+		bName = bName.substr(0, bName.find('.'));
 	}
 	return bName;
 }
@@ -1106,7 +1106,7 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 			{
 				std::lock_guard<std::mutex> tandemLock(allTandemMut);
 				for(const auto & currentTandem : allCurrentTandems){
-					if(std::string::npos == currentTandem.repeat_ .repeat_.find("N")){
+					if(std::string::npos == currentTandem.repeat_ .repeat_.find('N')){
 						ret.allTandems.emplace_back(currentTandem);
 					}
 				}
@@ -1243,7 +1243,7 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 			{
 				std::lock_guard<std::mutex> tandemLock(allTandemMut);
 				for(const auto & currentTandem : allCurrentTandems){
-					if(std::string::npos == currentTandem.repeat_ .repeat_.find("N")){
+					if(std::string::npos == currentTandem.repeat_ .repeat_.find('N')){
 						ret.allTandems.emplace_back(currentTandem);
 					}
 				}
