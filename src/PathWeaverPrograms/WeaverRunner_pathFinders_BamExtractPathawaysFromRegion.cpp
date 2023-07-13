@@ -362,6 +362,7 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 
         auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(
                 *bamReader, extractedOpts.out_, regionsUsed, parsForRegion.bamExtractPars_);
+
         if (keepTemporaryFiles) {
           OutOptions extractedReadsStatsFileOpts(njh::files::make_path(extractionDir, "extractedReadsStats.tab.txt"));
           OutputStream extractedReadsStatsFileOut(extractedReadsStatsFileOpts);
