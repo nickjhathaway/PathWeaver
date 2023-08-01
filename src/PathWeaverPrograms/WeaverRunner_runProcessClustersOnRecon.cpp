@@ -154,7 +154,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	std::set<std::string> samples;
 //	std::set<std::string> targets;
 	bfs::path inputDirectory = "./";
-	std::string pat = "";
+	std::string pat;
 	std::string countField = "estimatedPerBaseCoverage";
 
 	bfs::path trimBedFnp = "";
