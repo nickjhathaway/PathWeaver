@@ -186,7 +186,9 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 
 
 	bool nodesSplit = false;
+#if defined(PATHWEAVERSUPERDEBUG)
 	uint32_t nodeProcessCount = 0;
+#endif
 	for (const auto & n : nodesToProcess) {
 		//bool printInfo = false;
 //		if(n->k_.length() == 136){
@@ -299,8 +301,9 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				exit(1);
 			}
 		}
-#endif
+
 		++nodeProcessCount;
+#endif
 //		if (n->headCount() > 1 && n->tailCount() > 1) {
 		if (!n->headless() && !n->tailless() && (n->headCount() > 1 || n->tailCount() > 1)) {
 #if defined(PATHWEAVERSUPERDEBUG)
@@ -448,16 +451,20 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 				}
 #endif
 				for (const auto & tail : outgoing) {
+					uint32_t tailReadsCount = 0;
+#if defined(PATHWEAVERSUPERDEBUG)
 					uint32_t headReadsCount = 0;
 					uint32_t headTotalCount = 0;
-					uint32_t tailReadsCount = 0;
 					uint32_t tailTotalCount = 0;
+#endif
 					for (const auto & tailCounts : tail.second) {
 						if (njh::in(tailCounts.first, head.second)) {
+							++tailReadsCount;
+#if defined(PATHWEAVERSUPERDEBUG)
 							headTotalCount += head.second.at(tailCounts.first);
 							tailTotalCount += tailCounts.second;
-							++tailReadsCount;
 							++headReadsCount;
+#endif
 						}
 					}
 					if(tailReadsCount > 0){
@@ -591,10 +598,10 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 			std::set<std::string> tailsGoingToAdd;
 			if (!uniqueHeadsToTailsCounts.empty()) {
 				for(const auto & head : uniqueHeadsToTailsCounts){
-					uint32_t total = 0;
-					for(const auto & tail : head.second){
-						total+= tail.second;
-					}
+					// uint32_t total = 0;
+					// for(const auto & tail : head.second){
+					// 	total+= tail.second;
+					// }
 					for(const auto & tail : head.second){
 //						if(tail.second > occurenceCutOff_){
 						if(tail.second > connectorCutOff){
@@ -757,8 +764,8 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 						for (const auto & name : n->inReadNamesIdx_) {
 							bool appearsInHeads = false;
 							bool appearsInTails = false;
-							bool appearsInOtherTails = false;
-							bool appearsInOtherHeads = false;
+							// bool appearsInOtherTails = false;
+							// bool appearsInOtherHeads = false;
 							if (njh::in(name, incoming[head.first])) {
 								appearsInHeads = true;
 							}
@@ -800,7 +807,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 
 							for (const auto & other : outgoing) {
 								if (other.first != tail && njh::in(name, other.second)) {
-									appearsInOtherTails = true;
+									// appearsInOtherTails = true;
 									++appearsInOtherTailsCounts;
 #if defined(PATHWEAVERSUPERDEBUG)
 									{
@@ -829,7 +836,7 @@ bool KmerPathwayGraph::disentangleInternalNodes(const disentangleInternalNodesPa
 							for(const auto & other : incoming){
 								if(other.first != head.first &&
 										njh::in(name, other.second)){
-									appearsInOtherHeads = true;
+									// appearsInOtherHeads = true;
 									++appearsInOtherHeadsCounts;
 #if defined(PATHWEAVERSUPERDEBUG)
 									{

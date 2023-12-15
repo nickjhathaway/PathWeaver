@@ -837,7 +837,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						if(extractionPars.trimShortTips_){
 							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 						"- Removing Short tips"));
+#if defined(PATHWEAVERDEBUG)
 							uint32_t removeShortTipRunNumber = 0;
+#endif
 							while(currentGraph->removeShortTips(shortTipNumber, tipCutOff)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -851,8 +853,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("collapsedInitialGraph-rmHeadTailLess-removedShortTips-beforeBreakSelfPointingPaths", "-", removeShortTipRunNumber, "-collapsed"));
 								}
-#endif
+
 								++removeShortTipRunNumber;
+#endif
 							}
 						}
 						//break self pointing paths;
@@ -877,7 +880,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						if(extractionPars.collapseOneBaseIndelsNodes_){
 							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(), "- Collapsing One Base Indel nodes immediately after initial collapse"));
 							//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 							uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 							while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -889,11 +894,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-collapsedInitialGraph-collapseOneBaseIndelsNodes-",collapseOneBaseIndelsNodesCount ));
 								}
-#endif
-								++collapseOneBaseIndelsNodesCount;
-							}
-							uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
 
+								++collapseOneBaseIndelsNodesCount;
+#endif
+							}
+#if defined(PATHWEAVERDEBUG)
+							uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 							if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -905,8 +912,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-collapsedInitialGraph-collapseOneBaseIndelsNodesComplex-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 								}
-#endif
+
 								++collapseOneBaseIndelsNodesCountComplex;
+#endif
 							}
 						}
 					}
@@ -914,7 +922,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					if(extractionPars.startWithRemoveShortTips_ && extractionPars.trimShortTips_) {
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 																							"- Removing Short tips"));
+#if defined(PATHWEAVERDEBUG)
 						uint32_t removeShortTipRunNumber = 0;
+#endif
 						while (currentGraph->removeShortTips(shortTipNumber, tipCutOff)) {
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -934,8 +944,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								graphWriter.writeOutDotsAndSeqs(
 												njh::pasteAsStr("fullCollapse-initialRemoveShortTips", "-", removeShortTipRunNumber, "-collapsed"));
 							}
-#endif
+
 							++removeShortTipRunNumber;
+#endif
 						}
 					}
 
@@ -971,7 +982,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 
 					if(extractionPars.startDisentanglementConservative_){
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes Conservative"));
+#if defined(PATHWEAVERDEBUG)
 						uint32_t disentagleCount = 0;
+#endif
 						KmerPathwayGraphDev::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 						while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
@@ -1004,7 +1017,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 							"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 								//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 								uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 								while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1016,11 +1031,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									{
 										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 									}
-#endif
-									++collapseOneBaseIndelsNodesCount;
-								}
 
+									++collapseOneBaseIndelsNodesCount;
+#endif
+								}
+#if defined(PATHWEAVERDEBUG)
 								uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 								if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1032,14 +1049,15 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									{
 										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 									}
-#endif
+
 									++collapseOneBaseIndelsNodesCountComplex;
+#endif
 								}
 							}
 
-
-							++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+							++disentagleCount;
+
 							{
 								std::cout << __FILE__ << " " << __LINE__ << std::endl;
 								std::cout << "conservative disentagleCount: " << disentagleCount << std::endl;
@@ -1080,7 +1098,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 																										"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 									//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 									uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 									while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 										{
@@ -1092,11 +1112,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										{
 										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 									}
-#endif
-										++collapseOneBaseIndelsNodesCount;
-									}
 
+										++collapseOneBaseIndelsNodesCount;
+#endif
+									}
+#if defined(PATHWEAVERDEBUG)
 									uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 									if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 										{
@@ -1108,14 +1130,15 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										{
 										graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 									}
-#endif
+
 										++collapseOneBaseIndelsNodesCountComplex;
+#endif
 									}
 								}
 
-
-								++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+								++disentagleCount;
+
 								{
 								std::cout << __FILE__ << " " << __LINE__ << std::endl;
 								std::cout << "conservative disentagleCount: " << disentagleCount << std::endl;
@@ -1125,7 +1148,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 					}
 					watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes"));
+#if defined(PATHWEAVERDEBUG)
 					uint32_t disentagleCount = 0;
+#endif
 					KmerPathwayGraphDev::disentangleInternalNodesPars disPars{false, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 					while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
@@ -1168,7 +1193,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 						"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 							//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 							uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 							while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -1180,11 +1207,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 								}
-#endif
-								++collapseOneBaseIndelsNodesCount;
-							}
 
+								++collapseOneBaseIndelsNodesCount;
+#endif
+							}
+#if defined(PATHWEAVERDEBUG)
 							uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 							if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -1196,13 +1225,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 								}
-#endif
+
 								++collapseOneBaseIndelsNodesCountComplex;
+#endif
 							}
 						}
-
-						++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+						++disentagleCount;
+
 						{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << "disentagleCount: " << disentagleCount << std::endl;
@@ -1254,7 +1284,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 																									"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 								//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 								uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 								while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1266,11 +1298,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 								}
-#endif
-									++collapseOneBaseIndelsNodesCount;
-								}
 
+									++collapseOneBaseIndelsNodesCount;
+#endif
+								}
+#if defined(PATHWEAVERDEBUG)
 								uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 								if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 									{
@@ -1282,13 +1316,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 								}
-#endif
+
 									++collapseOneBaseIndelsNodesCountComplex;
+#endif
 								}
 							}
-
-							++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+							++disentagleCount;
+
 							{
 							std::cout << __FILE__ << " " << __LINE__ << std::endl;
 							std::cout << "disentagleCount: " << disentagleCount << std::endl;
@@ -1352,7 +1387,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 					"- Collapsing One Base Indel nodes"));
 						//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 						uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 						while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -1364,11 +1401,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							{
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-collapseOneBaseIndelsNodes-",collapseOneBaseIndelsNodesCount ));
 							}
-#endif
-							++collapseOneBaseIndelsNodesCount;
-						}
-						uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
 
+							++collapseOneBaseIndelsNodesCount;
+#endif
+						}
+#if defined(PATHWEAVERDEBUG)
+						uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 						if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -1380,15 +1419,18 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							{
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-collapseOneBaseIndelsNodesComplex-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 							}
-#endif
+
 							++collapseOneBaseIndelsNodesCountComplex;
+#endif
 						}
 					}
 
 					if(extractionPars.collapseNodesWithAllowableError_){
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(), "- Collapsing nodes with allowable error"));
 						//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 						uint32_t collapseNodesWithErrorsCount = 0;
+#endif
 						while(currentGraph->collapseBubbleNodesWithError(extractionPars.errorsToAllow_, extractionPars.collapseNodesWithAllowableErrorFreqMultiplier_)){
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -1400,15 +1442,18 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							{
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-collapsedInitialGraph-collapseNodesWithAllowableError-",collapseNodesWithErrorsCount ));
 							}
-#endif
+
 							++collapseNodesWithErrorsCount;
+#endif
 						}
 					}
 
 					if(extractionPars.trimShortTips_){
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 					"- Removing Short tips"));
+#if defined(PATHWEAVERDEBUG)
 						uint32_t removeShortTipRunNumber = 0;
+#endif
 						while(currentGraph->removeShortTips(shortTipNumber, tipCutOff)){
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -1441,7 +1486,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								}
 #endif
 							}
+#if defined(PATHWEAVERDEBUG)
 							++removeShortTipRunNumber;
+#endif
 						}
 
 						if(extractionPars.removeHeadlessTaillessAlongTheWay && extractionPars.removeHeadlessTaillessAfterDisentaglement){
@@ -1468,7 +1515,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							}
 							if(extractionPars.startDisentanglementConservative_){
 								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes Conservative After tip removal"));
+#if defined(PATHWEAVERDEBUG)
 								uint32_t disentagleCount = 0;
+#endif
 								KmerPathwayGraphDev::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 								while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
@@ -1500,7 +1549,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 									"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 										//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 										uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 										while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 											{
@@ -1512,11 +1563,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 											{
 												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 											}
-#endif
-											++collapseOneBaseIndelsNodesCount;
-										}
 
+											++collapseOneBaseIndelsNodesCount;
+#endif
+										}
+#if defined(PATHWEAVERDEBUG)
 										uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 										if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 											{
@@ -1528,12 +1581,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 											{
 												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 											}
-#endif
+
 											++collapseOneBaseIndelsNodesCountComplex;
+#endif
 										}
 									}
-									++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+									++disentagleCount;
+
 									{
 										std::cout << __FILE__ << " " << __LINE__ << std::endl;
 										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
@@ -1573,7 +1628,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 											watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 																												"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 											//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 											uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 											while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 												{
@@ -1585,11 +1642,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 												{
 												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 											}
-#endif
-												++collapseOneBaseIndelsNodesCount;
-											}
 
+												++collapseOneBaseIndelsNodesCount;
+#endif
+											}
+#if defined(PATHWEAVERDEBUG)
 											uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 											if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 												{
@@ -1601,12 +1660,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 												{
 												graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-Conservative-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 											}
-#endif
+
 												++collapseOneBaseIndelsNodesCountComplex;
+#endif
 											}
 										}
-										++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+										++disentagleCount;
+
 										{
 										std::cout << __FILE__ << " " << __LINE__ << std::endl;
 										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
@@ -1650,7 +1711,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 								"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 									//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 									uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 									while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 										{
@@ -1662,11 +1725,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										{
 											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 										}
-#endif
-										++collapseOneBaseIndelsNodesCount;
-									}
 
+										++collapseOneBaseIndelsNodesCount;
+#endif
+									}
+#if defined(PATHWEAVERDEBUG)
 									uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 									if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 										{
@@ -1678,12 +1743,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										{
 											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 										}
-#endif
+
 										++collapseOneBaseIndelsNodesCountComplex;
+#endif
 									}
 								}
-								++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+								++disentagleCount;
+
 								{
 									std::cout << __FILE__ << " " << __LINE__ << std::endl;
 									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
@@ -1723,7 +1790,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 																											"- Collapsing One Base Indel nodes while Split Internals Conservative"));
 										//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 										uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 										while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 											{
@@ -1735,11 +1804,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 											{
 											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-collapseOneBaseIndelsNodes-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 										}
-#endif
-											++collapseOneBaseIndelsNodesCount;
-										}
 
+											++collapseOneBaseIndelsNodesCount;
+#endif
+										}
+#if defined(PATHWEAVERDEBUG)
 										uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 										if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 											{
@@ -1751,12 +1822,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 											{
 											graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternalsByEdgeCounts-afterTipTemoval-collapseOneBaseIndelsNodesComplex-", disentagleCount, "-collapsed-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 										}
-#endif
+
 											++collapseOneBaseIndelsNodesCountComplex;
+#endif
 										}
 									}
-									++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+									++disentagleCount;
+
 									{
 									std::cout << __FILE__ << " " << __LINE__ << std::endl;
 									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
@@ -1790,13 +1863,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								}
 #endif
 							}
-							uint32_t headlessTaillessAfterDisentaglementAfterTip = 0;
+							// uint32_t headlessTaillessAfterDisentaglementAfterTip = 0;//
 							uint32_t headlessTaillessAfterDisentaglementBelowLenAfterTip = 0;
 
 							for(const auto & n : currentGraph->nodes_){
 								if(n->on_){
 									if(n->tailless() && n->headless()){
-										++headlessTaillessAfterDisentaglementAfterTip;
+										// ++headlessTaillessAfterDisentaglementAfterTip;//
 										if(n->k_.size() < extractionPars.optimizeNodeSizeCutOff_){
 											++headlessTaillessAfterDisentaglementBelowLenAfterTip;
 										}
@@ -1816,7 +1889,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 						"- Collapsing One Base Indel nodes after short tip removal"));
 							//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 							uint32_t collapseOneBaseIndelsNodesCount = 0;
+#endif
 							while(currentGraph->collapseOneBaseIndelsNodes(debugEstimatingGraph)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -1828,11 +1903,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-collapseOneBaseIndelsNodes-",collapseOneBaseIndelsNodesCount , "-collapsed"));
 								}
-#endif
-								++collapseOneBaseIndelsNodesCount;
-							}
 
+								++collapseOneBaseIndelsNodesCount;
+#endif
+							}
+#if defined(PATHWEAVERDEBUG)
 							uint32_t collapseOneBaseIndelsNodesCountComplex = 0;
+#endif
 							if(currentGraph->collapseOneBaseIndelsNodesComplex()){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -1844,14 +1921,17 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-collapseOneBaseIndelsNodesComplex-",collapseOneBaseIndelsNodesCountComplex, "-collapsed"));
 								}
-#endif
+
 								++collapseOneBaseIndelsNodesCountComplex;
+#endif
 							}
 						}
 						if(extractionPars.collapseNodesWithAllowableError_){
 							watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(), "- Collapsing nodes with allowable error after short tip removal"));
 							//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 							uint32_t collapseNodesWithErrorsCount = 0;
+#endif
 							while(currentGraph->collapseBubbleNodesWithError(extractionPars.errorsToAllow_, extractionPars.collapseNodesWithAllowableErrorFreqMultiplier_)){
 #if defined(PATHWEAVERDEBUG)
 								{
@@ -1863,8 +1943,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								{
 									graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-collapsedInitialGraph-collapseNodesWithAllowableError-",collapseNodesWithErrorsCount ));
 								}
-#endif
+
 								++collapseNodesWithErrorsCount;
+#endif
 							}
 						}
 						if(extractionPars.collapseOneBaseIndelsNodes_ || extractionPars.collapseNodesWithAllowableError_){
@@ -1909,7 +1990,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							}
 							if(extractionPars.startDisentanglementConservative_){
 								watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),"- Disentangle Internal Nodes Conservative After tip removal"));
+#if defined(PATHWEAVERDEBUG)
 								uint32_t disentagleCount = 0;
+#endif
 								KmerPathwayGraphDev::disentangleInternalNodesPars disPars{true, shortTipNumber, tipCutOff, headlessTaillessLenCutOff, extractionPars};
 								while(currentGraph->disentangleInternalNodes(disPars)){
 #if defined(PATHWEAVERDEBUG)
@@ -1937,8 +2020,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										}
 #endif
 									}
-									++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+									++disentagleCount;
+
 									{
 										std::cout << __FILE__ << " " << __LINE__ << std::endl;
 										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
@@ -1974,8 +2058,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 										}
 #endif
 										}
-										++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+										++disentagleCount;
+
 										{
 										std::cout << __FILE__ << " " << __LINE__ << std::endl;
 										std::cout << "after tip removal conservative disentagleCount: " << disentagleCount << std::endl;
@@ -2016,8 +2101,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									}
 #endif
 								}
-								++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+								++disentagleCount;
+
 								{
 									std::cout << __FILE__ << " " << __LINE__ << std::endl;
 									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
@@ -2054,8 +2140,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 									}
 #endif
 									}
-									++disentagleCount;
 #if defined(PATHWEAVERDEBUG)
+									++disentagleCount;
+
 									{
 									std::cout << __FILE__ << " " << __LINE__ << std::endl;
 									std::cout << "after tip removal disentagleCount: " << disentagleCount << std::endl;
@@ -2089,13 +2176,14 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 								}
 #endif
 							}
-							uint32_t headlessTaillessAfterDisentaglementFinal = 0;
+
+							// uint32_t headlessTaillessAfterDisentaglementFinal = 0;
 							uint32_t headlessTaillessAfterDisentaglementBelowLenFinal = 0;
 
 							for(const auto & n : currentGraph->nodes_){
 								if(n->on_){
 									if(n->tailless() && n->headless()){
-										++headlessTaillessAfterDisentaglementFinal;
+										// ++headlessTaillessAfterDisentaglementFinal;
 										if(n->k_.size() < extractionPars.optimizeNodeSizeCutOff_){
 											++headlessTaillessAfterDisentaglementBelowLenFinal;
 										}
@@ -2387,7 +2475,10 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					if (extractionPars.splitEnds_) {
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 					"- Splitting End Nodes"));
+#if defined(PATHWEAVERSUPERDEBUG)
 						uint32_t splitEndsCount = 0;
+#endif
+
 						while (currentGraph->splitEndNodes(extractionPars.maxSplitEndNodeSize_)) {
 #if defined(PATHWEAVERSUPERDEBUG)
 							{
@@ -2443,8 +2534,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							{
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitEnds", "-", splitEndsCount, "-collapsed"));
 							}
-#endif
+
 							++splitEndsCount;
+#endif
 						}
 					}
 #if defined(PATHWEAVERDEBUG)
@@ -2468,7 +2560,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitTailed-collapsed"));
 						}
 #endif
+#if defined(PATHWEAVERDEBUG)
 						uint32_t splitEndsCountAfterSplitTailed = 0;
+#endif
 						while(currentGraph->splitEndNodes(extractionPars.maxSplitEndNodeSize_)){
 #if defined(PATHWEAVERDEBUG)
 							{
@@ -2480,8 +2574,9 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 							{
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitTailed-collapsed-splitEndNodes","-", splitEndsCountAfterSplitTailed, "-collapsed"));
 							}
-#endif
+
 							++splitEndsCountAfterSplitTailed;
+#endif
 						}
 					}
 
@@ -2500,18 +2595,21 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 					"- Collapsing One Base Indel nodes"));
 						//if(currentGraph->collapseOneBaseIndelsNodes()){
+#if defined(PATHWEAVERDEBUG)
 						uint32_t trimTipsOfLowEntropyNodesCount = 0;
+#endif
 						while(currentGraph->trimTipsOfLowEntropyNodes(extractionPars.trimTipsOfLowEntropyNodesCutOff_)){
 #if defined(PATHWEAVERDEBUG)
 							{
 								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-final-removeLowEntropyTips-", trimTipsOfLowEntropyNodesCount ));
 							}
-#endif
+
 							//currentGraph->collapseSingleLinkedPaths();
 //							if(extractionPars.debug){
 //								graphWriter.writeOutDotsAndSeqs(njh::pasteAsStr("fullCollapse-splitInternals-afterTipTemoval-collapseOneBaseIndelsNodes-",collapseOneBaseIndelsNodesCount ));
 //							}
 							++trimTipsOfLowEntropyNodesCount;
+#endif
 						}
 						if(extractionPars.removeHeadlessTaillessAlongTheWay && extractionPars.removeHeadlessTaillessAfterDisentaglement){
 							currentGraph->removeHeadlessTaillessNodes(headlessTaillessLenCutOff);
@@ -2696,10 +2794,12 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					}
 #endif
 					uint32_t nodeCount = 0;
+#if defined(PATHWEAVERDEBUG)
 					double totalCount = 0;
 					for(const auto & node : currentGraph->nodes_){
 						totalCount += node->inReadNamesIdx_.size();
 					}
+#endif
 					MetaDataInName inputMeta;
 					if(nullptr != meta && meta->hasSample(sampName)){
 						inputMeta = meta->getMetaForSample(sampName, getVectorOfMapKeys(meta->groupData_));

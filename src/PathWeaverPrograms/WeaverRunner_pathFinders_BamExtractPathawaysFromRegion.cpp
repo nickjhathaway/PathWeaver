@@ -878,12 +878,12 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
                   }
                 }
               }
-              double totalMeanCoverage = 0;
-              double totalReadCnt = 0;
+              // double totalMeanCoverage = 0;
+              // double totalReadCnt = 0;
               for (auto &clus: finalSeqsOnClusters) {
                 MetaDataInName metaName(clus.seqBase_.name_);
-                totalMeanCoverage += metaName.getMeta<double>(coverageField);
-                totalReadCnt += clus.seqBase_.cnt_;
+                // totalMeanCoverage += metaName.getMeta<double>(coverageField);
+                // totalReadCnt += clus.seqBase_.cnt_;
               }
 //									OutOptions outFinalInfoOpts(njh::files::make_path(finalInfoRegionDir,"finalOutputInfo.tab.txt"));
 //									OutputStream outFinalInfo(outFinalInfoOpts);

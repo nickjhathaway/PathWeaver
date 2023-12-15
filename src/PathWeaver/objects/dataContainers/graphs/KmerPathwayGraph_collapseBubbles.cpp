@@ -84,14 +84,14 @@ bool KmerPathwayGraph::collapseBubbleNodesWithError(const comparison & errorAllo
 	bool modifiedNodes = false;
 //	uint32_t roundingSize = 5;
 	//iterate over the groups
-	uint32_t groupCount = 0;
+	// uint32_t groupCount = 0;
 //	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	for(auto & group : groupedNodes){
 
 //		std::cout << "\tgroup.second.size(): " << group.second.size() << std::endl;
 		// if there are only two nodes in the group, process them
 		if(2 == group.second.size()){
-			++groupCount;
+			// ++groupCount;
 			if(uAbsdiff(group.second.front()->k_.length(), group.second.back()->k_.length()) > 20){
 				continue;
 			}
@@ -311,14 +311,14 @@ bool KmerPathwayGraph::collapseOneBaseIndelsNodes(KmerPathwayGraph & estimatingC
 	bool modifiedNodes = false;
 //	uint32_t roundingSize = 5;
 	//iterate over the groups
-	uint32_t groupCount = 0;
+	// uint32_t groupCount = 0;
 //	std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	for(auto & group : groupedNodes){
 
 //		std::cout << "\tgroup.second.size(): " << group.second.size() << std::endl;
 		// if there are only two nodes in the group, process them
 		if(3 == group.second.size() || 2 == group.second.size()){
-			++groupCount;
+			// ++groupCount;
 
 //			std::cout << "groupCount: " << groupCount << std::endl;
 //			for(const auto & n : group.second){

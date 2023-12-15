@@ -919,7 +919,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		std::unordered_map<std::string, uint32_t> sampCountsForPopHaps;
 		std::unordered_map<std::string, std::unordered_set<std::string>> sampNamesForPopHaps;
 
-		uint32_t totalPopCount = 0;
+		// uint32_t totalPopCount = 0;
 		std::set<std::string> samplesCount;
 //		std::cout << njh::conToStr(processedGatherRes.allSamples) << std::endl;
 //		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -930,7 +930,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			sampCountsForPopHaps[popClus.seqBase_.name_] = popClus.sampleClusters().size();
 			auto samples = getVectorOfMapKeys(popClus.sampleClusters());
 			sampNamesForPopHaps[popClus.seqBase_.name_].insert(samples.begin(), samples.end());
-			totalPopCount += popClus.sampleClusters().size();
+			// totalPopCount += popClus.sampleClusters().size();
 		}
 		for(const auto & seq : popSeqsPerSamp){
 			MetaDataInName seqMeta(seq.name_);

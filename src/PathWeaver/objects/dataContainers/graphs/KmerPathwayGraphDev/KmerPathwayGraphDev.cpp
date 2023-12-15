@@ -302,7 +302,7 @@ void KmerPathwayGraphDev::breakSingleLinkedPathsReadThreading(){
 				return obj1.firstNode_ < obj2.firstNode_;
 			}
 		});
-		uint32_t pathNumber = 0;
+		// uint32_t pathNumber = 0;
 		std::vector<uint32_t> pathLength;
 		for(const auto & path : paths){
 			pathLength.emplace_back(path.lastNode_ + 1 - path.firstNode_);
@@ -312,7 +312,7 @@ void KmerPathwayGraphDev::breakSingleLinkedPathsReadThreading(){
 				allNodePositionsForRead[pos] = 1;
 			}
 //			outPaths << njh::conToStr(allNodePositionsForRead, "\t") << std::endl;
-			++pathNumber;
+			// ++pathNumber;
 		}
 		auto meanPathLen = vectorMean(pathLength);
 //		auto medPathLen = vectorMedianRef(pathLength);
@@ -381,7 +381,7 @@ void KmerPathwayGraphDev::breakSingleLinkedPathsReadThreading(){
 //			outOptsPathsLowReach.overWriteFile_ = true;
 //			OutputStream outPathsLowReach(outOptsPathsLowReach);
 //			outPathsLowReach << "streak\tpositions\tfromBeg\ttoEnd" << std::endl;
-			uint32_t streakNumber = 0;
+			// uint32_t streakNumber = 0;
 			std::vector<std::pair<uint32_t, uint32_t>> lowCutStreaksKept;
 			for(const auto & streak : lowCutStreaks){
 //				bool containsNonKlenNode = false;
@@ -417,7 +417,7 @@ void KmerPathwayGraphDev::breakSingleLinkedPathsReadThreading(){
 //								<< "\t" << estd::to_string(fromBeg)
 //								<< "\t" << estd::to_string(toEnd) << std::endl;
 						lowCutStreaksKept.emplace_back(streak);
-						++streakNumber;
+						// ++streakNumber;
 					}
 				}else{
 //					outPathsLowReach << streakNumber
@@ -425,7 +425,7 @@ void KmerPathwayGraphDev::breakSingleLinkedPathsReadThreading(){
 //							<< "\t" << estd::to_string(fromBeg)
 //							<< "\t" << estd::to_string(toEnd) << std::endl;
 					lowCutStreaksKept.emplace_back(streak);
-					++streakNumber;
+					// ++streakNumber;
 				}
 			}
 			for(const auto & streak : lowCutStreaksKept){

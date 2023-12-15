@@ -57,7 +57,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 					TableReader readTab(TableIOOpts::genTabFileIn(coiPerBedLocationFnp,true));
 					readTab.doNotCheckRowSizes = true;
 					VecStr row;
-					uint32_t usedTotal = 0;
+					// uint32_t usedTotal = 0;
 					std::set<std::string> samplesInFile;
 					while(readTab.getNextRow(row)){
 						samplesInFile.emplace(row[readTab.header_.getColPos("sample")]);
@@ -65,9 +65,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							if(!pars.targets.empty() && !njh::in(row[readTab.header_.getColPos("name")], pars.targets)){
 								continue;
 							}
-							if("true" == row[readTab.header_.getColPos("success")]){
-								usedTotal+= njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotalUsed")]);
-							}
+							// if("true" == row[readTab.header_.getColPos("success")]){
+							// 	usedTotal+= njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotalUsed")]);
+							// }
 							readTotals[row[readTab.header_.getColPos("name")]] = njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotal")]);
 						}
 					}
