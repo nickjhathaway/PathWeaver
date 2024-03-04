@@ -530,7 +530,7 @@ void HaploPathFinder::PathFinderCorePars::setPostProcessTrimmingOpts(seqSetUp & 
 		hmmProcessPars_.scoreCutOff = hmmProcessPars_.hardScoreCutOff;
 	}
 	setUp.setOption(hmmProcessPars_.hardEvalueCutOff, "--hmmHardEvalueCutOff", "hmm hard evalue cut off");
-	if(hmmProcessPars_.hardEvalueCutOff > hmmProcessPars_.evalueCutOff){
+	if(hmmProcessPars_.hardEvalueCutOff < hmmProcessPars_.evalueCutOff){
 		hmmProcessPars_.evalueCutOff = hmmProcessPars_.hardEvalueCutOff;
 	}
 	setUp.setOption(hmmProcessPars_.hardScoreNormCutOff, "--hmmHardScoreNormCutOff", "hmm hard scoreNorm cut off");
