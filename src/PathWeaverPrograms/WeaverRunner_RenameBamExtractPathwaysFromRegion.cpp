@@ -27,11 +27,14 @@ namespace njhseq {
 int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 		const njh::progutils::CmdArgs & inputCommands) {
 
+	bool subset = false;
 	bfs::path weavedResultsDir;
 
 	bfs::path renamingFile;
 
 	seqSetUp setUp(inputCommands);
+	setUp.setOption(subset, "--subset", "subset the file with the renaming file, will only take targets that are in the renaming file");
+
 	setUp.setOption(weavedResultsDir, "--resultDir", "The directory with PathWeaver results", true);
 	setUp.setOption(renamingFile, "--renamingFile", "Renaming File, needs to have columns 'new' and 'old', old is the name of the target region and new is the new name", true);
 	setUp.processDirectoryOutputName(true);
@@ -83,7 +86,7 @@ int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 												std::back_inserter(targetsInRenamingNotInBasic),
 												std::back_inserter(targetsInBasicNotInRenaming),
 												std::back_inserter(shared));
-		if(!targetsInRenamingNotInBasic.empty()) {
+		if(!targetsInRenamingNotInBasic.empty() && !subset) {
 			warnings.emplace_back(
 				njh::pasteAsStr("The following names were found in the renaming file, ", renamingFile, " but not in the basic info file, ", njh::files::make_path(weavedResultsDir, "final", "basicInfoPerRegion.tab.txt"),
 					"\n",
@@ -131,7 +134,9 @@ int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 	//rename basic info
 	OutputStream allBasicInfo_out(allBasicInfo);
 	for(auto & row : basic_info_table) {
-		row[basic_info_table.getColPos("name")] = renamingKey[row[basic_info_table.getColPos("name")]];
+		if(!subset || njh::in(row[basic_info_table.getColPos("name")], renamingKey)) {
+			row[basic_info_table.getColPos("name")] = renamingKey[row[basic_info_table.getColPos("name")]];
+		}
 	}
 	basic_info_table.outPutContents(allBasicInfo_out, "\t");
 
@@ -141,10 +146,6 @@ int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 
 	SeqOutput allFinalFasta_writer(SeqIOOptions::genFastaOut(allFinalFasta));
 	allFinalFasta_writer.openOut();
-
-
-
-
 	//
 	bfs::path input_allFinalFasta = njh::files::make_path(weavedResultsDir, "final", "allFinal.fasta");
 	if(0 != bfs::file_size(input_allFinalFasta)){
@@ -154,9 +155,11 @@ int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 		while(reader.readNextRead(seq)){
 			MetaDataInName seqMeta(seq.name_);
 			auto old_regionUID = seqMeta.getMeta("regionUID");
-			seqMeta.addMeta("regionUID", renamingKey[old_regionUID], true);
-			seqMeta.resetMetaInName(seq.name_);
-			allFinalFasta_writer.write(seq);
+			if(!subset || njh::in(old_regionUID, renamingKey)) {
+				seqMeta.addMeta("regionUID", renamingKey[old_regionUID], true);
+				seqMeta.resetMetaInName(seq.name_);
+				allFinalFasta_writer.write(seq);
+			}
 		}
 	}
 
@@ -170,9 +173,11 @@ int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 		while(reader.readNextRead(seq)){
 			MetaDataInName seqMeta(seq.name_);
 			auto old_regionUID = seqMeta.getMeta("regionUID");
-			seqMeta.addMeta("regionUID", renamingKey[old_regionUID], true);
-			seqMeta.resetMetaInName(seq.name_);
-			allPartialFasta_writer.write(seq);
+			if(!subset || njh::in(old_regionUID, renamingKey)) {
+				seqMeta.addMeta("regionUID", renamingKey[old_regionUID], true);
+				seqMeta.resetMetaInName(seq.name_);
+				allPartialFasta_writer.write(seq);
+			}
 		}
 	}
 
