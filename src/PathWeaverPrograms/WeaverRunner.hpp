@@ -38,6 +38,7 @@ class WeaverRunner : public njh::progutils::ProgramRunner {
 	static int BamExtractPathwaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
 
 	static int MergeMultipleBamExtractPathwaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
+	static int RenameBamExtractPathwaysFromRegion(const njh::progutils::CmdArgs & inputCommands);
 
 
 	static int ExtractPathwaysReadsFallingInMultipleRegions(const njh::progutils::CmdArgs & inputCommands);
