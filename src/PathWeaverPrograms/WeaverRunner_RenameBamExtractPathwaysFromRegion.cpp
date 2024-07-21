@@ -86,14 +86,14 @@ int WeaverRunner::RenameBamExtractPathwaysFromRegion(
 												std::back_inserter(targetsInRenamingNotInBasic),
 												std::back_inserter(targetsInBasicNotInRenaming),
 												std::back_inserter(shared));
-		if(!targetsInRenamingNotInBasic.empty() && !subset) {
+		if(!targetsInRenamingNotInBasic.empty()) {
 			warnings.emplace_back(
 				njh::pasteAsStr("The following names were found in the renaming file, ", renamingFile, " but not in the basic info file, ", njh::files::make_path(weavedResultsDir, "final", "basicInfoPerRegion.tab.txt"),
 					"\n",
 					targetsInRenamingNotInBasic)
 			);
 		}
-		if(!targetsInBasicNotInRenaming.empty()) {
+		if(!targetsInBasicNotInRenaming.empty() && !subset) {
 			warnings.emplace_back(
 				njh::pasteAsStr("The following names were not found in the renaming file, ", renamingFile, " but were in the basic info file, ", njh::files::make_path(weavedResultsDir, "final", "basicInfoPerRegion.tab.txt"),
 					"\n",
