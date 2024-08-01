@@ -47,6 +47,9 @@ namespace njhseq {
 
 int WeaverRunner::BamExtractPathwaysFromRegion(
 		const njh::progutils::CmdArgs & inputCommands) {
+
+  bfs::path chromKeyFnp;
+
 	BamRegionInvestigator::BamRegionInvestigatorPars brInvestPars;
 
 	BamRegionInvestigator::BamCountSpecficRegionsPars spanningReadsPar;
@@ -135,6 +138,7 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 	masterPars.bamExtractPars_.keepImproperMateUnmapped_ = true;
 	masterPars.setBamExtractOpts(setUp);
 
+
 	//adding meta to the final seqs
 	setUp.setOption(masterPars.metaDataFnp, "--metaDataFnp", "Name of the meta data fnp");
 
@@ -204,7 +208,7 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 	std::unique_ptr<MultipleGroupMetaData> meta;
 	auto sampName = getPossibleSampleNameFromFnp(
 					setUp.pars_.ioOptions_.firstName_);
-	if ("" != masterPars.metaDataFnp) {
+	if (!masterPars.metaDataFnp.empty()) {
 
 		meta = std::make_unique<MultipleGroupMetaData>(masterPars.metaDataFnp,
 				std::set<std::string> { sampName });

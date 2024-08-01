@@ -30,11 +30,11 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 	SeqGatheringFromPathWeaver::processedGatherSeqsMetaPars processedPars;
 	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars corePars;
 
-
+	std::string chromKey;
 	std::set<std::string> samples;
 	std::set<std::string> targets;
 	bfs::path inputDirectory = "./";
-	std::string pat = "";
+	std::string pat;
 	bfs::path groupingsFile;
 
 	corePars.countField = "estimatedPerBaseCoverage";
@@ -46,6 +46,7 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 	// parameters
 	setUp.processDebug();
 	setUp.processVerbose();
+	setUp.setOption(chromKey, "--chromKey"," table to rename chromosomes, 2 column or a comma separated key:value");
 	setUp.setOption(pat, "--pat","The results directory pattern to process, directories must end with this, the prefix to this pattern will be treated as the sample name", true);
 	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
 	setUp.setOption(samples, "--samples", "Process input from only these samples");
@@ -64,6 +65,58 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 	setUp.finishSetUp(std::cout);
 
 	setUp.startARunLog(setUp.pars_.directoryName_);
+
+	std::unordered_map<std::string, std::string> chromRenamingKey;
+	if(!chromKey.empty()){
+		std::set<std::string> newKeys;
+		if(!bfs::exists(chromKey)) {
+			auto commaToks = tokenizeString(chromKey, ",");
+			for(const auto & commaToken : commaToks) {
+				auto semicolonToks = tokenizeString(commaToken, ":");
+				if(semicolonToks.size() != 2) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << " for chromKey: " << chromKey << " should be comma separated key:value pair, " << " error in processing: " << commaToken << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(semicolonToks[0], chromRenamingKey)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error from " << chromKey << "already have key " << semicolonToks[0] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(semicolonToks[1], newKeys)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << chromKey << "already have value " << semicolonToks[1] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				chromRenamingKey.emplace(semicolonToks[0], semicolonToks[1]);
+				newKeys.emplace(semicolonToks[1]);
+			}
+		}else {
+			TableReader tab(TableIOOpts::genTabFileIn(chromKey, false));
+			if(tab.header_.columnNames_.size() <2) {
+				std::stringstream ss;
+				ss << __PRETTY_FUNCTION__ << ", error " << chromKey << " should be at least 2 columns, not " <<  tab.header_.columnNames_.size()<< "\n";
+				throw std::runtime_error{ss.str()};
+			}
+
+			VecStr row;
+			while(tab.getNextRow(row)) {
+				if(njh::in(row[0], chromRenamingKey)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error from " << chromKey << "already have key " << row[0] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(row[1], newKeys)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << chromKey << "already have value " << row[1] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				chromRenamingKey.emplace(row[0], row[1]);
+				newKeys.emplace(row[1]);
+			}
+		}
+	}
+
 	corePars.sampleField = "sample";
 	corePars.targetField = "regionUID";
 
@@ -89,7 +142,7 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 
 
 	std::shared_ptr<MultipleGroupMetaData> meta;
-	if("" != groupingsFile){
+	if(!groupingsFile.empty()){
 		meta = std::make_shared<MultipleGroupMetaData>(groupingsFile);
 	}
 
@@ -151,6 +204,8 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 
 
 int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inputCommands) {
+
+	std::string chromKey;
 	std::set<std::string> samples;
 //	std::set<std::string> targets;
 	bfs::path inputDirectory = "./";
@@ -184,6 +239,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	setUp.processDebug();
 	setUp.processVerbose();
+
+	setUp.setOption(chromKey, "--chromKey", "renaming chromosome key table, no named column file with first column being old name and second column being new name, or comma separated key:value");
+
+
 	bool trimBedSet = setUp.setOption(trimBedFnp, "--trimBedFnp", "Bed File of trim locations, 4th column must match the name of the input targets");
 	setUp.setOption(genomeFnp, "--genome2bit", "genome 2bit file for when supplying trim locations", trimBedSet);
 	if(trimBedSet){
@@ -430,6 +489,58 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		ss << __PRETTY_FUNCTION__ << ", error no directories found in " << inputDirectory << " ending with " << pat << "\n";
 		throw std::runtime_error{ss.str()};
 	}
+
+	std::unordered_map<std::string, std::string> chromRenamingKey;
+	if(!chromKey.empty()){
+		std::set<std::string> newKeys;
+		if(!bfs::exists(chromKey)) {
+			auto commaToks = tokenizeString(chromKey, ",");
+			for(const auto & commaToken : commaToks) {
+				auto semicolonToks = tokenizeString(commaToken, ":");
+				if(semicolonToks.size() != 2) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << " for chromKey: " << chromKey << " should be comma separated key:value pair, " << " error in processing: " << commaToken << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(semicolonToks[0], chromRenamingKey)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error from " << chromKey << "already have key " << semicolonToks[0] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(semicolonToks[1], newKeys)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << chromKey << "already have value " << semicolonToks[1] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				chromRenamingKey.emplace(semicolonToks[0], semicolonToks[1]);
+				newKeys.emplace(semicolonToks[1]);
+			}
+		}else {
+			TableReader tab(TableIOOpts::genTabFileIn(chromKey, false));
+			if(tab.header_.columnNames_.size() <2) {
+				std::stringstream ss;
+				ss << __PRETTY_FUNCTION__ << ", error " << chromKey << " should be at least 2 columns, not " <<  tab.header_.columnNames_.size()<< "\n";
+				throw std::runtime_error{ss.str()};
+			}
+
+			VecStr row;
+			while(tab.getNextRow(row)) {
+				if(njh::in(row[0], chromRenamingKey)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error from " << chromKey << "already have key " << row[0] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(row[1], newKeys)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << chromKey << "already have value " << row[1] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				chromRenamingKey.emplace(row[0], row[1]);
+				newKeys.emplace(row[1]);
+			}
+		}
+	}
+
 	auto reportsDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"reports"});
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 	std::unordered_set<std::string> allTargets;
@@ -437,7 +548,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	{
 		OutputStream allBasicInfo(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 		std::shared_ptr<TableReader> firstTable;
-
 		for(const auto & dir : directories){
 			auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
 			if(bfs::exists(basicFnp)){
@@ -458,7 +568,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		std::mutex allBasicInfoMut;
 		if(!skipRBind){
 			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
-			std::function<void()> gatherAllBasicInfoFiles = [&allBasicInfo,&allBasicInfoMut,&dirQueue, &firstTable](){
+			std::function<void()> gatherAllBasicInfoFiles = [
+				&allBasicInfo,&allBasicInfoMut,
+				&dirQueue, &firstTable, &chromRenamingKey](){
 				bfs::path dir;
 				std::stringstream tabOut;
 				while(dirQueue.getVal(dir)){
@@ -476,6 +588,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						}
 						VecStr row;
 						while(currentTable.getNextRow(row)){
+							if(njh::in(row[0], chromRenamingKey)) {
+								row[0] = chromRenamingKey.at(row[0]);
+							}
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
 					}
@@ -514,6 +629,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	gatherCorePars.countField = countField;
 	gatherCorePars.meta = meta;
 	gatherCorePars.numThreads = masterPopClusPars.numThreads;
+	gatherCorePars.chromRenamingKey = chromRenamingKey;
 
 	rawGatherPars.allSeqFnp = rawAllSeqsFnp;
 	rawGatherPars.directories = directories;

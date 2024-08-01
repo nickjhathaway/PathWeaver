@@ -84,6 +84,21 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 						while(reader.readNextRead(seq)){
 //								std::cout << seq.name_ << std::endl;
 							MetaDataInName seqMeta(seq.name_);
+							if(!corePars_.chromRenamingKey.empty() && seqMeta.containsMeta("regionCoords")) {
+								auto regionCoords = seqMeta.getMeta("regionCoords");
+								bool modified = false;
+								for(const auto & rename : corePars_.chromRenamingKey) {
+									if(regionCoords.find(rename.first) != std::string::npos) {
+										modified = true;
+										regionCoords = njh::replaceString(regionCoords, rename.first, rename.second);
+										break;
+									}
+								}
+								if(modified) {
+									seqMeta.addMeta("regionCoords", regionCoords,true);
+									seqMeta.resetMetaInName(seq.name_);
+								}
+							}
 							auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 							if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
 								continue;
@@ -123,6 +138,21 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 							while(reader.readNextRead(seq)){
 								MetaDataInName seqMeta(seq.name_);
+								if(!corePars_.chromRenamingKey.empty() && seqMeta.containsMeta("regionCoords")) {
+									auto regionCoords = seqMeta.getMeta("regionCoords");
+									bool modified = false;
+									for(const auto & rename : corePars_.chromRenamingKey) {
+										if(regionCoords.find(rename.first) != std::string::npos) {
+											modified = true;
+											regionCoords = njh::replaceString(regionCoords, rename.first, rename.second);
+											break;
+										}
+									}
+									if(modified) {
+										seqMeta.addMeta("regionCoords", regionCoords,true);
+										seqMeta.resetMetaInName(seq.name_);
+									}
+								}
 								auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 								if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
 									if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
@@ -271,7 +301,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 
 		return ret;
-	};
+	}
 
 
 SeqGatheringFromPathWeaver::processedGatherSeqsMetaRes SeqGatheringFromPathWeaver::processedGatherSeqsMeta(

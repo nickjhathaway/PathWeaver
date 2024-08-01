@@ -30,9 +30,11 @@ public:
 		bool overWrite = false;
 		uint32_t numThreads = 1;
 		std::shared_ptr<MultipleGroupMetaData> meta;
+
+		std::unordered_map<std::string, std::string> chromRenamingKey;
 	};
 
-	SeqGatheringFromPathWeaver(const SeqGatheringFromPathWeaverCorePars & corePars):corePars_(corePars){
+	explicit SeqGatheringFromPathWeaver(const SeqGatheringFromPathWeaverCorePars & corePars):corePars_(corePars){
 
 	}
 	SeqGatheringFromPathWeaverCorePars corePars_;
