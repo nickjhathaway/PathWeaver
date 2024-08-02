@@ -119,6 +119,7 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 
 	corePars.sampleField = "sample";
 	corePars.targetField = "regionUID";
+	corePars.chromRenamingKey = chromRenamingKey;
 
 	std::vector<bfs::path> directories;
 	if (samples.empty()) {
