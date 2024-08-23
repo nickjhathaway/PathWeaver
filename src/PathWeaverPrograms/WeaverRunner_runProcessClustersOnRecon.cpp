@@ -246,7 +246,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	bool reOrientBedSet = setUp.setOption(reOrientBedFnp, "--reOrientBedFnp", "Bed File of reoreient locations, 4th column must match the name of the input targets, will reOreient the region to this region");
 	if(reOrientBedSet) {
-		if(!bfs::exists(trimBedFnp)){
+		if(!bfs::exists(reOrientBedFnp)){
 			setUp.failed_ = true;
 			setUp.addWarning(njh::pasteAsStr(reOrientBedFnp, " doesn't exist"));
 		}
