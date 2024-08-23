@@ -28,7 +28,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		}
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
-		maxLen *=1.5;
+		maxLen *= 1.5;
 		aligner baseAligner(maxLen, gapScoringParameters(5,1,0,0,0,0), substituteMatrix::createDegenScoreMatrixCaseInsensitive(2,-2));
 		concurrent::AlignerPool alnPool(baseAligner, corePars_.numThreads);
 		alnPool.initAligners();
@@ -49,6 +49,19 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			while(inputDirQueue.getVal(inputDir)){
 				//std::cout << "inputDir:" << inputDir << std::endl;
 				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+
+
+				std::unordered_map<std::string, bool> isReverseStrand;
+				if(!pars.reOrientingRegion_.empty()) {
+					//this won't work for regions with the same name but different coords when we do multie region pulling
+					auto basInfoFnp = njh::files::make_path(inputDir, "final", "basicInfoPerRegion.tab.txt");
+					TableReader basicReader(TableIOOpts::genTabFileIn(basInfoFnp));
+					VecStr row;
+					while(basicReader.getNextRow(row)) {
+						isReverseStrand[row[4]] = '-' == row[5].front();
+					}
+				}
+
 				auto finalSeqFnp = njh::files::make_path(inputDir,"final", "allFinal.fasta");
 				auto coiPerBedLocationFnp = njh::files::make_path(inputDir,"final", "basicInfoPerRegion.tab.txt");
 				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -105,14 +118,18 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							}
 							uint32_t count = 0;
 							if("reads" == corePars_.countField){
-								count += seq.cnt_;
+								count += static_cast<uint32_t>(std::round(seq.cnt_));
 							}else{
-								count += seqMeta.getMeta<double>(corePars_.countField);
+								count += static_cast<uint32_t>(std::round(seqMeta.getMeta<double>(corePars_.countField)));
 							}
 							if(0 == count){
 								continue;
 							}
-							auto tarName = njh::replaceString(rawTarName, ".", "-");
+							// auto tarName = njh::replaceString(rawTarName, ".", "-");
+							const auto& tarName = rawTarName;
+							if(njh::in(rawTarName, pars.reOrientingRegion_) && pars.reOrientingRegion_.at(rawTarName)->reverseSrand_ != isReverseStrand[rawTarName]) {
+								seq.reverseComplementRead(false,true);
+							}
 							//targetKey[tarName] = rawTarName;
 							if(njh::in(rawTarName,pars.trimSeqs)){
 								readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
@@ -159,16 +176,20 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 										continue;
 									}
 									uint32_t count = 0;
-									if("reads" == corePars_.countField){
-										count += seq.cnt_;
-									}else{
-										count += seqMeta.getMeta<double>(corePars_.countField);
+									if ("reads" == corePars_.countField) {
+										count += static_cast<uint32_t>(std::round(seq.cnt_));
+									} else {
+										count += static_cast<uint32_t>(std::round(seqMeta.getMeta<double>(corePars_.countField)));
 									}
 									if(0 == count){
 										continue;
 									}
-									auto tarName = njh::replaceString(rawTarName, ".", "-");
+									//auto tarName = njh::replaceString(rawTarName, ".", "-");
+									const auto& tarName = rawTarName;
 									//targetKey[tarName] = rawTarName;
+									if(njh::in(rawTarName, pars.reOrientingRegion_) && pars.reOrientingRegion_.at(rawTarName)->reverseSrand_ != isReverseStrand[rawTarName]) {
+										seq.reverseComplementRead(false,true);
+									}
 									if(njh::in(rawTarName,pars.trimSeqs)){
 										readVecTrimmer::trimSeqToRefByGlobalAln(seq,pars.trimSeqs.at(rawTarName), *currentAligner);
 									}

@@ -53,12 +53,13 @@ public:
 
 	};
 
-	struct gatherSeqsAndSortByTargetPars{
+	struct gatherSeqsAndSortByTargetPars {
 		bfs::path allSeqFnp;
 		std::vector<bfs::path> directories;
 		std::set<std::string> targets;
 		bool addPartial = false;
 		std::unordered_map<std::string, std::vector<seqWithKmerInfo>> trimSeqs;
+		std::unordered_map<std::string, std::shared_ptr<GenomicRegion>> reOrientingRegion_;
 		uint32_t minInputSeqLen = 12;
 	};
 

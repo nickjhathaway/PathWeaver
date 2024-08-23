@@ -213,6 +213,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	std::string pat;
 	std::string countField = "estimatedPerBaseCoverage";
 
+	bfs::path reOrientBedFnp = "";
 	bfs::path trimBedFnp = "";
 	bfs::path genomeFnp = "";
 
@@ -243,7 +244,13 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	setUp.setOption(chromKey, "--chromKey", "renaming chromosome key table, no named column file with first column being old name and second column being new name, or comma separated key:value");
 
-
+	bool reOrientBedSet = setUp.setOption(reOrientBedFnp, "--reOrientBedFnp", "Bed File of reoreient locations, 4th column must match the name of the input targets, will reOreient the region to this region");
+	if(reOrientBedSet) {
+		if(!bfs::exists(trimBedFnp)){
+			setUp.failed_ = true;
+			setUp.addWarning(njh::pasteAsStr(reOrientBedFnp, " doesn't exist"));
+		}
+	}
 	bool trimBedSet = setUp.setOption(trimBedFnp, "--trimBedFnp", "Bed File of trim locations, 4th column must match the name of the input targets");
 	setUp.setOption(genomeFnp, "--genome2bit", "genome 2bit file for when supplying trim locations", trimBedSet);
 	if(trimBedSet){
@@ -571,7 +578,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
 			std::function<void()> gatherAllBasicInfoFiles = [
 				&allBasicInfo,&allBasicInfoMut,
-				&dirQueue, &firstTable, &chromRenamingKey](){
+				&dirQueue, &firstTable, &chromRenamingKey, rawGatherPars](){
 				bfs::path dir;
 				std::stringstream tabOut;
 				while(dirQueue.getVal(dir)){
@@ -591,6 +598,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						while(currentTable.getNextRow(row)){
 							if(njh::in(row[0], chromRenamingKey)) {
 								row[0] = chromRenamingKey.at(row[0]);
+							}
+							if(njh::in(row[firstTable->header_.getColPos("name")], rawGatherPars.reOrientingRegion_)) {
+								row[5] = rawGatherPars.reOrientingRegion_.at(row[firstTable->header_.getColPos("name")])->reverseSrand_ ? std::string(1, '-') : std::string(1, '+');
 							}
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
@@ -641,6 +651,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		auto locations = bedPtrsToGenomicRegs(getBeds(trimBedFnp));
 		for(const auto & loc : locations){
 			rawGatherPars.trimSeqs[loc.uid_].emplace_back(loc.extractSeq(tReader),7, false);
+		}
+	}
+	if(reOrientBedSet) {
+		auto locations = bedPtrsToGenomicRegs(getBeds(reOrientBedFnp));
+		for(const auto & loc : locations){
+			rawGatherPars.reOrientingRegion_[loc.uid_] = std::make_shared<GenomicRegion>(loc);
 		}
 	}
 
