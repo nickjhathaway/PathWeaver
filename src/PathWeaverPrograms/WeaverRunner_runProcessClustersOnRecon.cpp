@@ -549,6 +549,22 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 	}
 
+	if(trimBedSet){
+		TwoBit::TwoBitFile tReader(genomeFnp);
+		auto locations = bedPtrsToGenomicRegs(getBeds(trimBedFnp));
+		for(const auto & loc : locations){
+			rawGatherPars.trimSeqs[loc.uid_].emplace_back(loc.extractSeq(tReader),7, false);
+		}
+	}
+
+
+	if(reOrientBedSet) {
+		auto locations = bedPtrsToGenomicRegs(getBeds(reOrientBedFnp));
+		for(const auto & loc : locations){
+			rawGatherPars.reOrientingRegion_[loc.uid_] = std::make_shared<GenomicRegion>(loc);
+		}
+	}
+
 	auto reportsDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"reports"});
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 	std::unordered_set<std::string> allTargets;
@@ -599,6 +615,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							if(njh::in(row[0], chromRenamingKey)) {
 								row[0] = chromRenamingKey.at(row[0]);
 							}
+							// std::cout << __FILE__ << " " << __LINE__ << std::endl;
+							// std::cout << "njh::in(row[firstTable->header_.getColPos(\"name\")], rawGatherPars.reOrientingRegion_): " << njh::colorBool(njh::in(row[firstTable->header_.getColPos("name")], rawGatherPars.reOrientingRegion_)) << std::endl;
+							// std::cout << "row[firstTable->header_.getColPos(\"name\")]: " << row[firstTable->header_.getColPos("name")] << std::endl;
+							// std::cout << "rawGatherPars.reOrientingRegion_ names: " << njh::conToStr(njh::getVecOfMapKeys(rawGatherPars.reOrientingRegion_), ",") << std::endl;
 							if(njh::in(row[firstTable->header_.getColPos("name")], rawGatherPars.reOrientingRegion_)) {
 								row[5] = rawGatherPars.reOrientingRegion_.at(row[firstTable->header_.getColPos("name")])->reverseSrand_ ? std::string(1, '-') : std::string(1, '+');
 							}
@@ -646,19 +666,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	rawGatherPars.directories = directories;
 
 
-	if(trimBedSet){
-		TwoBit::TwoBitFile tReader(genomeFnp);
-		auto locations = bedPtrsToGenomicRegs(getBeds(trimBedFnp));
-		for(const auto & loc : locations){
-			rawGatherPars.trimSeqs[loc.uid_].emplace_back(loc.extractSeq(tReader),7, false);
-		}
-	}
-	if(reOrientBedSet) {
-		auto locations = bedPtrsToGenomicRegs(getBeds(reOrientBedFnp));
-		for(const auto & loc : locations){
-			rawGatherPars.reOrientingRegion_[loc.uid_] = std::make_shared<GenomicRegion>(loc);
-		}
-	}
+
 
 
 	SeqGatheringFromPathWeaver seqGatherer(gatherCorePars);
