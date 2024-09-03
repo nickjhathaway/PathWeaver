@@ -57,6 +57,7 @@ public:
 		bfs::path allSeqFnp;
 		std::vector<bfs::path> directories;
 		std::set<std::string> targets;
+		std::set<std::string> excludeTargets;
 		bool addPartial = false;
 		std::unordered_map<std::string, std::vector<seqWithKmerInfo>> trimSeqs;
 		std::unordered_map<std::string, std::shared_ptr<GenomicRegion>> reOrientingRegion_;

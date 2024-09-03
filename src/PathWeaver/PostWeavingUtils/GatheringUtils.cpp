@@ -93,6 +93,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							if(!pars.targets.empty() && !njh::in(row[readTab.header_.getColPos("name")], pars.targets)){
 								continue;
 							}
+							if(!pars.excludeTargets.empty() && njh::in(row[readTab.header_.getColPos("name")], pars.excludeTargets)){
+								continue;
+							}
 							// if("true" == row[readTab.header_.getColPos("success")]){
 							// 	usedTotal+= njh::StrToNumConverter::stoToNum<uint32_t>(row[readTab.header_.getColPos("readTotalUsed")]);
 							// }
@@ -144,6 +147,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							}
 							auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 							if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
+								continue;
+							}
+							if(!pars.excludeTargets.empty() && njh::in(rawTarName, pars.excludeTargets)){
 								continue;
 							}
 							uint32_t count = 0;
@@ -218,6 +224,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 								auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 								if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
 									if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
+										continue;
+									}
+									if(!pars.excludeTargets.empty() && njh::in(rawTarName, pars.excludeTargets)){
 										continue;
 									}
 									uint32_t count = 0;

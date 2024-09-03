@@ -270,6 +270,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(inputDirectory, "--inputDirectory", "Input Directory to search");
 	setUp.setOption(samples, "--samples", "Process input from only these samples");
 	setUp.setOption(rawGatherPars.targets, "--targets", "Process input for only these targets");
+
 	bool noPartial = false;
 
 	setUp.setOption(noPartial, "--doNotAddPartial", "Don't Add Partial sequences, seqs that were able to be trimmed but there was left over sequence (which sometimes is consistent with artifact)");
@@ -347,6 +348,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	masterPopClusPars.preFiltCutOffs.clusterSizeCutOff = 5;
 	setUp.setOption(masterPopClusPars.preFiltCutOffs.clusterSizeCutOff, "--clusterCutOff", "Input Cluster Size Cut Off", false, "Filtering");
 	setUp.setOption(masterPopClusPars.excludeSamples, "--excludeSamples", "Samples to Exclude from analysis", false, "Filtering");
+
+	setUp.setOption(rawGatherPars.excludeTargets, "--excludeTargets", "Targets to Exclude from analysis", false, "Filtering");
+
 	bool keepCommonlyLowFreqHaplotypes = false;
 	setUp.setOption(keepCommonlyLowFreqHaplotypes, "--keepCommonlyLowFreqHaplotypes", "Keep Commonly Low Freq Haplotypes", false, "Filtering");
 	masterPopClusPars.lowLevelPopFiltPars_.removeCommonlyLowFreqHaplotypes_ = !keepCommonlyLowFreqHaplotypes;
