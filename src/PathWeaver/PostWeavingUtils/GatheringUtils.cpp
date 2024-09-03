@@ -75,6 +75,21 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 					while(readTab.getNextRow(row)){
 						samplesInFile.emplace(row[readTab.header_.getColPos("sample")]);
 						if("NA" != row[readTab.header_.getColPos("readTotal")]){
+							//rename if there is a renaming key
+							if(!corePars_.chromRenamingKey.empty()) {
+								auto name = row[readTab.header_.getColPos("name")];
+								bool modified = false;
+								for(const auto & rename : corePars_.chromRenamingKey) {
+									if(name.find(rename.first) != std::string::npos) {
+										modified = true;
+										name = njh::replaceString(name, rename.first, rename.second);
+										break;
+									}
+								}
+								if(modified) {
+									row[readTab.header_.getColPos("name")] = name;
+								}
+							}
 							if(!pars.targets.empty() && !njh::in(row[readTab.header_.getColPos("name")], pars.targets)){
 								continue;
 							}
