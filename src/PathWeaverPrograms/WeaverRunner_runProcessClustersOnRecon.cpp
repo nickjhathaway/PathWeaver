@@ -804,6 +804,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		//read in seqs for target
 		std::unordered_map<std::string, std::unordered_map<std::string, njhseq::collapse::SampleCollapseCollection::RepSeqs>> seqsForSample;
 		{
+
 			SeqInput targetSeqReader(allSeqsFnpIn);
 			auto seqs = targetSeqReader.getReads<seqInfo>(processedGatherRes.seqsLocations.at(tar).first, processedGatherRes.seqsLocations.at(tar).second);
 //			std::cout << "target: " << tar << std::endl;
@@ -894,7 +895,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 																									 &sampleQueue,&alnPool,&collapserObj,&currentPars,&setUp,
 																	&sampColl,&customCutOffsMap,
 																	&customCutOffsMapPerRep, &seqsForSample](){
-				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+				// std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::string samp = "";
 				auto currentAligner = alnPool.popAligner();
 				while(sampleQueue.getVal(samp)){
@@ -997,7 +998,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 //			std::cout <<njh::bashCT::boldRed("Sleeping......") << std::endl;;
 //			using namespace std::chrono_literals;
 //			std::this_thread::sleep_for(100000s);
-
+			readVec::getMaxLength(populationInput, maxLen);
+			alignerObj.parts_.setMaxSize(maxLen);
 			sampColl.doPopulationClustering(populationInput, alignerObj, collapserObj, currentPars.popIteratorMap);
 
 		}
