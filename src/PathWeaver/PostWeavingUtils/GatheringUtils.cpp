@@ -112,6 +112,21 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									seqMeta.resetMetaInName(seq.name_);
 								}
 							}
+							if(!corePars_.chromRenamingKey.empty() && seqMeta.containsMeta("regionUID")) {
+								auto regionCoords = seqMeta.getMeta("regionUID");
+								bool modified = false;
+								for(const auto & rename : corePars_.chromRenamingKey) {
+									if(regionCoords.find(rename.first) != std::string::npos) {
+										modified = true;
+										regionCoords = njh::replaceString(regionCoords, rename.first, rename.second);
+										break;
+									}
+								}
+								if(modified) {
+									seqMeta.addMeta("regionUID", regionCoords,true);
+									seqMeta.resetMetaInName(seq.name_);
+								}
+							}
 							auto rawTarName = seqMeta.getMeta(corePars_.targetField);
 							if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
 								continue;
@@ -167,6 +182,21 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									}
 									if(modified) {
 										seqMeta.addMeta("regionCoords", regionCoords,true);
+										seqMeta.resetMetaInName(seq.name_);
+									}
+								}
+								if(!corePars_.chromRenamingKey.empty() && seqMeta.containsMeta("regionUID")) {
+									auto regionCoords = seqMeta.getMeta("regionUID");
+									bool modified = false;
+									for(const auto & rename : corePars_.chromRenamingKey) {
+										if(regionCoords.find(rename.first) != std::string::npos) {
+											modified = true;
+											regionCoords = njh::replaceString(regionCoords, rename.first, rename.second);
+											break;
+										}
+									}
+									if(modified) {
+										seqMeta.addMeta("regionUID", regionCoords,true);
 										seqMeta.resetMetaInName(seq.name_);
 									}
 								}
