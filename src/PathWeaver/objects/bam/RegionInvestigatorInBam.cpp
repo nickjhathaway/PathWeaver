@@ -137,7 +137,7 @@ BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageForRegion(
 	while(bReader.GetNextAlignmentCore(bAln)){
 		if(bAln.IsPrimaryAlignment() && bAln.IsPaired()){
 				++ret.totalPairedReads_;
-			if(bAln.IsProperPair()){
+			if(bAln.IsProperPair() && (bAln.IsMapped() && bAln.IsMateMapped() && bAln.IsReverseStrand() != bAln.IsMateReverseStrand())){
 				++ret.totalProperPairedReads_;
 			}else if(!bAln.IsProperPair() && ((bAln.IsMapped() && !bAln.IsMateMapped()) || (!bAln.IsMapped() && bAln.IsMateMapped())) ){
 				++ret.totalOneMateUnmappedImproperPairs_;
