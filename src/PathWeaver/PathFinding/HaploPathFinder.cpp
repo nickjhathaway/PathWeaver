@@ -604,6 +604,18 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 				"Filter Off Pairs marked as improper (mate doesn't map, inverse mapping etc)", false, "BamExtracting");
 	}
 
+	if (bamExtractPars_.removeInverseOrphans_) {
+		bool keepInverseOrphans = false;
+		setUp.setOption(keepInverseOrphans, "--keepInverseOrphans",
+				"Keep orphans that have inverse mapping", false, "BamExtracting");
+		bamExtractPars_.removeInverseOrphans_ = !keepInverseOrphans;
+	} else {
+		setUp.setOption(bamExtractPars_.removeInverseOrphans_,
+				"--removeImproperPairs",
+				"Filter Off orphans that have inverse mapping", false, "BamExtracting");
+	}
+
+
 	if (bamExtractPars_.removeImproperPairs_) {
 		bool removeImproperMateUnmapped = false;
 		setUp.setOption(removeImproperMateUnmapped, "--removeImproperMateUnmapped",
@@ -626,6 +638,8 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	setUp.setOption(bamExtractPars_.percInRegion_,          "--percInRegion",          "Percent of bases in Region to be included", false, "BamExtracting");
 	setUp.setOption(bamExtractPars_.minAlnMapSize_, "--minAlnMapSize", "min Aln Map Size for initial recruitment", false, "BamExtracting");
 	setUp.setOption(bamExtractPars_.softClipPercentageCutOff_, "--softClipPercentageCutOff", "The minimum percentage of the bases that can be soft clipped to include alignment", false, "BamExtracting");
+	bamExtractPars_.softClipHardCutOff_ = 30;
+	setUp.setOption(bamExtractPars_.softClipHardCutOff_, "--softClipHardCutOff", "A hard cut off for amount of soft clipping allowed to be included in extraction", false, "BamExtracting");
 
 }
 

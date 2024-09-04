@@ -136,6 +136,7 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 	masterPars.bamExtractPars_.softClipPercentageCutOff_ = 1.00;
 	masterPars.bamExtractPars_.removeImproperPairs_ = true;
 	masterPars.bamExtractPars_.keepImproperMateUnmapped_ = true;
+	masterPars.bamExtractPars_.removeInverseOrphans_ = true;
 	masterPars.setBamExtractOpts(setUp);
 
 
