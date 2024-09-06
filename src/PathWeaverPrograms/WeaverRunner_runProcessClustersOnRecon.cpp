@@ -311,27 +311,38 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	setUp.pars_.colOpts_.verboseOpts_.verbose_ = setUp.pars_.verbose_;
 	setUp.pars_.colOpts_.verboseOpts_.debug_ = setUp.pars_.debug_;
+	bool doNotUseSwgaSampleClusErrorSet = false;
+	if(setUp.setOption(masterPopClusPars.noErrorsSet, "--noErrors", "Collapse parameters with no errors", false, "Clustering")) {
+		doNotUseSwgaSampleClusErrorSet = true;
+	}
 
-	setUp.setOption(masterPopClusPars.noErrorsSet, "--noErrors", "Collapse parameters with no errors", false, "Clustering");
 
-
-	setUp.setOption(masterPopClusPars.strictErrorsSetHq1, "--strictErrors-hq1", "Collapse parameters with a several low quality mismatches and 1 high quality mismatch", false, "Clustering");
+	if(setUp.setOption(masterPopClusPars.strictErrorsSetHq1, "--strictErrors-hq1", "Collapse parameters with a several low quality mismatches and 1 high quality mismatch", false, "Clustering")) {
+		doNotUseSwgaSampleClusErrorSet = true;
+	}
 	if(masterPopClusPars.strictErrorsSetHq1){
 		masterPopClusPars.strictErrorsSet = true;
 		masterPopClusPars.hqMismatches = 1;
 	}
 
-	bool doNotUseSwgaSampleClusErrorSet = false;
-	setUp.setOption(doNotUseSwgaSampleClusErrorSet, "--doNotUseSwgaSampleClusErrorSet", "By default collapse parameters for each sample with SWGA data (collapsing on homopolymer indel)s, this will turn this off and another clustering or parameters can be set for the clustering", false, "Clustering");
-	swgaSampleClusErrorSet = !doNotUseSwgaSampleClusErrorSet;
-	setUp.setOption(masterPopClusPars.strictErrorsSet, "--strictErrors", "Collapse parameters with a several low quality mismatches", false, "Clustering");
+	if(!doNotUseSwgaSampleClusErrorSet) {
+		setUp.setOption(doNotUseSwgaSampleClusErrorSet, "--doNotUseSwgaSampleClusErrorSet", "By default collapse parameters for each sample with SWGA data (collapsing on homopolymer indel)s, this will turn this off and another clustering or parameters can be set for the clustering", false, "Clustering");
+	}
+
+	if(setUp.setOption(masterPopClusPars.strictErrorsSet, "--strictErrors", "Collapse parameters with a several low quality mismatches", false, "Clustering")) {
+		doNotUseSwgaSampleClusErrorSet = true;
+	}
 	setUp.setOption(masterPopClusPars.hqMismatches, "--hq", "Number of high quality mismatches to allow", false, "Clustering");
 	setUp.setOption(masterPopClusPars.stopAfter, "--stopAfter", "Number of top haplotypes to check", false, "Clustering");
 
-	setUp.setOption(masterPopClusPars.parameters, "--par", "ParametersFileName", !swgaSampleClusErrorSet && !masterPopClusPars.noErrorsSet && !masterPopClusPars.strictErrorsSet && !masterPopClusPars.strictErrorsSetHq1, "Clustering");
+	if(setUp.setOption(masterPopClusPars.parameters, "--par", "ParametersFileName", !swgaSampleClusErrorSet && !masterPopClusPars.noErrorsSet && !masterPopClusPars.strictErrorsSet && !masterPopClusPars.strictErrorsSetHq1, "Clustering")) {
+		doNotUseSwgaSampleClusErrorSet = true;
+	}
 
-	setUp.setOption(masterPopClusPars.binParameters, "--binPar", "bin Parameters Filename", false, "Clustering");
-
+	if(setUp.setOption(masterPopClusPars.binParameters, "--binPar", "bin Parameters Filename", false, "Clustering")) {
+		doNotUseSwgaSampleClusErrorSet = true;
+	}
+	swgaSampleClusErrorSet = !doNotUseSwgaSampleClusErrorSet;
 
 	masterPopClusPars.preFiltCutOffs.sampleMinReadCount = 10;
 	bool sampMinSet = setUp.setOption(masterPopClusPars.preFiltCutOffs.sampleMinReadCount, "--sampleMinTotalReadCutOff",
@@ -402,7 +413,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(popClusParsPars.strictErrorsSet, "--pop-strictErrors", "Collapse parameters with a several low quality mismatches in population clustering", false, "Population");
 	setUp.setOption(popClusParsPars.hqMismatches, "--pop-hq", "Number of high quality mismatches to allow in population clustering", false, "Population");
 	setUp.setOption(popClusParsPars.stopAfter, "--pop-stopAfter", "Number of top haplotypes to check in population clustering", false, "Population");
-	setUp.setOption(swgaPopClusErrorSet, "--pop-swgaErrorSet", "Collapse parameters for population clustering with SWGA data (collapsing on homopolymer indel)s", false, "Clustering");
+	setUp.setOption(swgaPopClusErrorSet, "--pop-swgaErrorSet", "Collapse parameters for population clustering with SWGA data (collapsing on homopolymer indels)", false, "Clustering");
 
 	setUp.setOption(setUp.pars_.chiOpts_.checkChimeras_, "--recheckChimeras", "Check Input sequences for possible Chimeras", false, "Chimeras");
 	setUp.setOption(masterPopClusPars.keepChimeras, "--keepChimeras", "KeepChimeras", false, "Chimeras");
