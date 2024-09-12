@@ -335,7 +335,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(masterPopClusPars.hqMismatches, "--hq", "Number of high quality mismatches to allow", false, "Clustering");
 	setUp.setOption(masterPopClusPars.stopAfter, "--stopAfter", "Number of top haplotypes to check", false, "Clustering");
 
-	if(setUp.setOption(masterPopClusPars.parameters, "--par", "ParametersFileName", !swgaSampleClusErrorSet && !masterPopClusPars.noErrorsSet && !masterPopClusPars.strictErrorsSet && !masterPopClusPars.strictErrorsSetHq1, "Clustering")) {
+	if(setUp.setOption(masterPopClusPars.parameters, "--par", "ParametersFileName", doNotUseSwgaSampleClusErrorSet && !masterPopClusPars.noErrorsSet && !masterPopClusPars.strictErrorsSet && !masterPopClusPars.strictErrorsSetHq1, "Clustering")) {
 		doNotUseSwgaSampleClusErrorSet = true;
 	}
 
