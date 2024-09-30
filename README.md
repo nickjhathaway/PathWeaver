@@ -75,6 +75,8 @@ PathWeaver ExtractPathwaysReadsFallingInMultipleRegions --bed pfvars_exon1_withU
 PathWeaver SeqsExtractPathways --fastq1 out_R1.fastq --fastq2 out_R2.fastq --sampName example --dout outExample --overWriteDir --revCompMate
 ```
 
+## Citations used in 
 
+PathWeaver has been used in the following citations: 
 
-
+*  Hathaway, N. J., Kim, I. E., Jr, Young, N. W., Hui, S. T., Crudale, R., Liang, E. Y., Nixon, C. P., Giesbrecht, D., Juliano, J. J., Parr, J. B., & Bailey, J. A. (2024). *Interchromosomal segmental duplication drives translocation and loss of P. falciparum histidine-rich protein 3*. eLife. https://doi.org/10.7554/elife.93534.2
