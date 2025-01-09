@@ -1036,6 +1036,9 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
       if (writeOutLogs) {
         jLog.addToLog(regionName, logValue);
       }
+    	if (!keepTemporaryFiles && bfs::exists(regionDir)) {
+    		njh::files::rmDirForce(regionDir);
+    	}
     }
   };
 
