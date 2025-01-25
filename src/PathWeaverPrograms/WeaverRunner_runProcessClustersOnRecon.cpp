@@ -91,7 +91,7 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 				chromRenamingKey.emplace(semicolonToks[0], semicolonToks[1]);
 				newKeys.emplace(semicolonToks[1]);
 			}
-		}else {
+		} else {
 			TableReader tab(TableIOOpts::genTabFileIn(chromKey, false));
 			if(tab.header_.columnNames_.size() <2) {
 				std::stringstream ss;
@@ -149,9 +149,13 @@ int WeaverRunner::rawGatherSeqs(const njh::progutils::CmdArgs & inputCommands) {
 
 	processedPars.outMetaFnp = njh::files::make_path(setUp.pars_.directoryName_, "metaFnp.tab.txt");
 	auto rawAllSeqsFnp = njh::files::make_path(setUp.pars_.directoryName_, "rawAllSeqsFile.fasta");
+	auto rawAllPartialSeqsFnp = njh::files::make_path(setUp.pars_.directoryName_, "rawAllPartialSeqsFile.fasta.gz");
+
 	auto targetsLocsFnp = njh::files::make_path(setUp.pars_.directoryName_, "targetLocations.tab.txt");
 	//
 	rawGatherPars.allSeqFnp = rawAllSeqsFnp;
+	rawGatherPars.allPartialSeqFnp = rawAllPartialSeqsFnp;
+
 	rawGatherPars.directories = directories;
 	corePars.meta = meta;
 	rawGatherPars.targets = targets;
@@ -665,6 +669,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	njh::stopWatch watch;
 	watch.setLapName("Gathering Raw Seqs");
 	auto rawAllSeqsFnp = njh::files::make_path(infoDir, "rawAllSeqsFile.fasta");
+	auto rawAllPartialSeqsFnp = njh::files::make_path(infoDir, "rawAllPartialSeqsFile.fasta.gz");
 
 	//
 	SeqGatheringFromPathWeaver::SeqGatheringFromPathWeaverCorePars gatherCorePars;
@@ -678,6 +683,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	gatherCorePars.chromRenamingKey = chromRenamingKey;
 
 	rawGatherPars.allSeqFnp = rawAllSeqsFnp;
+	rawGatherPars.allPartialSeqFnp = rawAllPartialSeqsFnp;
+
 	rawGatherPars.directories = directories;
 
 

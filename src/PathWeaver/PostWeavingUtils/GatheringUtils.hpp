@@ -55,6 +55,7 @@ public:
 
 	struct gatherSeqsAndSortByTargetPars {
 		bfs::path allSeqFnp;
+		bfs::path allPartialSeqFnp;
 		std::vector<bfs::path> directories;
 		std::set<std::string> targets;
 		std::set<std::string> excludeTargets;

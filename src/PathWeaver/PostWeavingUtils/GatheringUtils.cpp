@@ -21,7 +21,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		njh::concurrent::LockableVec<bfs::path> inputDirQueue(pars.directories);
 		std::mutex allSeqsByTargetMut;
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-
+		MultiSeqIO partialOutputWriter;
+		partialOutputWriter.addReader("allPartialSeqs", SeqIOOptions::genFastaOutGz(pars.allPartialSeqFnp));
+		partialOutputWriter.openOut("allPartialSeqs");
 		uint64_t maxLen = 500;
 		for(const auto & trimSeqsPerTarget : pars.trimSeqs){
 			readVec::getMaxLength(trimSeqsPerTarget.second, maxLen);
@@ -38,6 +40,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 																				 &allSeqsByTarget,
 																				 &allSeqsByTargetMut,
 																				 &alnPool,
+																				 &partialOutputWriter,
 																				 &pars,&ret,this](){
 			bfs::path inputDir;
 			VecStr currentMissingDirectoriesOutput;
@@ -152,6 +155,14 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 							if(!pars.excludeTargets.empty() && njh::in(rawTarName, pars.excludeTargets)){
 								continue;
 							}
+
+							if(nullptr != corePars_.meta){
+								auto sampleName = seqMeta.getMeta(corePars_.sampleField);
+								auto newMeta = corePars_.meta->getMetaForSample(sampleName, njh::getVecOfMapKeys(corePars_.meta->groupData_));
+								//newMeta.addMeta("sample", sampleName);
+								seqMeta.addMeta(newMeta, true);
+								seqMeta.resetMetaInName(seq.name_);
+							}
 							uint32_t count = 0;
 							if("reads" == corePars_.countField){
 								count += static_cast<uint32_t>(std::round(seq.cnt_));
@@ -179,6 +190,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 					}
 					//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
+					// {
 					if(pars.addPartial){
 						auto partialSeqFnp = njh::files::make_path(inputDir,"partial", "allPartial.fasta");
 
@@ -222,13 +234,25 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									}
 								}
 								auto rawTarName = seqMeta.getMeta(corePars_.targetField);
-								if(seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
-									if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
-										continue;
-									}
-									if(!pars.excludeTargets.empty() && njh::in(rawTarName, pars.excludeTargets)){
-										continue;
-									}
+								if(!pars.targets.empty() && !njh::in(rawTarName, pars.targets)){
+									continue;
+								}
+								if(!pars.excludeTargets.empty() && njh::in(rawTarName, pars.excludeTargets)){
+									continue;
+								}
+								//auto tarName = njh::replaceString(rawTarName, ".", "-");
+								const auto& tarName = rawTarName;
+								//targetKey[tarName] = rawTarName;
+								//add in meta from sample meta if it's been loaded
+								if(nullptr != corePars_.meta){
+									auto sampleName = seqMeta.getMeta(corePars_.sampleField);
+									auto newMeta = corePars_.meta->getMetaForSample(sampleName, njh::getVecOfMapKeys(corePars_.meta->groupData_));
+									//newMeta.addMeta("sample", sampleName);
+									seqMeta.addMeta(newMeta, true);
+									seqMeta.resetMetaInName(seq.name_);
+								}
+								if(pars.addPartial && seqMeta.containsMeta("trimStatus") && "true" == seqMeta.getMeta("trimStatus")){
+									//add count info
 									uint32_t count = 0;
 									if ("reads" == corePars_.countField) {
 										count += static_cast<uint32_t>(std::round(seq.cnt_));
@@ -238,9 +262,6 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									if(0 == count){
 										continue;
 									}
-									//auto tarName = njh::replaceString(rawTarName, ".", "-");
-									const auto& tarName = rawTarName;
-									//targetKey[tarName] = rawTarName;
 									if(njh::in(rawTarName, pars.reOrientingRegion_) && pars.reOrientingRegion_.at(rawTarName)->reverseSrand_ != isReverseStrand[rawTarName]) {
 										seq.reverseComplementRead(false,true);
 									}
@@ -252,6 +273,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 										samplesInPrcoessFiles.emplace(seqMeta.getMeta(corePars_.sampleField));
 										++seqsAdded;
 									}
+								} else {
+									partialOutputWriter.write("allPartialSeqs", seq);
 								}
 							}
 						}
@@ -293,13 +316,6 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 									count = seq->cnt_;
 								}else{
 									count = seqMeta.getMeta<double>(corePars_.countField);
-								}
-								if(nullptr != corePars_.meta){
-									auto sampleName = seqMeta.getMeta(corePars_.sampleField);
-									auto newMeta = corePars_.meta->getMetaForSample(sampleName, njh::getVecOfMapKeys(corePars_.meta->groupData_));
-									//newMeta.addMeta("sample", sampleName);
-									seqMeta.addMeta(newMeta, true);
-									seqMeta.resetMetaInName(seq->name_);
 								}
 								njh::addVecToSet(getVectorOfMapKeys(seqMeta.meta_), ret.allMetaFields);
 								seq->cnt_ = round((count/totalOfCountField) * readTotals[seqMeta.getMeta(corePars_.targetField)]);
@@ -367,6 +383,7 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				allSeqsByTarget[target].resize(0);
 			}
 			ret.allSeqFnp = allSeqOpts.out_.outName();
+			writer.closeOut();
 		}
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
