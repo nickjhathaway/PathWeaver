@@ -897,7 +897,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 		sampColl.keepSampleInfoInMemory_ = true;
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-		if("" != currentPars.groupingsFile){
+		if(!currentPars.groupingsFile.empty()){
 			sampColl.addGroupMetaData(currentPars.groupingsFile);
 		}
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
