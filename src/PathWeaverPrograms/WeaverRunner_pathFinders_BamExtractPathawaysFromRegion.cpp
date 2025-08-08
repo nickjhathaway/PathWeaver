@@ -1037,7 +1037,13 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
         jLog.addToLog(regionName, logValue);
       }
     	if (!keepTemporaryFiles && bfs::exists(regionDir)) {
-    		njh::files::rmDirForce(regionDir);
+		    try {
+		    	njh::files::rmDirForce(regionDir);
+		    } catch (bfs::filesystem_error &e) {
+		    	//some systems get busy and need a double remove, pause for a moment and then try again
+		    	sleep(2);
+			    njh::files::rmDirForce(regionDir);
+		    }
     	}
     }
   };
