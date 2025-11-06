@@ -912,7 +912,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			std::function<void()> setupClusterSamples = [
 																									 &sampleQueue,&alnPool,&collapserObj,&currentPars,&setUp,
 																	&sampColl,&customCutOffsMap,
-																	&customCutOffsMapPerRep, &seqsForSample](){
+																	&customCutOffsMapPerRep, &seqsForSample, tar](){
 				// std::cout << __FILE__ << " " << __LINE__ << std::endl;
 				std::string samp = "";
 				auto currentAligner = alnPool.popAligner();
@@ -928,17 +928,13 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					}
 
 					sampColl.setUpSample(samp,seqsForSample.at(samp), *currentAligner, collapserObj, setUp.pars_.chiOpts_);
-
 					sampColl.clusterSample(samp, *currentAligner, collapserObj, currentPars.iteratorMap);
-
 					sampColl.sampleCollapses_.at(samp)->markChimeras(currentPars.chiCutOff);
 
 					//exclude clusters that don't have the necessary replicate number
 					//defaults to the number of input replicates if none supplied
-
 					if (0 != currentPars.runsRequired) {
 						sampColl.sampleCollapses_.at(samp)->excludeBySampNum(currentPars.runsRequired, true);
-
 					} else {
 						sampColl.sampleCollapses_.at(samp)->excludeBySampNum(sampColl.sampleCollapses_.at(samp)->input_.info_.infos_.size(), true);
 					}
@@ -948,15 +944,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						sampColl.sampleCollapses_.at(samp)->excludeLowFreqOneOffs(true, currentPars.lowFreqMultiplier, *currentAligner,
 								skipChimeras, customCutOffsMap.at(samp));
 					}
-
 					sampColl.sampleCollapses_.at(samp)->excludeFractionAnyRep(customCutOffsMapPerRep.at(samp), true);
 					sampColl.sampleCollapses_.at(samp)->excludeFraction(customCutOffsMap.at(samp), true);
-
 					if (!currentPars.keepChimeras) {
 						//now exclude all marked chimeras
 						sampColl.sampleCollapses_.at(samp)->excludeChimerasNoReMark(true);
 					}
-
 
 					std::string sortBy = "fraction";
 					sampColl.sampleCollapses_.at(samp)->renameClusters(sortBy);
