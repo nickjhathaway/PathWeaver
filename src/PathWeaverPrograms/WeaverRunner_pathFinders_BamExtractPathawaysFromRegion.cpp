@@ -45,6 +45,9 @@
 
 namespace njhseq {
 
+
+
+
 int WeaverRunner::BamExtractPathwaysFromRegion(
 		const njh::progutils::CmdArgs & inputCommands) {
 	std::string chromKey;
