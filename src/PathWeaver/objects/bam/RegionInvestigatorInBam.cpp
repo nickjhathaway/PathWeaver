@@ -28,6 +28,7 @@
 
 #include "RegionInvestigatorInBam.hpp"
 #include <njhseq/concurrency/pools/BamReaderPool.hpp>
+#include <njhseq/objects/dataContainers/tables/TableReader.hpp>
 #include <njhseq/readVectorManipulation/readVectorHelpers/readVecTrimmer.hpp>
 
 namespace njhseq {
@@ -86,9 +87,64 @@ BamRegionInvestigator::BamRegionInvestigator(const BamRegionInvestigatorPars & p
 
 }
 
+
+std::unordered_map<std::string, std::string> BamRegionInvestigator::processChromRenaming(
+	const std::string& chromKey) {
+		std::unordered_map<std::string, std::string> chromRenamingKey;
+		std::set<std::string> newKeys;
+		if(!bfs::exists(chromKey)) {
+			auto commaToks = tokenizeString(chromKey, ",");
+			for(const auto & commaToken : commaToks) {
+				auto semicolonToks = tokenizeString(commaToken, ":");
+				if(semicolonToks.size() != 2) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << " for chromKey: " << chromKey << " should be comma separated key:value pair, " << " error in processing: " << commaToken << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(semicolonToks[0], chromRenamingKey)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error from " << chromKey << "already have key " << semicolonToks[0] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(semicolonToks[1], newKeys)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << chromKey << "already have value " << semicolonToks[1] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				chromRenamingKey.emplace(semicolonToks[0], semicolonToks[1]);
+				newKeys.emplace(semicolonToks[1]);
+			}
+		} else {
+			TableReader tab(TableIOOpts::genTabFileIn(chromKey, false));
+			if(tab.header_.columnNames_.size() <2) {
+				std::stringstream ss;
+				ss << __PRETTY_FUNCTION__ << ", error " << chromKey << " should be at least 2 columns, not " <<  tab.header_.columnNames_.size()<< "\n";
+				throw std::runtime_error{ss.str()};
+			}
+
+			VecStr row;
+			while(tab.getNextRow(row)) {
+				if(njh::in(row[0], chromRenamingKey)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error from " << chromKey << "already have key " << row[0] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				if(njh::in(row[1], newKeys)) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << chromKey << "already have value " << row[1] << "\n";
+					throw std::runtime_error{ss.str()};
+				}
+				chromRenamingKey.emplace(row[0], row[1]);
+				newKeys.emplace(row[1]);
+			}
+		}
+		return chromRenamingKey;
+}
+
 std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvestigator::getCoverageOnFromBam(
 		const bfs::path & bamFnp,
 		const std::vector<GenomicRegion> & regions) const {
+
 	std::vector<std::shared_ptr<RegionInfo>> pairs;
 	std::mutex pairsMut;
 	njh::concurrent::LockableQueue<GenomicRegion> regionsQueue(regions);
@@ -626,19 +682,36 @@ std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvesti
 																	&regionSeqs,&spanningReadsPar,
 																	&regionsQueue,this](){
 		std::vector<std::shared_ptr<RegionInfo>> currentBamRegionsPairs;
-		GenomicRegion region;
+		GenomicRegion original_region;
 		BamTools::BamReader bReader;
 		bReader.Open(bamFnp.string());
 		loadBamIndexThrow(bReader, __PRETTY_FUNCTION__);
 		checkBamOpenThrow(bReader, bamFnp);
 
+		VecStr chroms_in_bam_header;
+		{
+			auto ref_vec = bReader.GetReferenceData();
+			for (const auto& ref : ref_vec) {
+				chroms_in_bam_header.emplace_back(ref.RefName);
+			}
+		}
 		aligner alignerObj(std::min<uint64_t>(std::max<uint64_t>(maxlenForRegions, 500), 1000), gapScoringParameters(5,1,0,0,0,0));
 
 		BamTools::BamAlignment bAln;
 		auto refData = bReader.GetReferenceData();
-		while(regionsQueue.getVal(region)){
-			const auto & refSeq = regionSeqs.at(region.createUidFromCoordsStrand());
-			currentBamRegionsPairs.emplace_back(std::make_shared<RegionInfo>(getCoverageAndFullySpanningForRegion(bReader, region, refSeq, spanningReadsPar, alignerObj)));
+		while(regionsQueue.getVal(original_region)){
+			const auto & refSeq = regionSeqs.at(original_region.createUidFromCoordsStrand());
+			auto bam_region = original_region;
+			for(const auto & key : chromRenamingKey_) {
+				if(std::string::npos != bam_region.chrom_.find(key.first)) {
+					auto new_chrom_name = njh::replaceString(bam_region.chrom_, key.first, key.second);
+					if (njh::in(new_chrom_name, chroms_in_bam_header)) {
+						bam_region.chrom_ = new_chrom_name;
+					}
+				}
+			}
+			currentBamRegionsPairs.emplace_back(std::make_shared<RegionInfo>(getCoverageAndFullySpanningForRegion(bReader, bam_region, refSeq, spanningReadsPar, alignerObj)));
+			currentBamRegionsPairs.back()->region_ = original_region;
 		}
 		{
 			std::lock_guard<std::mutex> lock(pairsMut);

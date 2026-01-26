@@ -110,6 +110,10 @@ public:
 	BamRegionInvestigator(const BamRegionInvestigatorPars & pars);
 	BamRegionInvestigatorPars pars_;
 
+	std::unordered_map<std::string, std::string> chromRenamingKey_;
+
+	static std::unordered_map<std::string, std::string> processChromRenaming(const std::string & chromRenamingFile);
+
 	std::vector<std::shared_ptr<RegionInfo>> getCoverageOnFromBam(
 			const bfs::path & bamFnp,
 			const std::vector<GenomicRegion> & regions) const;
