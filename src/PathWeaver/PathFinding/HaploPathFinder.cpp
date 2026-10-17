@@ -657,6 +657,15 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	setUp.setOption(sbPars.minVotes_, "--strandBiasKmerCorrectionMinVotes", "A base is corrected when at least this many covering k-mers agree and none disagree", false, "BamExtracting");
 	setUp.setOption(sbPars.maxMinorStrandReads_, "--strandBiasKmerCorrectionMaxMinorStrandReads", "Block a correction when any covering k-mer has more than this many reads on its minor strand", false, "BamExtracting");
 	setUp.setOption(sbPars.maxPasses_, "--strandBiasKmerCorrectionMaxPasses", "Maximum tally-and-correct passes, stops early when a pass finds nothing", false, "BamExtracting");
+	//quality-informed relaxation of the two guards that lose power at low depth
+	bool noStrandBiasKmerQualityRelax = !sbPars.useQualityRelax_;
+	setUp.setOption(noStrandBiasKmerQualityRelax, "--noStrandBiasKmerQualityRelax",
+			"Turn off using a strand-wide base-quality collapse as independent evidence of a sequence-specific error; when on it relaxes only the partner-depth and Fisher guards", false, "BamExtracting");
+	sbPars.useQualityRelax_ = !noStrandBiasKmerQualityRelax;
+	setUp.setOption(sbPars.qualDropMin_, "--strandBiasKmerQualityDropMin", "Required Phred drop of the reference base at the candidate's position, other strand minus artifact strand", false, "BamExtracting");
+	setUp.setOption(sbPars.qualMinReads_, "--strandBiasKmerQualityMinReads", "Partner reads needed on each strand before a quality drop is trusted", false, "BamExtracting");
+	setUp.setOption(sbPars.relaxedPartnerMissingStrandDepth_, "--strandBiasKmerQualityRelaxedPartnerDepth", "Partner depth required on the missing strand when a quality drop is present", false, "BamExtracting");
+	setUp.setOption(sbPars.relaxedFisherPhred_, "--strandBiasKmerQualityRelaxedFisherPhred", "Fisher Phred required when a quality drop is present", false, "BamExtracting");
 	bool noPadRegionByK = !sbPars.padRegionByK_;
 	setUp.setOption(noPadRegionByK, "--strandBiasKmerCorrectionNoPadRegionByK", "Do not pad the regions by k when tallying k-mers for the strand-bias correction", false, "BamExtracting");
 	sbPars.padRegionByK_ = !noPadRegionByK;
