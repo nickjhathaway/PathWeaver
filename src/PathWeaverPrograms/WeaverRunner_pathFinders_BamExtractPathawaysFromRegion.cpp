@@ -397,6 +397,12 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 
         auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(
                 *bamReader, extractedOpts.out_, regionsUsed, parsForRegion.bamExtractPars_);
+        //record strand-bias k-mer correction activity for the basic info table (counts are per extraction, shared by the regions extracted together)
+        for(auto & reg : regInfo){
+          reg->strandBiasKmerCorrectionPasses_ = regionExtracted.strandBiasKmerCorrectionPasses_;
+          reg->strandBiasKmerCorrectedReads_ = regionExtracted.strandBiasKmerCorrectedReads_;
+          reg->strandBiasKmerCorrectedBases_ = regionExtracted.strandBiasKmerCorrectedBases_;
+        }
 
         if (keepTemporaryFiles) {
           OutOptions extractedReadsStatsFileOpts(njh::files::make_path(extractionDir, "extractedReadsStats.tab.txt"));

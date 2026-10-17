@@ -641,6 +641,25 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	bamExtractPars_.softClipHardCutOff_ = 30;
 	setUp.setOption(bamExtractPars_.softClipHardCutOff_, "--softClipHardCutOff", "A hard cut off for amount of soft clipping allowed to be included in extraction", false, "BamExtracting");
 
+	//strand-bias (Illumina sequence specific error) k-mer correction, on by default
+	auto & sbPars = bamExtractPars_.strandBiasKmerCorrection_;
+	bool noStrandBiasKmerCorrection = !sbPars.on_;
+	setUp.setOption(noStrandBiasKmerCorrection, "--noStrandBiasKmerCorrection",
+			"Turn off the correction of strand-restricted artifact k-mers (bases seen on essentially one sequencing strand while the strand-balanced one-off k-mer is dominant) during extraction", false, "BamExtracting");
+	sbPars.on_ = !noStrandBiasKmerCorrection;
+	setUp.setOption(sbPars.kLen_, "--strandBiasKmerCorrectionKLen", "K-mer length for the strand-bias correction, max 32", false, "BamExtracting");
+	setUp.setOption(sbPars.minTotal_, "--strandBiasKmerCorrectionMinTotal", "Minimum reads for a k-mer to be considered a strand-bias artifact candidate", false, "BamExtracting");
+	setUp.setOption(sbPars.oneSidedFrac_, "--strandBiasKmerCorrectionOneSidedFrac", "Candidate k-mer minor strand count must be <= max(1, this fraction of its total)", false, "BamExtracting");
+	setUp.setOption(sbPars.minPartnerMissingStrandDepth_, "--strandBiasKmerCorrectionMinPartnerMissingStrandDepth", "The balanced partner k-mer must have at least this many reads on the strand the candidate is missing from", false, "BamExtracting");
+	setUp.setOption(sbPars.ratioHard_, "--strandBiasKmerCorrectionRatioCutOff", "Candidate strand VAF ratio (missing strand over present strand) must be below this", false, "BamExtracting");
+	setUp.setOption(sbPars.fisherPhred_, "--strandBiasKmerCorrectionFisherPhred", "Two-sided Fisher exact (Phred scaled) of partner vs candidate strand counts must exceed this", false, "BamExtracting");
+	setUp.setOption(sbPars.partnerMargin_, "--strandBiasKmerCorrectionPartnerMargin", "Best partner k-mer must be at least this fold the next best partner", false, "BamExtracting");
+	setUp.setOption(sbPars.minVotes_, "--strandBiasKmerCorrectionMinVotes", "A base is corrected when at least this many covering k-mers agree and none disagree", false, "BamExtracting");
+	setUp.setOption(sbPars.maxMinorStrandReads_, "--strandBiasKmerCorrectionMaxMinorStrandReads", "Block a correction when any covering k-mer has more than this many reads on its minor strand", false, "BamExtracting");
+	setUp.setOption(sbPars.maxPasses_, "--strandBiasKmerCorrectionMaxPasses", "Maximum tally-and-correct passes, stops early when a pass finds nothing", false, "BamExtracting");
+	bool noPadRegionByK = !sbPars.padRegionByK_;
+	setUp.setOption(noPadRegionByK, "--strandBiasKmerCorrectionNoPadRegionByK", "Do not pad the regions by k when tallying k-mers for the strand-bias correction", false, "BamExtracting");
+	sbPars.padRegionByK_ = !noPadRegionByK;
 }
 
 

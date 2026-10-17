@@ -80,6 +80,10 @@ public:
 		uint32_t totalProperPairedReads_{0};//!< total number of proper pairs within region
 		uint32_t totalOneMateUnmappedImproperPairs_{0}; //!< total number of paired reads that are improper due to one mate being unmapped
 
+		uint32_t strandBiasKmerCorrectionPasses_{0}; //!< number of strand-bias k-mer correction passes that found corrections during extraction
+		uint32_t strandBiasKmerCorrectedReads_{0};   //!< reads with at least one base corrected for a strand-restricted artifact during extraction
+		uint64_t strandBiasKmerCorrectedBases_{0};   //!< bases corrected for strand-restricted artifacts during extraction
+
 		/**@brief calculate the estimated per base read coverage for this region
 		 *
 		 * @return the per base coverage for this region
