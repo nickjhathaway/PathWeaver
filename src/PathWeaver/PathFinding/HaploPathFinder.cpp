@@ -647,6 +647,14 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	setUp.setOption(noStrandBiasKmerCorrection, "--noStrandBiasKmerCorrection",
 			"Turn off the correction of strand-restricted artifact k-mers (bases seen on essentially one sequencing strand while the strand-balanced one-off k-mer is dominant) during extraction", false, "BamExtracting");
 	sbPars.on_ = !noStrandBiasKmerCorrection;
+	bool noStrandBiasKmerDoubletCorrection = !sbPars.doublet_;
+	setUp.setOption(noStrandBiasKmerDoubletCorrection, "--noStrandBiasKmerDoubletCorrection",
+			"Turn off correction of adjacent two-base artifacts. The single-base criterion cannot reach these, since a k-mer covering the pair differs from the true k-mer at two positions and so has no one-off partner. A doublet is held to stricter evidence than a single: no quality relaxation, and a quality collapse required at both positions", false, "BamExtracting");
+	sbPars.doublet_ = !noStrandBiasKmerDoubletCorrection;
+	bool strandBiasKmerDoubletAnySubstitution = !sbPars.doubletRequireSameSubstitution_;
+	setUp.setOption(strandBiasKmerDoubletAnySubstitution, "--strandBiasKmerDoubletAnySubstitution",
+			"Allow an adjacent doublet whose two bases change differently. By default both must change the same way, which the artifact produces and two independent adjacent variants generally do not", false, "BamExtracting");
+	sbPars.doubletRequireSameSubstitution_ = !strandBiasKmerDoubletAnySubstitution;
 	setUp.setOption(sbPars.kLen_, "--strandBiasKmerCorrectionKLen", "K-mer length for the strand-bias correction, max 32", false, "BamExtracting");
 	setUp.setOption(sbPars.minTotal_, "--strandBiasKmerCorrectionMinTotal", "Minimum reads for a k-mer to be considered a strand-bias artifact candidate", false, "BamExtracting");
 	setUp.setOption(sbPars.oneSidedFrac_, "--strandBiasKmerCorrectionOneSidedFrac", "Candidate k-mer minor strand count must be <= max(1, this fraction of its total)", false, "BamExtracting");
