@@ -664,6 +664,8 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	setUp.setOption(sbPars.partnerMargin_, "--strandBiasKmerCorrectionPartnerMargin", "Best partner k-mer must be at least this fold the next best partner", false, "BamExtracting");
 	setUp.setOption(sbPars.minVotes_, "--strandBiasKmerCorrectionMinVotes", "A base is corrected when at least this many covering k-mers agree and none disagree", false, "BamExtracting");
 	setUp.setOption(sbPars.maxMinorStrandReads_, "--strandBiasKmerCorrectionMaxMinorStrandReads", "Block a correction when any covering k-mer has more than this many reads on its minor strand", false, "BamExtracting");
+	setUp.setOption(sbPars.maxMinorStrandFrac_, "--strandBiasKmerCorrectionMaxMinorStrandFrac",
+			"Scale the minor-strand veto with each k-mer's own depth, blocking an edit only when the minor strand holds more than max(absolute, this fraction x depth) reads; 0 keeps the plain absolute threshold. Held absolute the veto tightens as coverage rises, so past a few hundred fold an artifact k-mer vetoes its own correction", false, "BamExtracting");
 	setUp.setOption(sbPars.maxPasses_, "--strandBiasKmerCorrectionMaxPasses", "Maximum tally-and-correct passes, stops early when a pass finds nothing", false, "BamExtracting");
 	//quality-informed relaxation of the two guards that lose power at low depth
 	bool noStrandBiasKmerQualityRelax = !sbPars.useQualityRelax_;
