@@ -653,6 +653,12 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	sbPars.doublet_ = !noStrandBiasKmerDoubletCorrection;
 	setUp.setOption(sbPars.doubletRequireSameSubstitution_, "--strandBiasKmerDoubletRequireSameSubstitution",
 			"Correct an adjacent doublet only when both bases change the same way. Off by default, since requiring it misses pairs whose two bases change differently, which the artifact also produces; what keeps a doublet correction safe is one-sidedness, partner dominance and the quality collapse at both offsets", false, "BamExtracting");
+	bool noStrandBiasKmerResultValidation = !sbPars.requireCorrectedKmerObserved_;
+	setUp.setOption(noStrandBiasKmerResultValidation, "--noStrandBiasKmerResultValidation",
+			"Stop checking that a correction's result is sequence the reads actually carry. The check is on by default: every corrected k-mer, with its flanking context, must have been observed, which prevents two edits inside one window combining into sequence no read had and prevents a correction importing sequence from another copy of a repeat", false, "BamExtracting");
+	sbPars.requireCorrectedKmerObserved_ = !noStrandBiasKmerResultValidation;
+	setUp.setOption(sbPars.validationFlank_, "--strandBiasKmerValidationFlank",
+			"Bases of flanking context on each side of a corrected k-mer that the result must also match in the reads; 0 checks the k-mer alone. The flanks pin which copy of a repeat a read belongs to, so a correction cannot import sequence from another copy", false, "BamExtracting");
 	setUp.setOption(sbPars.kLen_, "--strandBiasKmerCorrectionKLen", "K-mer length for the strand-bias correction, max 32", false, "BamExtracting");
 	setUp.setOption(sbPars.minTotal_, "--strandBiasKmerCorrectionMinTotal", "Minimum reads for a k-mer to be considered a strand-bias artifact candidate", false, "BamExtracting");
 	setUp.setOption(sbPars.oneSidedFrac_, "--strandBiasKmerCorrectionOneSidedFrac", "Candidate k-mer minor strand count must be <= max(1, this fraction of its total)", false, "BamExtracting");
