@@ -379,7 +379,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			"Low Freq Multiplier used for --excludeLowFreqOneOffs, considered low frequency if haplotype frac is less than its fraction times this number than the other haplotype", false, "Filtering");
 
 	bool keepOneSampOnlyOneOffHaps = false;
-	setUp.setOption(masterPopClusPars.lowLevelPopFiltPars_.removeOneSampOnlyOneOffHaps_, "--keepOneSampOnlyOneOffHaps",
+	setUp.setOption(keepOneSampOnlyOneOffHaps, "--keepOneSampOnlyOneOffHaps",
 			"Keep haplotypes that are below --oneSampOnlyOneOffHapsFrac fraction(default 0.20) that only appear in one sample that is one off of another haplotype within sample", false, "Filtering");
 	masterPopClusPars.lowLevelPopFiltPars_.removeOneSampOnlyOneOffHaps_ = !keepOneSampOnlyOneOffHaps;
 	masterPopClusPars.lowLevelPopFiltPars_.oneSampOnlyOneOffHapsFrac_ = 0.21;
@@ -393,7 +393,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	setUp.setOption(masterPopClusPars.rescuePars_.majorHaplotypeFracForRescue_, "--majorHaplotypeFracForRescue", "In order to be considered a major haplotype in a sample for comparing during rescue");
 	setUp.setOption(masterPopClusPars.rescuePars_.rescueExcludedChimericHaplotypes, "--rescueExcludedChimericHaplotypes", "Rescue Excluded chimeric Haplotypes if they appear as a major haplotype in another sample");
-	bool doNotRescueExcludedOneOffLowFreqHaplotypes;
+	bool doNotRescueExcludedOneOffLowFreqHaplotypes = false;
 	setUp.setOption(doNotRescueExcludedOneOffLowFreqHaplotypes, "--doNotRescueExcludedOneOffLowFreqHaplotypes", "Do Not Rescue Excluded one off low freq Haplotypes if they appear as a major haplotype in another sample");
 	masterPopClusPars.rescuePars_.rescueExcludedOneOffLowFreqHaplotypes = !doNotRescueExcludedOneOffLowFreqHaplotypes;
 	setUp.setOption(masterPopClusPars.rescuePars_.rescueExcludedLowFreqHaplotypes, "--rescueExcludedLowFreqHaplotypes", "Rescue Excluded Haplotypes for falling below frequency cut off if they appear as a major haplotype in another sample");
@@ -929,30 +929,31 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 					sampColl.setUpSample(samp,seqsForSample.at(samp), *currentAligner, collapserObj, setUp.pars_.chiOpts_);
 					sampColl.clusterSample(samp, *currentAligner, collapserObj, currentPars.iteratorMap);
-					sampColl.sampleCollapses_.at(samp)->markChimeras(currentPars.chiCutOff);
+					auto sampPtr = sampColl.getSampleCollapse(samp);
+					sampPtr->markChimeras(currentPars.chiCutOff);
 
 					//exclude clusters that don't have the necessary replicate number
 					//defaults to the number of input replicates if none supplied
 					if (0 != currentPars.runsRequired) {
-						sampColl.sampleCollapses_.at(samp)->excludeBySampNum(currentPars.runsRequired, true);
+						sampPtr->excludeBySampNum(currentPars.runsRequired, true);
 					} else {
-						sampColl.sampleCollapses_.at(samp)->excludeBySampNum(sampColl.sampleCollapses_.at(samp)->input_.info_.infos_.size(), true);
+						sampPtr->excludeBySampNum(sampPtr->input_.info_.infos_.size(), true);
 					}
 
 					if(currentPars.collapseLowFreqOneOffs){
 						bool skipChimeras = true;
-						sampColl.sampleCollapses_.at(samp)->excludeLowFreqOneOffs(true, currentPars.lowFreqMultiplier, *currentAligner,
+						sampPtr->excludeLowFreqOneOffs(true, currentPars.lowFreqMultiplier, *currentAligner,
 								skipChimeras, customCutOffsMap.at(samp));
 					}
-					sampColl.sampleCollapses_.at(samp)->excludeFractionAnyRep(customCutOffsMapPerRep.at(samp), true);
-					sampColl.sampleCollapses_.at(samp)->excludeFraction(customCutOffsMap.at(samp), true);
+					sampPtr->excludeFractionAnyRep(customCutOffsMapPerRep.at(samp), true);
+					sampPtr->excludeFraction(customCutOffsMap.at(samp), true);
 					if (!currentPars.keepChimeras) {
 						//now exclude all marked chimeras
-						sampColl.sampleCollapses_.at(samp)->excludeChimerasNoReMark(true);
+						sampPtr->excludeChimerasNoReMark(true);
 					}
 
 					std::string sortBy = "fraction";
-					sampColl.sampleCollapses_.at(samp)->renameClusters(sortBy);
+					sampPtr->renameClusters(sortBy);
 
 
 //					if (!expectedSeqs.empty()) {
