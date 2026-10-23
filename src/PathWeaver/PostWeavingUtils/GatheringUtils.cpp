@@ -15,8 +15,50 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		gatherSeqsAndSortByTargetRes ret;
 
 
-		//key1 = target, key2= sample, value = the sequences
-		std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> allSeqsByTarget;
+		//each thread buffers sequences and spools them to a temporary file per target so all the sequences are never held in memory at once,
+		//the target files are then put together in target order into pars.allSeqFnp
+		struct TargetSpool {
+			std::mutex mut_;
+			bfs::path fnp_;
+			uint32_t count_{0};
+			std::string firstName_;
+		};
+		std::unordered_map<std::string, std::unique_ptr<TargetSpool>> spools;
+		std::mutex spoolsMut;
+		auto spoolDir = njh::files::make_path(pars.allSeqFnp.parent_path(), pars.allSeqFnp.filename().string() + "_spoolByTarget");
+		if (bfs::exists(spoolDir)) {
+			bfs::remove_all(spoolDir);
+		}
+		bfs::create_directories(spoolDir);
+		auto spoolSeqs = [&spools, &spoolsMut, &spoolDir](const std::string & target, const std::vector<std::shared_ptr<seqInfo>> & seqs) {
+			if (seqs.empty()) {
+				return;
+			}
+			std::stringstream text;
+			for (const auto & seq : seqs) {
+				seq->outPutSeq(text);
+			}
+			TargetSpool * spool = nullptr;
+			{
+				std::lock_guard<std::mutex> lock(spoolsMut);
+				auto search = spools.find(target);
+				if (spools.end() == search) {
+					auto added = std::make_unique<TargetSpool>();
+					added->fnp_ = njh::files::make_path(spoolDir, std::to_string(spools.size()) + ".fasta");
+					search = spools.emplace(target, std::move(added)).first;
+				}
+				spool = search->second.get();
+			}
+			std::lock_guard<std::mutex> lock(spool->mut_);
+			if (0 == spool->count_) {
+				spool->firstName_ = seqs.front()->name_;
+			}
+			std::ofstream out(spool->fnp_.string(), std::ios::app);
+			out << text.str();
+			spool->count_ += seqs.size();
+		};
+		//how much sequence text a thread holds before spooling
+		const uint64_t spoolBufferBytes = 32 * 1024 * 1024;
 
 		njh::concurrent::LockableVec<bfs::path> inputDirQueue(pars.directories);
 		std::mutex allSeqsByTargetMut;
@@ -37,7 +79,8 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 		std::function<void()> collectSeqs = [&inputDirQueue,
-																				 &allSeqsByTarget,
+																				 &spoolSeqs,
+																				 &spoolBufferBytes,
 																				 &allSeqsByTargetMut,
 																				 &alnPool,
 																				 &partialOutputWriter,
@@ -46,6 +89,14 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			VecStr currentMissingDirectoriesOutput;
 			VecStr currentMissingSamplesOutput;
 			std::unordered_map<std::string, std::vector<std::shared_ptr<seqInfo>>> currentAllSeqsByTarget;
+			uint64_t currentBufferedBytes = 0;
+			auto spoolCurrent = [&currentAllSeqsByTarget, &currentBufferedBytes, &spoolSeqs]() {
+				for (const auto & tarSeqs : currentAllSeqsByTarget) {
+					spoolSeqs(tarSeqs.first, tarSeqs.second);
+				}
+				currentAllSeqsByTarget.clear();
+				currentBufferedBytes = 0;
+			};
 			std::unordered_set<std::string> currentAllSamples;
 			auto currentAligner = alnPool.popAligner();
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -58,10 +109,15 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				if(!pars.reOrientingRegion_.empty()) {
 					//this won't work for regions with the same name but different coords when we do multie region pulling
 					auto basInfoFnp = njh::files::make_path(inputDir, "final", "basicInfoPerRegion.tab.txt");
+					//bed convention, a header isn't required: name is column 4 and strand column 6, keyed by name since that's what the sequences are looked up by
 					TableReader basicReader(TableIOOpts::genTabFileIn(basInfoFnp));
+					basicReader.doNotCheckRowSizes = true;
 					VecStr row;
 					while(basicReader.getNextRow(row)) {
-						isReverseStrand[row[4]] = '-' == row[5].front();
+						if(row.size() < 6 || njh::beginsWith(row[0], "#")){
+							continue;
+						}
+						isReverseStrand[row[3]] = '-' == row[5].front();
 					}
 				}
 
@@ -329,6 +385,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 //								std::cout << "target: " << tar.first << std::endl;
 //								std::cout << "tarSeqs.size(): " << tarSeqs.size() << std::endl;
 //							}
+							for (const auto & seq : tarSeqs) {
+								currentBufferedBytes += seq->name_.size() + seq->seq_.size() + 3;
+							}
 							addOtherVec(currentAllSeqsByTarget[tar.first], tarSeqs);
 							//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
@@ -343,14 +402,15 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 				}
 //				std::cout << "inputDir:" << inputDir << std::endl;
 				//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+				if (currentBufferedBytes > spoolBufferBytes) {
+					spoolCurrent();
+				}
 			}
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
+			spoolCurrent();
 			{
 				std::lock_guard<std::mutex> lock(allSeqsByTargetMut);
 				njh::addVecToSet(currentMissingDirectoriesOutput, ret.missingOutput);
-				for(auto & tarSeqs : currentAllSeqsByTarget){
-					addOtherVec(allSeqsByTarget[tarSeqs.first], tarSeqs.second);
-				}
 				ret.allSamples.insert(currentAllSamples.begin(), currentAllSamples.end());
 			}
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
@@ -362,28 +422,25 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 		{
 			auto allSeqOpts = SeqIOOptions::genFastaOut(pars.allSeqFnp);
 			allSeqOpts.out_.overWriteFile_ = corePars_.overWrite;
-			SeqOutput writer(allSeqOpts);
-			writer.openOut();
-			uint32_t seqCounts = 0;
-			auto targetKeys = getVectorOfMapKeys(allSeqsByTarget);
-			njh::sort(targetKeys);
+			{
+				OutputStream writer(allSeqOpts.out_);
+				uint32_t seqCounts = 0;
+				auto targetKeys = getVectorOfMapKeys(spools);
+				njh::sort(targetKeys);
 
-			for(const auto & target : targetKeys){
-//				std::cout << __FILE__ << " " << __LINE__ << std::endl;
-//				std::cout << target << std::endl;
-//				std::cout << "allSeqsByTarget[target].size(): " << allSeqsByTarget[target].size() << std::endl;
+				for(const auto & target : targetKeys){
+					const auto & spool = *spools.at(target);
+					ret.targetKeyNewToOld[target] = MetaDataInName(spool.firstName_).getMeta(corePars_.targetField);
+					ret.targetKeyOldToNew[MetaDataInName(spool.firstName_).getMeta(corePars_.targetField)] = target;
 
-				ret.targetKeyNewToOld[target] = MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField);
-				ret.targetKeyOldToNew[MetaDataInName(allSeqsByTarget[target].front()->name_).getMeta(corePars_.targetField)] = target;
-
-				ret.seqsLocations[target] = std::make_pair(seqCounts, allSeqsByTarget[target].size());
-				writer.write(allSeqsByTarget[target]);
-				seqCounts += allSeqsByTarget[target].size();
-				allSeqsByTarget[target].clear();
-				allSeqsByTarget[target].resize(0);
+					ret.seqsLocations[target] = std::make_pair(seqCounts, spool.count_);
+					std::ifstream spoolIn(spool.fnp_.string(), std::ios::binary);
+					writer << spoolIn.rdbuf();
+					seqCounts += spool.count_;
+				}
 			}
+			bfs::remove_all(spoolDir);
 			ret.allSeqFnp = allSeqOpts.out_.outName();
-			writer.closeOut();
 		}
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 

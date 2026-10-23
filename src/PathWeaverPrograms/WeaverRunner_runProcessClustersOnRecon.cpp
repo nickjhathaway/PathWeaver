@@ -426,6 +426,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(masterPopClusPars.numThreads, "--numThreads", "Number of threads to use");
 	uint32_t numThreadsForSample = 1;
 	setUp.setOption(numThreadsForSample, "--numThreadsForSample", "Number of threads to use for each population clustering");
+	bool compressSamplesInMemory = false;
+	setUp.setOption(compressSamplesInMemory, "--compressSamplesInMemory", "Keep each sample's clusters compressed between processing steps rather than as is, ~30% less memory but ~20% slower");
 
 	setUp.setOption(masterPopClusPars.writeOutAllInfoFile, "--writeOutAllInfoFile", "Write Out All Info File that contains information on all clusters including excluded ones");
 	setUp.setOption(setUp.pars_.colOpts_.clusOpts_.converge_, "--converge", "Keep clustering at each iteration until there is no more collapsing, could increase run time significantly", false, "Clustering");
@@ -644,6 +646,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
 					}
+					//write out as it goes rather than holding every row of every sample
+					if (tabOut.tellp() > 8 * 1024 * 1024) {
+						std::lock_guard<std::mutex> lock(allBasicInfoMut);
+						allBasicInfo << tabOut.str();
+						tabOut.str("");
+					}
 				}
 				{
 					std::lock_guard<std::mutex> lock(allBasicInfoMut);
@@ -812,7 +820,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	std::function<void()> runPopClusOnTar = [&tarNamesQueue,&masterPopClusParsCopyConst,
 																					 &setUp,&processedGatherRes,
 																					 &allSeqsFnpIn,
-																					 &seqOpts,&numThreadsForSample,
+																					 &seqOpts,&numThreadsForSample,&compressSamplesInMemory,
 																					 &previousPopDir](){
 		std::string tar = "";
 
@@ -895,7 +903,9 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				PopNamesInfo(currentPars.experimentNames.populationName_, processedGatherRes.allSamples, masterPopClusParsCopyConst.experimentNames.controlSamples_),
 				currentPars.preFiltCutOffs);
 
-		sampColl.keepSampleInfoInMemory_ = true;
+		//samples are kept as is by default, or compressed between steps (see SampleStateStore) for less memory but a bit more time
+		sampColl.keepSampleInfoInMemory_ = !compressSamplesInMemory;
+		sampColl.storeSampleStatesInMemory_ = compressSamplesInMemory;
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		if(!currentPars.groupingsFile.empty()){
 			sampColl.addGroupMetaData(currentPars.groupingsFile);
