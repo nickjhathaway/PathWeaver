@@ -646,7 +646,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							tabOut << njh::conToStr(row, "\t") << "\n";
 						}
 					}
-					//write out as it goes rather than holding every row of every sample
+					//write out once the buffer is over 8mb
 					if (tabOut.tellp() > 8 * 1024 * 1024) {
 						std::lock_guard<std::mutex> lock(allBasicInfoMut);
 						allBasicInfo << tabOut.str();
