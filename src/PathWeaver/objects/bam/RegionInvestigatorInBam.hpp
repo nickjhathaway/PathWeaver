@@ -125,10 +125,11 @@ public:
 	RegionInfo getCoverageForRegion(
 			BamTools::BamReader & bReader, const GenomicRegion & region) const;
 
+	/**@brief alignerObj is for trimming reads to the region, stitchAligner for stitching mates (see PairedReadProcessor::genStitchingAligner) */
 	RegionInfo getCoverageAndFullySpanningForRegion(
 			BamTools::BamReader &bReader, const GenomicRegion &region,
 			const seqInfo &refSeq, const BamCountSpecficRegionsPars &spanningReadsPar,
-			aligner &alignerObj) const;
+			aligner &alignerObj, aligner &stitchAligner) const;
 
 
 	struct ReadCountsRes{
@@ -161,11 +162,11 @@ public:
 
 	ReadCountsResSingle getFullSpanningCountForRegion(const GenomicRegion & currentRegion, const seqInfo & refSeq,
 			const BamCountSpecficRegionsPars & spanningReadsPar,
-			BamTools::BamReader &currentBReader, aligner & alignerObj) const;
+			BamTools::BamReader &currentBReader, aligner & alignerObj, aligner & stitchAligner) const;
 
 	void updateFullSpanningCountForRegion(RegionInfo & currentRegion, const seqInfo & refSeq,
 			const BamCountSpecficRegionsPars & spanningReadsPar,
-			BamTools::BamReader &currentBReader, aligner & alignerObj) const;
+			BamTools::BamReader &currentBReader, aligner & alignerObj, aligner & stitchAligner) const;
 
 
 	std::vector<std::shared_ptr<RegionInfo>> getCoverageAndFullSpanningReads(

@@ -45,7 +45,8 @@ namespace njhseq {
 		setUp.setOption(matchIDCutOff, "--matchIDCutOff", "Match ID Cut Off");
 		setUp.setOption(numThreads, "--numThreads", "Number Threads");
 		setUp.setOption(pairPars.minOverlap_, "--minOverlap", "Min Overlap in overlap when stitching pairs");
-		setUp.setOption(pairPars.errorAllowed_, "--errorAllowed", "Error allowed in overlap when stitching pairs");
+		setUp.setOption(pairPars.errorAllowed_, "--errorAllowed", "Fraction of high quality mismatches allowed in overlap when stitching pairs, rounds down so an overlap under 1/this bases is allowed none");
+		setUp.setOption(pairPars.mismatchPenalty_, "--stitchMismatchPenalty", "The penalty for a mismatch when aligning mates to stitch them, harsher than the match score so a long low identity placement doesn't out score a short true overlap");
 		setUp.setOption(pairPars.hardMismatchCutOff_, "--hardMismatchCutOff", "Hard Mismatch Cut Off allowed in overlaop when stitching pairs");
 		setUp.setOption(pairPars.lqMismatchCutOff, "--lqMismatchCutOff", "low quality Mismatch Cut Off allowed in overlaop when stitching pairs");
 		setUp.setOption(pairPars.hqMismatchCutOff, "--hqMismatchCutOff", "hq Mismatch Cut Off allowed in overlaop when stitching pairs");
@@ -263,10 +264,10 @@ BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageForRegion(
 BamRegionInvestigator::RegionInfo BamRegionInvestigator::getCoverageAndFullySpanningForRegion(
 		BamTools::BamReader &bReader, const GenomicRegion &region,
 		const seqInfo &refSeq, const BamCountSpecficRegionsPars &spanningReadsPar,
-		aligner &alignerObj) const {
+		aligner &alignerObj, aligner &stitchAligner) const {
 	RegionInfo ret(getCoverageForRegion(bReader, region));
 	updateFullSpanningCountForRegion(ret, refSeq, spanningReadsPar, bReader,
-			alignerObj);
+			alignerObj, stitchAligner);
 	return ret;
 }
 
@@ -310,6 +311,7 @@ BamRegionInvestigator::ReadCountsRes BamRegionInvestigator::getTotalAndFullySpan
 
 		//it's unlikely there will reads that are longer 1000 for now, so work around from trying to request too much memory for aligners
 		aligner alignerObj(std::min<uint64_t>(std::max<uint64_t>(maxlenForRegions, 500), 1000), gapScoringParameters(5,1,0,0,0,0));
+		aligner stitchAligner = PairedReadProcessor(spanningReadsPar.pairPars).genStitchingAligner(500);
 		GenomicRegion currentRegion;
 		auto currentBReader = bamPool.popReader();
 		auto refData = currentBReader->GetReferenceData();
@@ -318,7 +320,7 @@ BamRegionInvestigator::ReadCountsRes BamRegionInvestigator::getTotalAndFullySpan
 		std::unordered_map<std::string, uint32_t> currentTotalReadCounts;
 		while(regionsQueue.getVal(currentRegion)){
 			const auto & refSeq = regionSeqs.at(currentRegion.createUidFromCoordsStrand());
-			auto currentCount = getFullSpanningCountForRegion(currentRegion, refSeq, spanningReadsPar, *currentBReader, alignerObj);
+			auto currentCount = getFullSpanningCountForRegion(currentRegion, refSeq, spanningReadsPar, *currentBReader, alignerObj, stitchAligner);
 			currentSpanningReadCounts[currentRegion.createUidFromCoordsStrand()]+=currentCount.spanningReadCount_;
 			currentTotalReadCounts[currentRegion.createUidFromCoordsStrand()]+=currentCount.totalReadCount_;;
 		}
@@ -370,7 +372,7 @@ void BamRegionInvestigator::getTotalAndFullySpanningReadCounts(const bfs::path &
 void BamRegionInvestigator::updateFullSpanningCountForRegion(
 		RegionInfo &currentInfo, const seqInfo &refSeq,
 		const BamCountSpecficRegionsPars &spanningReadsPar,
-		BamTools::BamReader &currentBReader, aligner &alignerObj) const {
+		BamTools::BamReader &currentBReader, aligner &alignerObj, aligner &stitchAligner) const {
 
 	readVecTrimmer::GlobalAlnTrimPars trimPars;
 	trimPars.needJustOneEnd_ = false;
@@ -418,7 +420,8 @@ void BamRegionInvestigator::updateFullSpanningCountForRegion(
 								readVec::getMaxLength(secondMate, maxlen);
 								PairedRead pseq(firstMate, secondMate);
 								pseq.mateRComplemented_ = false;
-								auto pairRes = pProcess.processPairedEnd(pseq, processCounts, alignerObj);
+								stitchAligner.parts_.setMaxSize(maxlen);
+								auto pairRes = pProcess.processPairedEnd(pseq, processCounts, stitchAligner);
 								if(nullptr != pairRes.combinedSeq_){
 									readVec::getMaxLength(*pairRes.combinedSeq_, maxlen);
 									alignerObj.parts_.setMaxSize(maxlen);
@@ -508,7 +511,7 @@ void BamRegionInvestigator::updateFullSpanningCountForRegion(
 BamRegionInvestigator::ReadCountsResSingle BamRegionInvestigator::getFullSpanningCountForRegion(
 		const GenomicRegion & currentRegion, const seqInfo & refSeq,
 		const BamCountSpecficRegionsPars & spanningReadsPar,
-		BamTools::BamReader &currentBReader, aligner & alignerObj) const {
+		BamTools::BamReader &currentBReader, aligner & alignerObj, aligner & stitchAligner) const {
 
 	BamRegionInvestigator::ReadCountsResSingle ret;
 
@@ -558,7 +561,8 @@ BamRegionInvestigator::ReadCountsResSingle BamRegionInvestigator::getFullSpannin
 								readVec::getMaxLength(secondMate, maxlen);
 								PairedRead pseq(firstMate, secondMate);
 								pseq.mateRComplemented_ = false;
-								auto pairRes = pProcess.processPairedEnd(pseq, processCounts, alignerObj);
+								stitchAligner.parts_.setMaxSize(maxlen);
+								auto pairRes = pProcess.processPairedEnd(pseq, processCounts, stitchAligner);
 								if(nullptr != pairRes.combinedSeq_){
 									readVec::getMaxLength(*pairRes.combinedSeq_, maxlen);
 									alignerObj.parts_.setMaxSize(maxlen);
@@ -696,6 +700,7 @@ std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvesti
 			}
 		}
 		aligner alignerObj(std::min<uint64_t>(std::max<uint64_t>(maxlenForRegions, 500), 1000), gapScoringParameters(5,1,0,0,0,0));
+		aligner stitchAligner = PairedReadProcessor(spanningReadsPar.pairPars).genStitchingAligner(500);
 
 		BamTools::BamAlignment bAln;
 		auto refData = bReader.GetReferenceData();
@@ -710,7 +715,7 @@ std::vector<std::shared_ptr<BamRegionInvestigator::RegionInfo>> BamRegionInvesti
 					}
 				}
 			}
-			currentBamRegionsPairs.emplace_back(std::make_shared<RegionInfo>(getCoverageAndFullySpanningForRegion(bReader, bam_region, refSeq, spanningReadsPar, alignerObj)));
+			currentBamRegionsPairs.emplace_back(std::make_shared<RegionInfo>(getCoverageAndFullySpanningForRegion(bReader, bam_region, refSeq, spanningReadsPar, alignerObj, stitchAligner)));
 			currentBamRegionsPairs.back()->region_ = original_region;
 		}
 		{

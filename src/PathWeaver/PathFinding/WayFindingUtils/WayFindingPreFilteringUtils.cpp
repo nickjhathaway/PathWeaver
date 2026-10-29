@@ -954,7 +954,8 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 			currentPairParams.minOverlap_ = initialKmerLength;
 		}
 		concurrent::AlignerPool alnPool(maxInputSeqsLen,
-				gapScoringParameters(10,1,0,0,0,0), substituteMatrix(2,-4), extractionPars.numThreads);
+				gapScoringParameters(10,1,0,0,0,0),
+				substituteMatrix(currentPairParams.matchScore_, -static_cast<int32_t>(currentPairParams.mismatchPenalty_)), extractionPars.numThreads);
 //			alnPool.inAlnDir_ = njh::files::make_path(workingDir, "trimAlnCache");
 //			alnPool.outAlnDir_ = njh::files::make_path(workingDir, "trimAlnCache");
 

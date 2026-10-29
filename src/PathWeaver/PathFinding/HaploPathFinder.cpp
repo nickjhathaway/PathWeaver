@@ -307,7 +307,8 @@ void HaploPathFinder::PathFinderCorePars::setStitchParameters(seqSetUp & setUp){
 
 
 	setUp.setOption(pairProcessorParams_.minOverlap_, "--stitchPairsMinOverlap", "stitch pairs min overlap");
-	setUp.setOption(pairProcessorParams_.errorAllowed_, "--stitchErrorAllowed", "Stitch Error Allowed");
+	setUp.setOption(pairProcessorParams_.errorAllowed_, "--stitchErrorAllowed", "Stitch Error Allowed, fraction of high quality mismatches allowed in the overlap, rounds down so an overlap under 1/this bases is allowed none");
+	setUp.setOption(pairProcessorParams_.mismatchPenalty_, "--stitchMismatchPenalty", "The penalty for a mismatch when aligning mates to stitch them, harsher than the match score so a long low identity placement doesn't out score a short true overlap");
 	setUp.setOption(pairProcessorParams_.hardMismatchCutOff_, "--stitchHardMismatchCutOff", "Stitch Hard Mismatch Cut Off");
 	setUp.setOption(pairProcessorParams_.lqMismatchCutOff, "--stitchLqMismatchCutOff", "Stitch Lq Mismatch Cut Off");
 	setUp.setOption(pairProcessorParams_.hqMismatchCutOff, "--stitchHqMismatchCutOff", "Stitch Hq Mismatch Cut Off");
