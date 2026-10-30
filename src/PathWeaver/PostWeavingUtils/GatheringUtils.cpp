@@ -55,6 +55,13 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 			}
 			std::ofstream out(spool->fnp_.string(), std::ios::app);
 			out << text.str();
+			out.close();
+			//a failed write would make the target's sequence offsets wrong, so stop instead
+			if (!out) {
+				std::stringstream ss;
+				ss << __PRETTY_FUNCTION__ << ", error " << "couldn't write sequences for " << target << " to " << spool->fnp_ << "\n";
+				throw std::runtime_error { ss.str() };
+			}
 			spool->count_ += seqs.size();
 		};
 		//how much sequence text a thread holds before spooling
@@ -106,9 +113,9 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 
 				std::unordered_map<std::string, bool> isReverseStrand;
-				if(!pars.reOrientingRegion_.empty()) {
+				auto basInfoFnp = njh::files::make_path(inputDir, "final", "basicInfoPerRegion.tab.txt");
+				if(!pars.reOrientingRegion_.empty() && bfs::exists(basInfoFnp)) {
 					//this won't work for regions with the same name but different coords when we do multie region pulling
-					auto basInfoFnp = njh::files::make_path(inputDir, "final", "basicInfoPerRegion.tab.txt");
 					//bed convention, a header isn't required: name is column 4 and strand column 6, keyed by name since that's what the sequences are looked up by
 					TableReader basicReader(TableIOOpts::genTabFileIn(basInfoFnp));
 					basicReader.doNotCheckRowSizes = true;
@@ -117,7 +124,15 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 						if(row.size() < 6 || njh::beginsWith(row[0], "#")){
 							continue;
 						}
-						isReverseStrand[row[3]] = '-' == row[5].front();
+						//renamed the same way as the target names the sequences are looked up by
+						auto name = row[3];
+						for(const auto & rename : corePars_.chromRenamingKey) {
+							if(name.find(rename.first) != std::string::npos) {
+								name = njh::replaceString(name, rename.first, rename.second);
+								break;
+							}
+						}
+						isReverseStrand[name] = '-' == row[5].front();
 					}
 				}
 
@@ -435,8 +450,19 @@ SeqGatheringFromPathWeaver::gatherSeqsAndSortByTargetRes SeqGatheringFromPathWea
 
 					ret.seqsLocations[target] = std::make_pair(seqCounts, spool.count_);
 					std::ifstream spoolIn(spool.fnp_.string(), std::ios::binary);
+					if (!spoolIn) {
+						std::stringstream ss;
+						ss << __PRETTY_FUNCTION__ << ", error " << "couldn't open spooled sequences for " << target << " at " << spool.fnp_ << "\n";
+						throw std::runtime_error { ss.str() };
+					}
 					writer << spoolIn.rdbuf();
 					seqCounts += spool.count_;
+				}
+				writer.flush();
+				if (!writer) {
+					std::stringstream ss;
+					ss << __PRETTY_FUNCTION__ << ", error " << "couldn't write all sequences to " << allSeqOpts.out_.outName() << "\n";
+					throw std::runtime_error { ss.str() };
 				}
 			}
 			bfs::remove_all(spoolDir);

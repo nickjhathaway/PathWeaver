@@ -1151,6 +1151,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		sampColl.printSampleCollapseInfo(
 				njh::files::make_path(sampColl.masterOutputDir_,
 						"selectedClustersInfo.tab.txt.gz"));
+		//every sample's final and excluded clusters with why they were excluded
+		sampColl.printSampleClustersInfo(
+				njh::files::make_path(sampColl.masterOutputDir_,
+						"sampleClustersInfo.tab.txt.gz"));
 //		////std::cout << __FILE__ << " " << __LINE__ << std::endl;
 
 //		table hapIdTab = sampColl.genHapIdTable();
@@ -1248,6 +1252,31 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 					<< "\t" << meanHaps
 					<< "\t" << medianHaps
 					<< std::endl;
+		}
+	}
+
+	//gather all sample clusters info, the tables share a header so it's written once
+	{
+		OutputStream allSampleClustersInfo(njh::files::make_path(reportsDir, "allSampleClustersInfo.tab.txt.gz"));
+		bool wroteHeader = false;
+		for(const auto & tar : tarNames){
+			auto sampleClustersFnp = njh::files::make_path(setUp.pars_.directoryName_, tar, "sampleClustersInfo.tab.txt.gz");
+			if(!bfs::exists(sampleClustersFnp)){
+				continue;
+			}
+			InputStream in{InOptions(sampleClustersFnp)};
+			std::string line;
+			bool header = true;
+			while(njh::files::crossPlatGetline(in, line)){
+				if(header){
+					header = false;
+					if(wroteHeader){
+						continue;
+					}
+					wroteHeader = true;
+				}
+				allSampleClustersInfo << line << "\n";
+			}
 		}
 	}
 
