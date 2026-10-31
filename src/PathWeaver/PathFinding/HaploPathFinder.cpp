@@ -568,6 +568,8 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	if(setUp.setOption(bamExtractPars_.percentSubSample_, "--percentSubSample", "A number between 0 and 1 for sub sampling", false, "BamExtracting", njh::progutils::ProgramSetUp::flagCheckFrom0To1<double>("percentSubSample"))){
 		maxPerBaseCoverage = std::numeric_limits<double>::max();
 	}
+	bamExtractPars_.subSampleSeedSet_ = setUp.setOption(bamExtractPars_.subSampleSeed_, "--subSampleSeed",
+			"Seed for picking which reads are kept when sub sampling (--maxPerBaseCoverage or --percentSubSample), so runs can be repeated", false, "BamExtracting");
 	setUp.setOption(bamExtractPars_.renameSingles_, "--bamExtractRenameSingles",
 									"When extracting singles from region rename", false, "BamExtracting");
 	setUp.setOption(bamExtractPars_.trimToRegion_, "--bamExtractTrimToRegion",
