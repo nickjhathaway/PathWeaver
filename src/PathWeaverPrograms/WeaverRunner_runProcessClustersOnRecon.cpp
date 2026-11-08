@@ -15,6 +15,8 @@
 #include <SeekDeepPrograms/SeekDeepProgram/SeekDeepSetUp.hpp>
 #include <njhseq/objects/dataContainers/tables/TableReader.hpp>
 #include <njhseq/objects/Meta.h>
+#include <njhseq/objects/BioDataObject/pmo/pmoUtils.hpp>
+#include <SeekDeep/objects/TarAmpSetupUtils/PrimersAndMids.hpp>
 
 #include "PathWeaver/PostWeavingUtils/GatheringUtils.hpp"
 
@@ -256,7 +258,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 	}
 	bool trimBedSet = setUp.setOption(trimBedFnp, "--trimBedFnp", "Bed File of trim locations, 4th column must match the name of the input targets");
-	setUp.setOption(genomeFnp, "--genome2bit", "genome 2bit file for when supplying trim locations", trimBedSet);
+	setUp.setOption(genomeFnp, "--genome2bit", "genome 2bit file for when supplying trim locations, also used to make primers for the PMO for targets without primers", trimBedSet);
 	if(trimBedSet){
 		if(!bfs::exists(trimBedFnp)){
 			setUp.failed_ = true;
@@ -268,6 +270,14 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 	}
 	setUp.setOption(skipRBind, "--skipRBind", "Skip doing large rBind of all basic info files");
+	bool writePMO = false;
+	bfs::path pmoPrimersFnp;
+	std::string pmoPanelName = "PathWeaver";
+	std::string pmoProgramVersion = "develop";
+	setUp.setOption(writePMO, "--writePMO", "Write a minimum PMO per target and all of them merged to reports/allPMO.json.gz, with any --groupingsFile added as specimen meta");
+	setUp.setOption(pmoPrimersFnp, "--pmoPrimers", "An id file (target, forward, reverse) with primers for the targets, the PMO format requires primers so targets without any get the two ends of their region from --genome2bit, or NA without a genome");
+	setUp.setOption(pmoPanelName, "--pmoPanelName", "Panel name for the PMO");
+	setUp.setOption(pmoProgramVersion, "--pmoProgramVersion", "PathWeaver version to record in the PMO");
 
 	setUp.setOption(keepCommonSeqsWhenFiltering, "--keepCommonSeqsWhenFiltering", "Keep Common Seqs When Filtering");
 	setUp.setOption(pat, "--pat","The results directory pattern to process, directories must end with this, the prefix to this pattern will be treated as the sample name", true);
@@ -586,6 +596,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 	}
 
+	std::unordered_map<std::string, GenomicRegion> regionByTarget;
 	auto reportsDir = njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"reports"});
 	auto infoDir =    njh::files::makeDir(setUp.pars_.directoryName_, njh::files::MkdirPar{"info"});
 	std::unordered_set<std::string> allTargets;
@@ -604,7 +615,12 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				}
 				VecStr row;
 				while(firstTable->getNextRow(row)){
-					allTargets.emplace(row[firstTable->header_.getColPos("name")]);
+					const auto & regionName = row[firstTable->header_.getColPos("name")];
+					allTargets.emplace(regionName);
+					regionByTarget[regionName] = GenomicRegion(regionName, row[firstTable->header_.getColPos("#chrom")],
+							njh::StrToNumConverter::stoToNum<uint32_t>(row[firstTable->header_.getColPos("start")]),
+							njh::StrToNumConverter::stoToNum<uint32_t>(row[firstTable->header_.getColPos("end")]),
+							"-" == row[firstTable->header_.getColPos("strand")]);
 				}
 				break;
 			}
@@ -815,13 +831,53 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 	auto tarNames = getVectorOfMapKeys(processedGatherRes.seqsLocations);
 	njh::sort(tarNames);
+
+	//targets from assemblies usually have no primers and the PMO requires them, so they get the two ends of their region
+	std::unordered_map<std::string, std::pair<std::string, std::string>> pmoPrimersByTarget;
+	std::unordered_set<std::string> pmoFakePrimerTargets;
+	if(writePMO){
+		std::unique_ptr<PrimersAndMids> pmoPrimers;
+		if(!pmoPrimersFnp.empty()){
+			pmoPrimers = std::make_unique<PrimersAndMids>(pmoPrimersFnp);
+		}
+		std::unique_ptr<TwoBit::TwoBitFile> genomeReader;
+		if(!genomeFnp.empty()){
+			genomeReader = std::make_unique<TwoBit::TwoBitFile>(genomeFnp);
+		}
+		if(trimBedSet){
+			for(const auto & loc : bedPtrsToGenomicRegs(getBeds(trimBedFnp))){
+				regionByTarget[loc.uid_] = loc;
+			}
+		}
+		const uint32_t fakePrimerLen = 20;
+		for(const auto & tar : tarNames){
+			auto & primers = pmoPrimersByTarget[tar];
+			primers = std::make_pair("NA", "NA");
+			pmoFakePrimerTargets.emplace(tar);
+			auto regionName = njh::in(tar, rawGatherRes.targetKeyNewToOld) ? rawGatherRes.targetKeyNewToOld.at(tar) : tar;
+			if(nullptr != pmoPrimers && pmoPrimers->hasTarget(tar)){
+				primers = std::make_pair(pmoPrimers->targets_.at(tar).info_.forwardPrimerRaw_, pmoPrimers->targets_.at(tar).info_.reversePrimerRaw_);
+				pmoFakePrimerTargets.erase(tar);
+			} else if(nullptr != genomeReader && njh::in(regionName, regionByTarget)){
+				auto region = regionByTarget.at(regionName);
+				if(njh::in(regionName, rawGatherPars.reOrientingRegion_)){
+					region.reverseSrand_ = rawGatherPars.reOrientingRegion_.at(regionName)->reverseSrand_;
+				}
+				auto regionSeq = region.extractSeq(*genomeReader).seq_;
+				njh::strToUpper(regionSeq);
+				const auto primerLen = std::min<size_t>(fakePrimerLen, regionSeq.size());
+				primers = std::make_pair(regionSeq.substr(0, primerLen),
+						seqUtil::reverseComplement(regionSeq.substr(regionSeq.size() - primerLen), "DNA"));
+			}
+		}
+	}
 	njh::concurrent::LockableQueue<std::string> tarNamesQueue(tarNames);
 	const auto masterPopClusParsCopyConst = masterPopClusPars;
 	std::function<void()> runPopClusOnTar = [&tarNamesQueue,&masterPopClusParsCopyConst,
 																					 &setUp,&processedGatherRes,
 																					 &allSeqsFnpIn,
 																					 &seqOpts,&numThreadsForSample,&compressSamplesInMemory,
-																					 &previousPopDir](){
+																					 &previousPopDir, &writePMO, &pmoPrimersByTarget, &pmoFakePrimerTargets, &pmoPanelName, &pmoProgramVersion](){
 		std::string tar = "";
 
 	while(tarNamesQueue.getVal(tar)){
@@ -1171,6 +1227,16 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 
 		popMetaTable.outPutContents(TableIOOpts::genTabFileOut(njh::files::make_path(sampColl.masterOutputDir_, "population", "popSeqsWithMetaWtihSampleNameTable.tab.txt.gz")));
 		sampColl.createCoreJsonFile();
+		if(writePMO){
+			collapse::SampleCollapseCollection::MinimumPmoPars pmoPars;
+			pmoPars.forwardPrimer_ = pmoPrimersByTarget.at(tar).first;
+			pmoPars.reversePrimer_ = pmoPrimersByTarget.at(tar).second;
+			pmoPars.fakePrimers_ = njh::in(tar, pmoFakePrimerTargets);
+			pmoPars.panelName_ = pmoPanelName;
+			pmoPars.programName_ = "PathWeaver runProcessClustersOnRecon";
+			pmoPars.programVersion_ = pmoProgramVersion;
+			sampColl.writeMinimumPMO(njh::files::make_path(sampColl.masterOutputDir_, "PMO.json.gz"), pmoPars);
+		}
 
 	}
 
@@ -1278,6 +1344,24 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				allSampleClustersInfo << line << "\n";
 			}
 		}
+	}
+
+	if(writePMO){
+		pmo::PmoGenerationMethod generationMethod;
+		generationMethod.program_name_ = "PathWeaver runProcessClustersOnRecon";
+		generationMethod.program_version_ = pmoProgramVersion;
+		pmo::MinimumPmoMerger merger(generationMethod);
+		for(const auto & tar : tarNames){
+			auto pmoFnp = njh::files::make_path(setUp.pars_.directoryName_, tar, "PMO.json.gz");
+			if(bfs::exists(pmoFnp)){
+				merger.add(pmo::readPmo(pmoFnp));
+			}
+		}
+		auto allPmo = merger.finish();
+		if(!masterPopClusPars.groupingsFile.empty()){
+			pmo::addSpecimenMeta(allPmo, table(masterPopClusPars.groupingsFile, "\t", true), "sample");
+		}
+		pmo::writePmo(allPmo, OutOptions(njh::files::make_path(reportsDir, "allPMO.json.gz"), ".gz"));
 	}
 
 	//zip all seqs file
