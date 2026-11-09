@@ -298,6 +298,8 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	setUp.setOption(masterPopClusPars.collapseVarCallPars.variantCallerRunPars.lowVariantCutOff, "--lowVariantCutOff", "Low Variant Cut Off, don't report variants below this fraction");
   masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.lowVarFreq = masterPopClusPars.collapseVarCallPars.variantCallerRunPars.lowVariantCutOff;
   masterPopClusPars.collapseVarCallPars.transPars.setOptions(setUp);
+  masterPopClusPars.pmoGenomePars.setOptions(setUp);
+  masterPopClusPars.finalHapsVarCallPars.setOptions(setUp, masterPopClusPars.collapseVarCallPars);
   setUp.setOption(masterPopClusPars.collapseVarCallPars.calcPopMeasuresPars.getPairwiseComps, "--getPairwiseComps", "get Pairwise comparison metrics");
   bool noDiagAlnPairwiseComps = false;
   setUp.setOption(masterPopClusPars.collapseVarCallPars.noDiagAlnPairwiseComps, "--noDiagAlnPairwiseComps", "Use diagonal Alignment for Pairwise Comparisons");
@@ -873,11 +875,16 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	}
 	njh::concurrent::LockableQueue<std::string> tarNamesQueue(tarNames);
 	const auto masterPopClusParsCopyConst = masterPopClusPars;
+	std::unordered_map<std::string, std::shared_ptr<Bed6RecordCore>> variantCallLocations;
+	if(!masterPopClusPars.finalHapsVarCallPars.genomicLocationsFnp.empty()){
+		variantCallLocations = readVariantCallLocations(masterPopClusPars.finalHapsVarCallPars.genomicLocationsFnp, masterPopClusPars.finalHapsVarCallPars.genomicLocationsChangePeriodToDash);
+	}
 	std::function<void()> runPopClusOnTar = [&tarNamesQueue,&masterPopClusParsCopyConst,
 																					 &setUp,&processedGatherRes,
 																					 &allSeqsFnpIn,
 																					 &seqOpts,&numThreadsForSample,&compressSamplesInMemory,
-																					 &previousPopDir, &writePMO, &pmoPrimersByTarget, &pmoFakePrimerTargets, &pmoPanelName, &pmoProgramVersion](){
+																					 &previousPopDir, &writePMO, &pmoPrimersByTarget, &pmoFakePrimerTargets, &pmoPanelName, &pmoProgramVersion,
+																					 &variantCallLocations](){
 		std::string tar = "";
 
 	while(tarNamesQueue.getVal(tar)){
@@ -1163,13 +1170,18 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 
 	  auto varCallDirPath = njh::files::make_path(sampColl.masterOutputDir_,  "variantCalling");
-	  if(!masterPopClusParsCopyConst.collapseVarCallPars.transPars.lzPars_.genomeFnp.empty()){
-	  	auto collapseVarCallParsCopy = masterPopClusParsCopyConst.collapseVarCallPars;
-
-	    //if genome set call variants against genome
+	  auto collapseVarCallParsCopy = masterPopClusParsCopyConst.collapseVarCallPars;
+	  std::unique_ptr<TranslatorByAlignment::TranslatorByAlignmentResult> variantCalls;
+	  //call variants on the final haplotypes the same way variantCallOnSeqAndProtein does, targets missing from --genomicLocations aren't called
+	  const bool callTarget = !masterPopClusParsCopyConst.collapseVarCallPars.transPars.lzPars_.genomeFnp.empty()
+	  		&& (variantCallLocations.empty() || njh::in(tar, variantCallLocations));
+	  if(callTarget){
 	    collapseVarCallParsCopy.identifier = tar;
 	    collapseVarCallParsCopy.outputDirectory = varCallDirPath;
-	    collapseAndCallVariants(collapseVarCallParsCopy, outPopSeqsPerSamp);
+	    variantCalls = std::make_unique<TranslatorByAlignment::TranslatorByAlignmentResult>(callVariantsOnFinalHaps(
+	    		sampColl.genSampleCollapseInfo(sampColl.popNames_.samples_), tar, collapseVarCallParsCopy,
+	    		variantCallLocations.empty() ? nullptr : variantCallLocations.at(tar), masterPopClusParsCopyConst.groupingsFile,
+	    		njh::files::make_path(sampColl.masterOutputDir_, "variantCallingInputSeqs.fasta.gz")));
 	  }
 
 	  std::map<std::string, std::string> fullAATyped;
@@ -1182,7 +1194,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	      TableReader seqNamesTab(TableIOOpts::genTabFileIn(seqNamesFnp, true));
 	      VecStr row;
 	      while(seqNamesTab.getNextRow(row)){
-	        nameKey[row[seqNamesTab.header_.getColPos("CollapsedName")]] = row[seqNamesTab.header_.getColPos("PopUID")];
+	        nameKey[row[seqNamesTab.header_.getColPos("CollapsedName")]] = row[seqNamesTab.header_.getColPos("originalIdentifier")];
 	      }
 	    }
 	    {
@@ -1235,7 +1247,13 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			pmoPars.panelName_ = pmoPanelName;
 			pmoPars.programName_ = "PathWeaver runProcessClustersOnRecon";
 			pmoPars.programVersion_ = pmoProgramVersion;
-			sampColl.writeMinimumPMO(njh::files::make_path(sampColl.masterOutputDir_, "PMO.json.gz"), pmoPars);
+			auto pmoObj = sampColl.genMinimumPMO(pmoPars);
+			if(variantCalls){
+				addVariantCallsToPmo(pmoObj, tar, collapseVarCallParsCopy, *variantCalls, masterPopClusParsCopyConst.pmoGenomePars);
+			}
+			OutOptions pmoOutOpts(njh::files::make_path(sampColl.masterOutputDir_, "PMO.json.gz"), ".gz");
+			pmoOutOpts.overWriteFile_ = true;
+			pmo::writePmo(pmoObj, pmoOutOpts);
 		}
 
 	}
