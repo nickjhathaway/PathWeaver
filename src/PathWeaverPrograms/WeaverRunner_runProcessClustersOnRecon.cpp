@@ -1178,10 +1178,10 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	  if(callTarget){
 	    collapseVarCallParsCopy.identifier = tar;
 	    collapseVarCallParsCopy.outputDirectory = varCallDirPath;
-	    variantCalls = std::make_unique<TranslatorByAlignment::TranslatorByAlignmentResult>(callVariantsOnFinalHaps(
+	    variantCalls = callVariantsOnFinalHaps(
 	    		sampColl.genSampleCollapseInfo(sampColl.popNames_.samples_), tar, collapseVarCallParsCopy,
 	    		variantCallLocations.empty() ? nullptr : variantCallLocations.at(tar), masterPopClusParsCopyConst.groupingsFile,
-	    		njh::files::make_path(sampColl.masterOutputDir_, "variantCallingInputSeqs.fasta.gz")));
+	    		njh::files::make_path(sampColl.masterOutputDir_, "variantCallingInputSeqs.fasta.gz"));
 	  }
 
 	  std::map<std::string, std::string> fullAATyped;
