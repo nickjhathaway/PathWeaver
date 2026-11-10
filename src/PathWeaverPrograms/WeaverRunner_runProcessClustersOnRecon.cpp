@@ -612,9 +612,6 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 				TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 				firstTable = std::make_shared<TableReader>(currentTabOpts);
 				firstTable->doNotCheckRowSizes = true;
-				if(!skipRBind){
-					firstTable->header_.outPutContents(allBasicInfo, "\t");
-				}
 				VecStr row;
 				while(firstTable->getNextRow(row)){
 					const auto & regionName = row[firstTable->header_.getColPos("name")];
@@ -629,11 +626,25 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 		}
 
 		std::mutex allBasicInfoMut;
-		if(!skipRBind){
+		if(!skipRBind && nullptr != firstTable){
+			//samples assembled by different versions can have different columns, the combined table has all of them in the order first seen, NA where a sample doesn't have one
+			VecStr allColumns = firstTable->header_.columnNames_;
+			for(const auto & dir : directories){
+				auto basicFnp = njh::files::make_path(dir, "final", "basicInfoPerRegion.tab.txt");
+				if(bfs::exists(basicFnp)){
+					TableReader currentTable(TableIOOpts(InOptions(basicFnp), "\t", true));
+					for(const auto & col : currentTable.header_.columnNames_){
+						if(!njh::in(col, allColumns)){
+							allColumns.emplace_back(col);
+						}
+					}
+				}
+			}
+			allBasicInfo << njh::conToStr(allColumns, "\t") << "\n";
 			njh::concurrent::LockableVec<bfs::path> dirQueue(directories);
 			std::function<void()> gatherAllBasicInfoFiles = [
 				&allBasicInfo,&allBasicInfoMut,
-				&dirQueue, &firstTable, &chromRenamingKey, rawGatherPars](){
+				&dirQueue, &allColumns, &chromRenamingKey, rawGatherPars](){
 				bfs::path dir;
 				std::stringstream tabOut;
 				while(dirQueue.getVal(dir)){
@@ -642,13 +653,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 						TableIOOpts currentTabOpts(InOptions(basicFnp), "\t", true);
 						TableReader currentTable(currentTabOpts);
 						currentTable.doNotCheckRowSizes = true;
-						if(currentTable.header_.columnNames_ != firstTable->header_.columnNames_){
-							std::stringstream ss;
-							ss << __PRETTY_FUNCTION__ << ", error " << "table " << basicFnp << " header's doesn't match other's header"<< "\n";
-							ss << "Expected Header: " << njh::conToStr(firstTable->header_.columnNames_, ",") << "\n";
-							ss << "Current  Header: " << njh::conToStr(currentTable.header_.columnNames_, ",") << "\n";
-							throw std::runtime_error{ss.str()};
-						}
+						const bool sameColumns = currentTable.header_.columnNames_ == allColumns;
 						VecStr row;
 						while(currentTable.getNextRow(row)){
 							if(njh::in(row[0], chromRenamingKey)) {
@@ -658,10 +663,20 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 							// std::cout << "njh::in(row[firstTable->header_.getColPos(\"name\")], rawGatherPars.reOrientingRegion_): " << njh::colorBool(njh::in(row[firstTable->header_.getColPos("name")], rawGatherPars.reOrientingRegion_)) << std::endl;
 							// std::cout << "row[firstTable->header_.getColPos(\"name\")]: " << row[firstTable->header_.getColPos("name")] << std::endl;
 							// std::cout << "rawGatherPars.reOrientingRegion_ names: " << njh::conToStr(njh::getVecOfMapKeys(rawGatherPars.reOrientingRegion_), ",") << std::endl;
-							if(njh::in(row[firstTable->header_.getColPos("name")], rawGatherPars.reOrientingRegion_)) {
-								row[5] = rawGatherPars.reOrientingRegion_.at(row[firstTable->header_.getColPos("name")])->reverseSrand_ ? std::string(1, '-') : std::string(1, '+');
+							if(njh::in(row[currentTable.header_.getColPos("name")], rawGatherPars.reOrientingRegion_)) {
+								row[5] = rawGatherPars.reOrientingRegion_.at(row[currentTable.header_.getColPos("name")])->reverseSrand_ ? std::string(1, '-') : std::string(1, '+');
 							}
-							tabOut << njh::conToStr(row, "\t") << "\n";
+							if(sameColumns){
+								tabOut << njh::conToStr(row, "\t") << "\n";
+							}else{
+								VecStr outRow;
+								outRow.reserve(allColumns.size());
+								for(const auto & col : allColumns){
+									const bool hasValue = currentTable.header_.containsColumn(col) && currentTable.header_.getColPos(col) < row.size();
+									outRow.emplace_back(hasValue ? row[currentTable.header_.getColPos(col)] : std::string("NA"));
+								}
+								tabOut << njh::conToStr(outRow, "\t") << "\n";
+							}
 						}
 					}
 					//write out once the buffer is over 8mb
