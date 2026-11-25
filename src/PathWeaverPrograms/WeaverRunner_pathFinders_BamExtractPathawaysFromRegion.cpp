@@ -239,6 +239,7 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 
 	auto genomeFnp2bit = masterPars.genomeFnp;
 	genomeFnp2bit.replace_extension(".2bit");
+	masterPars.bamExtractPars_.softClipFilter_.genome2bit_ = genomeFnp2bit;
 
 
 	njh::LockableJsonLog jLog(njh::files::make_path(setUp.pars_.directoryName_, "extractionLog.json"));

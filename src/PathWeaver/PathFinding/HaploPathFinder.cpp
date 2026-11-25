@@ -643,6 +643,26 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 	setUp.setOption(bamExtractPars_.softClipPercentageCutOff_, "--softClipPercentageCutOff", "The minimum percentage of the bases that can be soft clipped to include alignment", false, "BamExtracting");
 	bamExtractPars_.softClipHardCutOff_ = 30;
 	setUp.setOption(bamExtractPars_.softClipHardCutOff_, "--softClipHardCutOff", "A hard cut off for amount of soft clipping allowed to be included in extraction", false, "BamExtracting");
+	bamExtractPars_.softClipFilter_.mode_ = SoftClipFilterPars::Mode::tandem;
+	std::string softClipFilterMode = SoftClipFilterPars::modeToStr(bamExtractPars_.softClipFilter_.mode_);
+	setUp.setOption(softClipFilterMode, "--softClipFilter",
+			"How alignments soft clipped past --softClipHardCutOff are handled. hardCutOff: filter them all; saElsewhere: keep them unless a supplementary alignment (SA tag) lands outside the region padded by --softClipSAWindow; saElsewhereOrInverted: also filter a supplementary alignment in the region on the opposite strand (a foldback); tandem: keep them only when each clip is more copies of a tandem repeat the alignment ends in, e.g. an insertion the aligner soft clipped",
+			false, "BamExtracting");
+	bamExtractPars_.softClipFilter_.mode_ = SoftClipFilterPars::modeFromStr(softClipFilterMode);
+	setUp.setOption(bamExtractPars_.softClipFilter_.saWindow_, "--softClipSAWindow",
+			"For --softClipFilter saElsewhere and saElsewhereOrInverted, a supplementary alignment within this many bases of the region counts as in the region", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.softClipFilter_.tandem_.maxPeriod_, "--softClipTandemMaxPeriod",
+			"For --softClipFilter tandem, the longest repeat unit looked for", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.softClipFilter_.tandem_.minEntropy_, "--softClipTandemMinEntropy",
+			"For --softClipFilter tandem, the lowest base entropy (bits) of the repeat tract in a clip, keeps low complexity (poly-T, (AT)n) clips filtered", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.softClipFilter_.tandem_.maxMismatchFrac_, "--softClipTandemMaxMismatchFrac",
+			"For --softClipFilter tandem, the most mismatches between neighboring repeat units, as a fraction of a 2-unit window", false, "BamExtracting");
+	setUp.setOption(bamExtractPars_.softClipFilter_.tandem_.flankIdentity_, "--softClipTandemFlankIdentity",
+			"For --softClipFilter tandem, the identity the part of a clip past the repeat has to match the nearby reference with", false, "BamExtracting");
+	std::string trimSoftClips = SoftClipFilterPars::trimClipsToStr(bamExtractPars_.softClipFilter_.trimClips_);
+	setUp.setOption(trimSoftClips, "--bamExtractTrimSoftClips",
+			"When reads are trimmed to the region, which soft clipped bases that would still sit inside the region are kept. drop: none; explained: clips that are more copies of a tandem repeat the alignment ends in (the same test as --softClipFilter tandem), e.g. an insertion the aligner soft clipped; all: every one", false, "BamExtracting");
+	bamExtractPars_.softClipFilter_.trimClips_ = SoftClipFilterPars::trimClipsFromStr(trimSoftClips);
 
 	//strand-bias (Illumina sequence specific error) k-mer correction, on by default
 	auto & sbPars = bamExtractPars_.strandBiasKmerCorrection_;

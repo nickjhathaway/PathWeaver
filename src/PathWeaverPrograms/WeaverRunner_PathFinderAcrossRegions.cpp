@@ -411,9 +411,9 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 			seqOutOpts.append_ = true;
 			bExtractor.writeExtractReadsFromBamRegion(setUp.pars_.ioOptions_.firstName_, region, pars.bamExtractPars_.percInRegion_, seqOutOpts);
 		}
-		bfs::path inputSingles = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract.fastq"));
-		bfs::path inputPairedFirstMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R1.fastq"));
-		bfs::path inputPairedSecondMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R2.fastq"));
+		bfs::path inputSingles = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract.fastq.gz"));
+		bfs::path inputPairedFirstMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R1.fastq.gz"));
+		bfs::path inputPairedSecondMates = njh::files::make_path(njh::files::make_path(realignmentDir, "rawExtract_R2.fastq.gz"));
 		njh::files::checkExistenceThrow(genomeFnp,__PRETTY_FUNCTION__);
 		bfs::path outputFnp = njh::files::make_path(realignmentBamDir, "realigned.sorted.bam");
 
@@ -671,6 +671,11 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 	extractedOpts.out_.outFilename_ = njh::files::make_path(
 			setUp.pars_.directoryName_, "extracted");
 
+	if(!pars.genomeFnp.empty()){
+		auto genomeFnp2bit = pars.genomeFnp;
+		genomeFnp2bit.replace_extension(".2bit");
+		pars.bamExtractPars_.softClipFilter_.genome2bit_ = genomeFnp2bit;
+	}
 	auto regionExtracted = bExtractor.extractReadsWtihCrossRegionMapping(extractedOpts, regions, pars.bamExtractPars_);
 	{
 		OutOptions extractedReadsStatsFileOpts(njh::files::make_path(extractionStatsDir, "extractedReadsStats.tab.txt"));
