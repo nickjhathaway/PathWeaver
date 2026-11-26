@@ -44,7 +44,8 @@ int CarmenServerRunner::runCarmen(const njh::progutils::CmdArgs & inputCommands)
 	SeqAppCorePars seqServerCorePars;
 	seqServerCorePars.name_ = "carmen0";
 	seqServerCorePars.port_ = 10000;
-#if defined(PATHWEAVERDEBUG)
+//PathWeaverDebug_INSTALLDIR only exists when the binary is built under the name PathWeaverDebug
+#if defined(PATHWEAVERDEBUG) && defined(PathWeaverDebug_INSTALLDIR)
 	bfs::path resourceDirName = njh::files::make_path(PathWeaverDebug_INSTALLDIR,
 			"etc/serverResources");
 #else

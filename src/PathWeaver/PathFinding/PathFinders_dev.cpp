@@ -2450,7 +2450,7 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					if (extractionPars.splitEnds_) {
 						watch.startNewLap(njh::pasteAsStr(genPrefixForWatchLapName(),
 					"- Splitting End Nodes"));
-#if defined(PATHWEAVERSUPERDEBUG)
+#if defined(PATHWEAVERDEBUG) || defined(PATHWEAVERSUPERDEBUG)
 						uint32_t splitEndsCount = 0;
 #endif
 
