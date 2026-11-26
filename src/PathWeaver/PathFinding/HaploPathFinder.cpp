@@ -614,7 +614,7 @@ void HaploPathFinder::ExtractParams::setBamExtractOpts(seqSetUp & setUp){
 		bamExtractPars_.removeInverseOrphans_ = !keepInverseOrphans;
 	} else {
 		setUp.setOption(bamExtractPars_.removeInverseOrphans_,
-				"--removeImproperPairs",
+				"--removeInverseOrphans",
 				"Filter Off orphans that have inverse mapping", false, "BamExtracting");
 	}
 
