@@ -693,9 +693,11 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 			};
 			njh::concurrent::runVoidFunctionThreaded(gatherAllBasicInfoFiles, masterPopClusPars.numThreads);
 		}
-		if(skipRBind){
-			bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
-		}
+	}
+	// removed once allBasicInfo is closed at the end of the block above, on NFS a file still open when it's deleted
+	// leaves a .nfs placeholder behind
+	if(skipRBind){
+		bfs::remove(njh::files::make_path(reportsDir, "allBasicInfo.tab.txt.gz"));
 	}
 
 	std::shared_ptr<MultipleGroupMetaData> meta;

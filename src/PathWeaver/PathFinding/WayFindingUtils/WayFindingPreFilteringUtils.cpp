@@ -906,10 +906,13 @@ repairSeqsAfterRecruitmentResults repairSeqsAfterRecruitment(const repairSeqsAft
 					reWritten.openWrite(singleReads[pos - 1]);
 					++singlesWritten;
 					++pos;
-					if (len(singleReads) == pos) {
-						reWritten.openWrite(singleReads[pos - 1]);
-					}
 				}
+			}
+			// the last read wasn't looked at as the first of a pair when the loop ended right on it, whether it came
+			// after a single or after a pair (before, a single right after the last pair was dropped)
+			if (len(singleReads) == pos) {
+				reWritten.openWrite(singleReads[pos - 1]);
+				++singlesWritten;
 			}
 			if(0 == singlesWritten){
 				bfs::remove(rePairPars.singlesFnp_);
@@ -1122,6 +1125,9 @@ writeOutTandemsAndOptionallyStitchRes writeOutTandemsAndOptionallyStitch(
 		njh::concurrent::runVoidFunctionThreaded(countTandemsPaired, extractionPars.numThreads);
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		multiWriter.closeOutAll();
+		// done reading the pairs, close them before they're removed and replaced by the not stitched pairs below,
+		// on NFS a file still open when it's deleted leaves a .nfs placeholder behind
+		pairedReader.closeIn();
 		if(extractionPars.stitchPairs){
 			//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 

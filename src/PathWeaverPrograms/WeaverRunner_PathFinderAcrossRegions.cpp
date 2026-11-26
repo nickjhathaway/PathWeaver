@@ -564,10 +564,14 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 
 	auto inputRegions = gatherRegions(bedFile.string(), "", setUp.pars_.verbose_);
 
-	OutOptions originalInputBedOpts(njh::files::make_path(setUp.pars_.directoryName_, "inputRegions.bed"));
-	auto originalInputBed = originalInputBedOpts.openFile();
-	for(const auto & region : inputRegions){
-		(*originalInputBed ) << region.genBedRecordCore().toDelimStr() << std::endl;
+	{
+		// scoped so it's closed now, inputRegions.bed is removed in the clean up at the end and on NFS a file still
+		// open when it's deleted leaves a .nfs placeholder behind
+		OutOptions originalInputBedOpts(njh::files::make_path(setUp.pars_.directoryName_, "inputRegions.bed"));
+		auto originalInputBed = originalInputBedOpts.openFile();
+		for(const auto & region : inputRegions){
+			(*originalInputBed ) << region.genBedRecordCore().toDelimStr() << std::endl;
+		}
 	}
 
 	HaploPathFinder hFinder(pars);
