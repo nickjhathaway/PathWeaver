@@ -2025,9 +2025,17 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 		(*logFilePtr) << fullLog << std::endl;
 	}else{
 
+		//the results are written by now, so temporary files that can't be removed only get a warning
+		//(network file systems can briefly refuse to remove a directory, so the removal is retried)
+		auto removeTemporary = [](const bfs::path & fnp){
+			auto removal = njh::files::rmDirForceRetry(fnp);
+			if(!removal.removed_){
+				std::cerr << "Warning, couldn't remove " << fnp << ", " << njh::conToStr(removal.failures_, " | ") << std::endl;
+			}
+		};
 		//clean up iteration directories
 		for(const auto & iterDir : iterationDirectories){
-			njh::files::rmDirForce(iterDir);
+			removeTemporary(iterDir);
 		}
 		//clean up final pass directory
 		{
@@ -2038,7 +2046,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 					"optimizationInfoAll.json", "output_final.dot" };
 			for(const auto & f : filesInFinalPass){
 				if(!njh::in(f.filename().string(), filesToKeep)){
-					njh::files::rmDirForce(f);
+					removeTemporary(f);
 				}
 			}
 		}
@@ -2052,7 +2060,7 @@ int WeaverRunner::ExtractPathwaysReadsFallingInMultipleRegions(const njh::progut
 		for(const auto & fnp : filesToCleanUp){
 			auto fullFnp = njh::files::make_path(setUp.pars_.directoryName_, fnp);
 			if(bfs::exists(fullFnp)){
-				njh::files::rmDirForce(fullFnp);
+				removeTemporary(fullFnp);
 			}
 		}
 	}

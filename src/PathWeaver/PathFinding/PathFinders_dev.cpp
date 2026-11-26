@@ -88,6 +88,13 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 	std::string patStr = "N+";
 	njh::PatPosFinder pFinder(patStr);
 
+	//whether to make a directory per k-mer length and write the reads used for each length into it, otherwise they are only kept in memory
+	//writing them to and then removing them from network file systems (e.g. NFS) can intermittently fail
+#if defined(PATHWEAVERDEBUG)
+	const bool writeKmerLengthDirs = true;
+#else
+	const bool writeKmerLengthDirs = extractionPars.writeOutAll_ || extractionPars.keepOptimizedSubDirs || extractionPars.writeNodeCounts_;
+#endif
 //	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 	for(const auto currentKLen : extractionPars.kmerLengths){
@@ -96,7 +103,12 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //		//
 //		std::cout << "\tcurrentKLen: " << currentKLen << ", kmerLenStop: " << kmerLenStop << std::endl;
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
-		bfs::path currentKmerDirectory = njh::files::makeDir(finalCurrentDir, njh::files::MkdirPar(sampName + njh::pasteAsStr("_klen-", leftPadNumStr(currentKLen, vectorMaximum(extractionPars.kmerLengths))) ));;
+		//the reads for each k-mer length are kept in memory, the k-mer length directory and copies of those reads are only written when intermediate files are being kept
+		const std::string currentKmerDirectoryName = sampName + njh::pasteAsStr("_klen-", leftPadNumStr(currentKLen, vectorMaximum(extractionPars.kmerLengths)));
+		bfs::path currentKmerDirectory = njh::files::make_path(finalCurrentDir, currentKmerDirectoryName + "/");
+		if(writeKmerLengthDirs){
+			currentKmerDirectory = njh::files::makeDir(finalCurrentDir, njh::files::MkdirPar(currentKmerDirectoryName));
+		}
 		Json::Value & klenLog = ret.log_[sampName + njh::pasteAsStr("_klen-", leftPadNumStr(currentKLen, vectorMaximum(extractionPars.kmerLengths)))];
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		watch.startNewLap(
@@ -119,15 +131,32 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				njh::files::make_path(currentKmerDirectory, "extractedSinglesWithTandems"));
 		SeqIOOptions singletNoTandemsOuts = SeqIOOptions::genFastqOut(
 				njh::files::make_path(currentKmerDirectory, "extractedSinglesWithNoTandems"));
-		bfs::path usedSinglesFnp;
-		bfs::path usedPairedR1Fnp;
-		bfs::path usedPairedR2Fnp;
+		//write reads to a file in the k-mer length directory if they are being kept, files are only created if there are reads
+		auto writeKmerLengthPairs = [&](const std::vector<PairedRead> & reads, const SeqIOOptions & opts){
+			if(writeKmerLengthDirs && !reads.empty()){
+				SeqOutput writer(opts);
+				writer.openOut();
+				for(const auto & read : reads){
+					writer.write(read);
+				}
+			}
+		};
+		auto writeKmerLengthSingles = [&](const std::vector<seqInfo> & reads, const SeqIOOptions & opts){
+			if(writeKmerLengthDirs && !reads.empty()){
+				SeqOutput writer(opts);
+				writer.openOut();
+				for(const auto & read : reads){
+					writer.write(read);
+				}
+			}
+		};
+		//the reads used for this k-mer length (pairs where both mates are usable, and single reads)
+		std::vector<PairedRead> usedPairs;
+		std::vector<seqInfo> usedSingles;
 		//std::cout << __FILE__ << " " << __LINE__ << std::endl;
 		{
-			SeqOutput writer(pairedOpts);
-			SeqOutput singleWriter(singletOuts);
-			SeqOutput unused_writer(unused_pairedOpts);
-			SeqOutput unused_singleWriter(unused_singletOuts);
+			std::vector<PairedRead> unusedPairs;
+			std::vector<seqInfo> unusedSingles;
 			if (findTanStitchPars.usedFilteredPairedOpts.inExists()) {
 				PairedRead pSeq;
 				SeqInput pairedReader(findTanStitchPars.usedFilteredPairedOpts);
@@ -173,15 +202,19 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 					}
 					if (!firstSkipped && !secondSkipped) {
-						writer.openWrite(pSeq);
+						usedPairs.emplace_back(pSeq);
 					}else if(!firstSkipped && secondSkipped){
-						singleWriter.openWrite(pSeq.seqBase_);
-						unused_singleWriter.openWrite(pSeq.mateSeqBase_);
+						usedSingles.emplace_back(pSeq.seqBase_);
+						if(writeKmerLengthDirs){
+							unusedSingles.emplace_back(pSeq.mateSeqBase_);
+						}
 					}else if(firstSkipped && !secondSkipped){
-						singleWriter.openWrite(pSeq.mateSeqBase_);
-						unused_singleWriter.openWrite(pSeq.seqBase_);
-					}else{
-						unused_writer.openWrite(pSeq);
+						usedSingles.emplace_back(pSeq.mateSeqBase_);
+						if(writeKmerLengthDirs){
+							unusedSingles.emplace_back(pSeq.seqBase_);
+						}
+					}else if(writeKmerLengthDirs){
+						unusedPairs.emplace_back(pSeq);
 					}
 				}
 			}
@@ -211,30 +244,17 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 						}
 					}
 					if (!skip) {
-						singleWriter.openWrite(seq);
-					}else{
-						unused_singleWriter.openWrite(seq);
+						usedSingles.emplace_back(seq);
+					}else if(writeKmerLengthDirs){
+						unusedSingles.emplace_back(seq);
 					}
 				}
 			}
-			if(writer.outOpen()){
-				usedPairedR1Fnp = writer.getPrimaryOutFnp();
-				usedPairedR2Fnp = writer.getSecondaryOutFnp();
-			}
-			if(singleWriter.outOpen()){
-				usedSinglesFnp = singleWriter.getPrimaryOutFnp();
-			}
-			writer.closeOut();
-			singleWriter.closeOut();
-			unused_writer.closeOut();
-			unused_singleWriter.closeOut();
+			writeKmerLengthPairs(usedPairs, pairedOpts);
+			writeKmerLengthSingles(usedSingles, singletOuts);
+			writeKmerLengthPairs(unusedPairs, unused_pairedOpts);
+			writeKmerLengthSingles(unusedSingles, unused_singletOuts);
 		}
-		auto finalPairedInOpts = SeqIOOptions::genPairedIn(pairedOpts.getPriamryOutName(),
-																											 pairedOpts.getSecondaryOutName());
-		finalPairedInOpts.revComplMate_ = inOpts.inPairs_.revComplMate_;
-		SeqInput pairedReader(finalPairedInOpts);
-		SeqInput singleReader(
-				SeqIOOptions::genFastqIn(singletOuts.getPriamryOutName()));
 
 
 		watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": ",
@@ -256,30 +276,25 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				processedTandems.tandemsAltMots, currentKLen,
 				extractionPars.useSmallerThanKlenExpandedPositions_);
 		uint32_t seqsWithTandems = 0;
-		SeqOutput tandemPairWriter(pairedTandemsOpts);
-		SeqOutput tandemSingleWriter(singletTandemsOuts);
-		SeqOutput noTandemPairWriter(pairedNoTandemsOpts);
-		SeqOutput noTandemSingleWriter(singletNoTandemsOuts);
+		//which of the used reads have tandems, the reads without tandems are added to the graph first
+		std::vector<bool> pairHasTandems(usedPairs.size(), false);
+		std::vector<bool> singleHasTandems(usedSingles.size(), false);
 		std::vector<uint32_t> readLengths;
 		uint32_t pairedInReadCount = 0;
-		if (pairedReader.ioOptions_.inExists()) {
-			PairedRead pSeq;
-			pairedReader.reOpenIn();
-			while (pairedReader.readNextRead(pSeq)) {
-				++pairedInReadCount;
-				readLengths.emplace_back(len(pSeq.seqBase_));
-				readLengths.emplace_back(len(pSeq.mateSeqBase_));
-				auto firstExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.seqBase_.seq_);
-				auto secondExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.mateSeqBase_.seq_);
+		for (uint64_t pos = 0; pos < usedPairs.size(); ++pos) {
+			const auto & pSeq = usedPairs[pos];
+			++pairedInReadCount;
+			readLengths.emplace_back(len(pSeq.seqBase_));
+			readLengths.emplace_back(len(pSeq.mateSeqBase_));
+			auto firstExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.seqBase_.seq_);
+			auto secondExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.mateSeqBase_.seq_);
 
-				bool foundAnyTandemsFirst = !firstExpansionPositions.empty();
-				bool foundAnyTandemsSecond = !secondExpansionPositions.empty();
-				if (foundAnyTandemsFirst || foundAnyTandemsSecond) {
-					tandemPairWriter.openWrite(pSeq);
-					++seqsWithTandems;
-				} else {
-					noTandemPairWriter.openWrite(pSeq);
-				}
+			bool foundAnyTandemsFirst = !firstExpansionPositions.empty();
+			bool foundAnyTandemsSecond = !secondExpansionPositions.empty();
+			if (foundAnyTandemsFirst || foundAnyTandemsSecond) {
+				pairHasTandems[pos] = true;
+				++seqsWithTandems;
+			}
 //				error
 //				if(foundAnyTandemsFirst && foundAnyTandemsSecond){
 //					tandemPairWriter.openWrite(pSeq);
@@ -295,23 +310,17 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //				} else {
 //					noTandemPairWriter.openWrite(pSeq);
 //				}
-			}
 		}
 		uint32_t singleReadCount = 0;
-		if (singleReader.ioOptions_.inExists()) {
-			seqInfo seq;
-			singleReader.reOpenIn();
-			while (singleReader.readNextRead(seq)) {
-				++singleReadCount;
-				readLengths.emplace_back(len(seq));
-				auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
-				bool foundAnyTandems = !expansionPositions.empty();
-				if(foundAnyTandems){
-					++seqsWithTandems;
-					tandemSingleWriter.openWrite(seq);
-				} else {
-					noTandemSingleWriter.openWrite(seq);
-				}
+		for (uint64_t pos = 0; pos < usedSingles.size(); ++pos) {
+			const auto & seq = usedSingles[pos];
+			++singleReadCount;
+			readLengths.emplace_back(len(seq));
+			auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
+			bool foundAnyTandems = !expansionPositions.empty();
+			if(foundAnyTandems){
+				++seqsWithTandems;
+				singleHasTandems[pos] = true;
 			}
 		}
 		klenLog["seqsWithTandems"] = seqsWithTandems;
@@ -324,37 +333,23 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 	//		}
 	//	}
 	//	std::cout << "TACACGACATACACGACATACACGACATACACGACATACA: " << graph.kCounts_["TACACGACATACACGACATACACGACATACACGACATACA"] << std::endl;
-		bfs::path tandemR1Fnp;
-		bfs::path tandemR2Fnp;
-		bfs::path tandemSingleFnp;
-		//close out writers so their buffers get flushed
-		if(tandemPairWriter.outOpen()){
-			tandemR1Fnp = tandemPairWriter.getPrimaryOutFnp();
-			tandemR2Fnp = tandemPairWriter.getSecondaryOutFnp();
-			tandemPairWriter.closeOut();
-		}
-		if(tandemSingleWriter.outOpen()){
-			tandemSingleFnp = tandemSingleWriter.getPrimaryOutFnp();
-			tandemSingleWriter.closeOut();
-		}
-		bfs::path notandemR1Fnp;
-		bfs::path notandemR2Fnp;
-		bfs::path notandemSingleFnp;
-		if(noTandemPairWriter.outOpen()){
-			notandemR1Fnp = noTandemPairWriter.getPrimaryOutFnp();
-			notandemR2Fnp = noTandemPairWriter.getSecondaryOutFnp();
-			noTandemPairWriter.closeOut();
-		}else if(!bfs::exists(tandemR1Fnp) && !bfs::exists(tandemR2Fnp) ){
-			//this check is needed in case all paired reads ended up with tandems
-			notandemR1Fnp = pairedReader.ioOptions_.firstName_;
-			notandemR2Fnp = pairedReader.ioOptions_.secondName_;
-		}
-		if(noTandemSingleWriter.outOpen()){
-			notandemSingleFnp = noTandemSingleWriter.getPrimaryOutFnp();
-			noTandemSingleWriter.closeOut();
-		}else if(!bfs::exists(tandemSingleFnp) ){
-			//this check is needed in case all single reads ended up with tandems
-			notandemSingleFnp = singleReader.ioOptions_.firstName_;
+		const bool anyTandemPairs = std::any_of(pairHasTandems.begin(), pairHasTandems.end(), [](bool hasTandems){ return hasTandems; });
+		const bool anyTandemSingles = std::any_of(singleHasTandems.begin(), singleHasTandems.end(), [](bool hasTandems){ return hasTandems; });
+		if(writeKmerLengthDirs){
+			std::vector<PairedRead> tandemPairs;
+			std::vector<PairedRead> noTandemPairs;
+			for (uint64_t pos = 0; pos < usedPairs.size(); ++pos) {
+				(pairHasTandems[pos] ? tandemPairs : noTandemPairs).emplace_back(usedPairs[pos]);
+			}
+			std::vector<seqInfo> tandemSingles;
+			std::vector<seqInfo> noTandemSingles;
+			for (uint64_t pos = 0; pos < usedSingles.size(); ++pos) {
+				(singleHasTandems[pos] ? tandemSingles : noTandemSingles).emplace_back(usedSingles[pos]);
+			}
+			writeKmerLengthPairs(tandemPairs, pairedTandemsOpts);
+			writeKmerLengthPairs(noTandemPairs, pairedNoTandemsOpts);
+			writeKmerLengthSingles(tandemSingles, singletTandemsOuts);
+			writeKmerLengthSingles(noTandemSingles, singletNoTandemsOuts);
 		}
 		auto medReadLeng = vectorMedianRef(readLengths);
 		klenLog["readLengthAverage"] = njh::json::toJson(vectorMean(readLengths));
@@ -437,30 +432,26 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		"- Adding Counts With No Tandems"));
 
 		// populate nodes
-		if (bfs::exists(notandemR1Fnp) && bfs::exists(notandemR2Fnp) ) {
-			PairedRead pSeq;
-			SeqInput noTandemPairReader(
-					SeqIOOptions::genPairedIn(notandemR1Fnp, notandemR2Fnp));
-			noTandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
-			noTandemPairReader.openIn();
-			while (noTandemPairReader.readNextRead(pSeq)) {
-				++totalInputSequences;
-				/**@todo handle the increase of counts to handle k-mers that appear in both pairs*/
-				firstGraph->increaseKCounts(pSeq.seqBase_.seq_);
-				firstGraph->increaseKCounts(pSeq.mateSeqBase_.seq_);
-				totalInputBases += pSeq.seqBase_.seq_.size();
-				totalInputBases += pSeq.mateSeqBase_.seq_.size();
+		for (uint64_t pos = 0; pos < usedPairs.size(); ++pos) {
+			if(pairHasTandems[pos]){
+				continue;
 			}
+			const auto & pSeq = usedPairs[pos];
+			++totalInputSequences;
+			/**@todo handle the increase of counts to handle k-mers that appear in both pairs*/
+			firstGraph->increaseKCounts(pSeq.seqBase_.seq_);
+			firstGraph->increaseKCounts(pSeq.mateSeqBase_.seq_);
+			totalInputBases += pSeq.seqBase_.seq_.size();
+			totalInputBases += pSeq.mateSeqBase_.seq_.size();
 		}
-		if (bfs::exists(notandemSingleFnp) ) {
-			seqInfo seq;
-			SeqInput noTandemSingleReader(SeqIOOptions::genFastqIn(notandemSingleFnp));
-			noTandemSingleReader.openIn();
-			while (noTandemSingleReader.readNextRead(seq)) {
-				++totalInputSequences;
-				firstGraph->increaseKCounts(seq.seq_);
-				totalInputBases += seq.seq_.size();
+		for (uint64_t pos = 0; pos < usedSingles.size(); ++pos) {
+			if(singleHasTandems[pos]){
+				continue;
 			}
+			const auto & seq = usedSingles[pos];
+			++totalInputSequences;
+			firstGraph->increaseKCounts(seq.seq_);
+			totalInputBases += seq.seq_.size();
 		}
 		watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": ",
 				"klen_", currentKLen,
@@ -469,39 +460,34 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": ",
 				"klen_", currentKLen,
 		"- Adding Counts With Tandems"));
-		if (bfs::exists(tandemR1Fnp)
-		 || bfs::exists(tandemSingleFnp)) {
-
-			if(bfs::exists(tandemR1Fnp)){
-				SeqInput tandemPairReader(SeqIOOptions::genPairedIn(tandemR1Fnp, tandemR2Fnp ));
-				tandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
-				PairedRead pSeq;
-				tandemPairReader.openIn();
-				while(tandemPairReader.readNextRead(pSeq)){
-					/**@todo handle the increase of counts to handle k-mers that appear in both pairs*/
-					//first mate
-					{
-						auto firstExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.seqBase_.seq_);
-						firstGraph->increaseKCountsAdjust(pSeq.seqBase_.seq_, firstExpansionPositions);
-					}
-					//second mate
-					{
-						auto secondExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.mateSeqBase_.seq_);
-						firstGraph->increaseKCountsAdjust(pSeq.mateSeqBase_.seq_, secondExpansionPositions);
-					}
+		if (anyTandemPairs || anyTandemSingles) {
+			for (uint64_t pos = 0; pos < usedPairs.size(); ++pos) {
+				if(!pairHasTandems[pos]){
+					continue;
+				}
+				const auto & pSeq = usedPairs[pos];
+				/**@todo handle the increase of counts to handle k-mers that appear in both pairs*/
+				//first mate
+				{
+					auto firstExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.seqBase_.seq_);
+					firstGraph->increaseKCountsAdjust(pSeq.seqBase_.seq_, firstExpansionPositions);
+				}
+				//second mate
+				{
+					auto secondExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.mateSeqBase_.seq_);
+					firstGraph->increaseKCountsAdjust(pSeq.mateSeqBase_.seq_, secondExpansionPositions);
 				}
 			}
 			//singles
-			if(bfs::exists(tandemSingleFnp)){
-				SeqInput singleTandemReader(SeqIOOptions::genFastqIn(tandemSingleFnp ));
-				seqInfo seq;
-				singleTandemReader.openIn();
-				while(singleTandemReader.readNextRead(seq)){
-					//single
-					{
-						auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
-						firstGraph->increaseKCountsAdjust(seq.seq_, expansionPositions);
-					}
+			for (uint64_t pos = 0; pos < usedSingles.size(); ++pos) {
+				if(!singleHasTandems[pos]){
+					continue;
+				}
+				const auto & seq = usedSingles[pos];
+				//single
+				{
+					auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
+					firstGraph->increaseKCountsAdjust(seq.seq_, expansionPositions);
 				}
 			}
 		}
@@ -614,55 +600,44 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": ",
 				"klen_", currentKLen,
 		"- Adding Edges With No Tandems"));
-		if (bfs::exists(notandemR1Fnp) && bfs::exists(notandemR2Fnp) ) {
-			PairedRead pSeq;
-			SeqInput noTandemPairReader(
-					SeqIOOptions::genPairedIn(notandemR1Fnp, notandemR2Fnp));
-			noTandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
-			noTandemPairReader.openIn();
-			while (noTandemPairReader.readNextRead(pSeq)) {
-				firstGraph->threadThroughSequence(pSeq);
+		for (uint64_t pos = 0; pos < usedPairs.size(); ++pos) {
+			if(!pairHasTandems[pos]){
+				firstGraph->threadThroughSequence(usedPairs[pos]);
 			}
 		}
-		if (bfs::exists(notandemSingleFnp) ) {
-			seqInfo seq;
-			SeqInput noTandemSingleReader(SeqIOOptions::genFastqIn(notandemSingleFnp));
-			noTandemSingleReader.openIn();
-			while (noTandemSingleReader.readNextRead(seq)) {
-				firstGraph->threadThroughSequence(seq);
+		for (uint64_t pos = 0; pos < usedSingles.size(); ++pos) {
+			if(!singleHasTandems[pos]){
+				firstGraph->threadThroughSequence(usedSingles[pos]);
 			}
 		}
 		watch.startNewLap(njh::pasteAsStr(njh::leftPadNumStr<uint32_t>(watch.getNumberOfLaps() + 1, 10000), ": ",
 				"klen_", currentKLen,
 		"- Adding Edges With Tandems"));
 		//pairs
-		if(bfs::exists(tandemR1Fnp)){
-			SeqInput tandemPairReader(SeqIOOptions::genPairedIn(tandemR1Fnp, tandemR2Fnp ));
-			tandemPairReader.ioOptions_.revComplMate_ = inOpts.inPairs_.revComplMate_;
-			PairedRead pSeq;
-			tandemPairReader.openIn();
-			while(tandemPairReader.readNextRead(pSeq)){
-				++totalInputSequences;
-				//first mate
-				auto firstExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.seqBase_.seq_);
-				auto secondExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.mateSeqBase_.seq_);
-				firstGraph->threadThroughSequenceAdjust(pSeq, firstExpansionPositions, secondExpansionPositions);
+		for (uint64_t pos = 0; pos < usedPairs.size(); ++pos) {
+			if(!pairHasTandems[pos]){
+				continue;
+			}
+			const auto & pSeq = usedPairs[pos];
+			++totalInputSequences;
+			//first mate
+			auto firstExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.seqBase_.seq_);
+			auto secondExpansionPositions = expansionHelperInitial.getExpansionPositions(pSeq.mateSeqBase_.seq_);
+			firstGraph->threadThroughSequenceAdjust(pSeq, firstExpansionPositions, secondExpansionPositions);
 //					firstGraph->threadThroughSequenceAdjust(pSeq.seqBase_, firstExpansionPositions, pSeq.seqBase_.name_);
 //					firstGraph->threadThroughSequenceAdjust(pSeq.mateSeqBase_,  secondExpansionPositions, pSeq.seqBase_.name_ + "_mate");
-			}
 		}
 		//singles
-		if(bfs::exists(tandemSingleFnp)){
-			SeqInput singleTandemReader(SeqIOOptions::genFastqIn(tandemSingleFnp ));
-			seqInfo seq;
-			singleTandemReader.openIn();
-			while(singleTandemReader.readNextRead(seq)){
-				//single
-				{
-					++totalInputSequences;
-					auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
-					firstGraph->threadThroughSequenceAdjust(seq,expansionPositions, seq.name_);
-				}
+		for (uint64_t pos = 0; pos < usedSingles.size(); ++pos) {
+			if(!singleHasTandems[pos]){
+				continue;
+			}
+			const auto & seq = usedSingles[pos];
+			//single
+			{
+				++totalInputSequences;
+				auto expansionPositions = expansionHelperInitial.getExpansionPositions(seq.seq_);
+				firstGraph->threadThroughSequenceAdjust(seq,expansionPositions, seq.name_);
 			}
 		}
 		uint32_t kCutIter = 0;
@@ -3683,7 +3658,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 				njh::files::checkExistenceThrow(extractionPars.hmmModelFnp_);
 				std::vector<seqInfo> hits;
 
-				auto hmmWorkSpaceDir = njh::files::makeDir(bestResult.runDirs_.klenDir_,
+				//without k-mer length directories the work space goes in the sample directory and is removed after use
+				auto hmmWorkSpaceDir = njh::files::makeDir(writeKmerLengthDirs ? bestResult.runDirs_.klenDir_ : finalCurrentDir,
 																									 njh::files::MkdirPar("hmm_work_space"));
 				{
 					auto inputSeqFnp = njh::files::make_path(hmmWorkSpaceDir, "inputSeqs.fasta");
@@ -3814,6 +3790,12 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 //				if (!extractionPars.writeOutAll_) {
 //					njh::files::rmDirForce(hmmWorkSpaceDir);
 //				}
+				if(!writeKmerLengthDirs){
+					auto removal = njh::files::rmDirForceRetry(hmmWorkSpaceDir);
+					if(!removal.removed_){
+						ret.cleanUpErrors_.emplace_back("couldn't remove " + hmmWorkSpaceDir.string() + ", " + njh::conToStr(removal.failures_, " | "));
+					}
+				}
 				outSeqs = hits;
 				//sort by length
 				njh::sort(outSeqs, [](const seqInfo & seq1, const seqInfo & seq2){
@@ -3995,7 +3977,8 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 					for(const auto & seq : outSeqs){
 						if(len(seq)  > finalReadLengthCutOff){
 							seqsAboveLenCutOff.emplace_back(seq);
-						}else{
+						}else if(writeKmerLengthDirs){
+							//only kept with the k-mer length directory
 							writer.openWrite(seq);
 						}
 					}
@@ -4248,13 +4231,19 @@ PathFinderFromSeqsRes PathFinderFromSeqsDev(
 		}
 #endif
 
-		if(!extractionPars.keepOptimizedSubDirs){
+		if(writeKmerLengthDirs && !extractionPars.keepOptimizedSubDirs){
 			std::set<std::string> klenDirs;
 			for(const auto & res : allOptRunResults){
 				klenDirs.emplace(res.runDirs_.klenDir_.string());
 			}
 			for(const auto & klenDir : klenDirs){
-				njh::files::rmDirForce(klenDir);
+				//the results are already written, so failing to remove a temporary directory is recorded rather than thrown
+				auto removal = njh::files::rmDirForceRetry(klenDir);
+				if(!removal.removed_){
+					ret.cleanUpErrors_.emplace_back("couldn't remove " + klenDir + ", " + njh::conToStr(removal.failures_, " | "));
+				}else if(removal.attempts_ > 1){
+					ret.log_["cleanUpRetries"].append(njh::json::toJson("removed " + klenDir + " after " + njh::conToStr(removal.failures_, " | ")));
+				}
 			}
 		}
 

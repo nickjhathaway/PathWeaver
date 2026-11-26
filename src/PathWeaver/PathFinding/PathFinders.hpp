@@ -46,6 +46,8 @@ struct PathFinderFromSeqsRes{
 	Json::Value log_;
 
 	writeOutTandemsAndOptionallyStitchRes previousDetTandems_;
+
+	std::vector<std::string> cleanUpErrors_; /**< temporary directories that couldn't be removed, these don't affect the results */
 };
 
 

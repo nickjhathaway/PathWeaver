@@ -300,8 +300,30 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 	concurrent::BamReaderPool bamPool(setUp.pars_.ioOptions_.firstName_, masterPars.pFinderPars_.numThreads);
 	bamPool.openBamFile();
 
+	//errors from individual regions, always written to regionErrors.tab.txt (the full extraction log is only written with --writeOutLogs)
+	struct RegionError {
+		std::string region_;
+		std::string type_;
+		std::string message_;
+	};
+	std::vector<RegionError> regionErrors;
+	std::mutex regionErrorsMut;
+	std::function<void(const std::string &, const std::string &, const std::string &)> addRegionError =
+			[&regionErrors,&regionErrorsMut](const std::string & region, const std::string & type, const std::string & message){
+		//keep each error to one line of the table
+		std::string oneLineMessage = message;
+		for(auto & c : oneLineMessage){
+			if('\n' == c || '\t' == c || '\r' == c){
+				c = ' ';
+			}
+		}
+		std::lock_guard<std::mutex> lock(regionErrorsMut);
+		std::cerr << "PathWeaver region " << type << ": " << region << ": " << oneLineMessage << std::endl;
+		regionErrors.emplace_back(RegionError{region, type, oneLineMessage});
+	};
+
   std::function<void(const HaploPathFinder::ExtractParams &)> extractPathway;
-  extractPathway = [&meta, &regionsQueue, &jLog, &refDir,
+  extractPathway = [&meta, &regionsQueue, &jLog, &refDir, &addRegionError,
           &finalDirectory, &writeOutBaseCoveragePerSeq, &baseCoverageCutOff,
           &filterOnBaseCoverage, &reDetermineReadCounts,
           &setUp, &coverageField,
@@ -430,6 +452,9 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 
         auto PWRes = PathFinderFromSeqsDev(regionExtracted, regionDir, sampName, parsForRegion.pFinderPars_, meta);
         logValue = PWRes.log_;
+        for(const auto & cleanUpError : PWRes.cleanUpErrors_){
+          addRegionError(regionName, "cleanUpFailed", cleanUpError);
+        }
         auto outputOpts = SeqIOOptions::genFastaIn(
                 njh::files::make_path(regionDir, sampName, "output_aboveCutOff.fasta"), true);
 
@@ -999,30 +1024,31 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
         }
       } catch (std::exception &e) {
 //				std::cout << e.what() << std::endl;
-        try {
-          auto finalInfoRegionDir = njh::files::make_path(finalDirectory,
-                                                          regionName);
-          if (bfs::exists(finalInfoRegionDir)) {
-            njh::files::rmDirForce(finalInfoRegionDir);
-          }
-        } catch (std::exception &e2) {
-          logValue["exception-" + regionName] = e.what() + std::string("\n") + e2.what();
-        }
         logValue["exception-" + regionName] = e.what();
+        addRegionError(regionName, "assemblyFailed", e.what());
+        auto finalInfoRegionDir = njh::files::make_path(finalDirectory,
+                                                        regionName);
+        if (bfs::exists(finalInfoRegionDir)) {
+          auto removal = njh::files::rmDirForceRetry(finalInfoRegionDir);
+          if (!removal.removed_) {
+            logValue["exception-" + regionName] = e.what() + std::string("\n") + njh::conToStr(removal.failures_, "\n");
+            addRegionError(regionName, "cleanUpFailed", "couldn't remove " + finalInfoRegionDir.string() + ", " + njh::conToStr(removal.failures_, " | "));
+          }
+        }
       }
-
+      //remove the temporary region directory, the region's results are already collected so a failure is recorded rather than thrown
+      //(network file systems can briefly refuse to remove a directory, so the removal is retried)
+      if (!keepTemporaryFiles && bfs::exists(regionDir)) {
+        auto removal = njh::files::rmDirForceRetry(regionDir);
+        if (!removal.removed_) {
+          addRegionError(regionName, "cleanUpFailed", "couldn't remove " + regionDir.string() + ", " + njh::conToStr(removal.failures_, " | "));
+        } else if (removal.attempts_ > 1) {
+          logValue["cleanUpRetries"].append(njh::json::toJson("removed " + regionDir.string() + " after " + njh::conToStr(removal.failures_, " | ")));
+        }
+      }
       if (writeOutLogs) {
         jLog.addToLog(regionName, logValue);
       }
-    	if (!keepTemporaryFiles && bfs::exists(regionDir)) {
-		    try {
-		    	njh::files::rmDirForce(regionDir);
-		    } catch (bfs::filesystem_error &e) {
-		    	//some systems get busy and need a double remove, pause for a moment and then try again
-		    	sleep(2);
-			    njh::files::rmDirForce(regionDir);
-		    }
-    	}
     }
   };
 
@@ -1177,23 +1203,33 @@ int WeaverRunner::BamExtractPathwaysFromRegion(
 			}
 		}
 
-		for(const auto & regionName : regionNames){
-			auto regionDir = njh::files::make_path(finalDirectory,regionName);
-			if(bfs::exists(regionDir)){
-				njh::files::rmDirForce(regionDir);
+		//everything is written by now, so a directory that can't be removed is recorded rather than failing the run
+		for(const auto & parentDir : std::vector<bfs::path>{finalDirectory, partialDirectory, masterPars.outputDir}){
+			for(const auto & regionName : regionNames){
+				auto regionDir = njh::files::make_path(parentDir,regionName);
+				if(bfs::exists(regionDir)){
+					auto removal = njh::files::rmDirForceRetry(regionDir);
+					if(!removal.removed_){
+						addRegionError(regionName, "cleanUpFailed", "couldn't remove " + regionDir.string() + ", " + njh::conToStr(removal.failures_, " | "));
+					}
+				}
 			}
 		}
-		for(const auto & regionName : regionNames){
-			auto regionDir = njh::files::make_path(partialDirectory,regionName);
-			if(bfs::exists(regionDir)){
-				njh::files::rmDirForce(regionDir);
-			}
-		}
-		for(const auto & regionName : regionNames){
-			auto regionDir = njh::files::make_path(masterPars.outputDir,regionName);
-			if(bfs::exists(regionDir)){
-				njh::files::rmDirForce(regionDir);
-			}
+	}
+	{
+		//one line per region error, header only when there were none
+		njh::sort(regionErrors, [](const RegionError & e1, const RegionError & e2){
+			return e1.region_ == e2.region_ ? e1.type_ < e2.type_ : e1.region_ < e2.region_;
+		});
+		OutOptions regionErrorsOpts(njh::files::make_path(masterPars.outputDir, "regionErrors.tab.txt"));
+		regionErrorsOpts.overWriteFile_ = true;
+		OutputStream regionErrorsOut(regionErrorsOpts);
+		regionErrorsOut << "sample\tregion\ttype\tmessage" << "\n";
+		for(const auto & regionError : regionErrors){
+			regionErrorsOut << sampName
+					<< "\t" << regionError.region_
+					<< "\t" << regionError.type_
+					<< "\t" << regionError.message_ << "\n";
 		}
 	}
 	return 0;
