@@ -33,12 +33,4 @@ class PathWeaverRunner: public njh::progutils::OneRing {
 public:
 	PathWeaverRunner();
 };
-PathWeaverRunner::PathWeaverRunner() :
-		njh::progutils::OneRing(
-				{
-					addRing<WeaverRunner>(),
-					addRing<CarmenServerRunner>(),
-				},//
-				{ }, "PathWeaver", "1", "0", "0-dev") {
-}
 } //namespace njhseq
