@@ -273,7 +273,7 @@ int WeaverRunner::runProcessClustersOnRecon(const njh::progutils::CmdArgs & inpu
 	bool writePMO = false;
 	bfs::path pmoPrimersFnp;
 	std::string pmoPanelName = "PathWeaver";
-	std::string pmoProgramVersion = "develop";
+	std::string pmoProgramVersion = inputCommands.runnerVersion_;
 	setUp.setOption(writePMO, "--writePMO", "Write a minimum PMO per target and all of them merged to reports/allPMO.json.gz, with any --groupingsFile added as specimen meta");
 	setUp.setOption(pmoPrimersFnp, "--pmoPrimers", "An id file (target, forward, reverse) with primers for the targets, the PMO format requires primers so targets without any get the two ends of their region from --genome2bit, or NA without a genome");
 	setUp.setOption(pmoPanelName, "--pmoPanelName", "Panel name for the PMO");
