@@ -515,7 +515,7 @@ void CarmenRunner::getCombinedSeqsPostHandler(std::shared_ptr<restbed::Session> 
 	auto request = session->get_request();
 	Json::Value postData;
 	if(!body.empty()){
-		postData = njh::json::parse(std::string(body.begin(), body.end()));
+		postData = bytesToJson(body);
 	}
 	Json::Value ret;
 
