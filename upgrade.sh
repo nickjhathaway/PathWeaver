@@ -8,6 +8,8 @@ fi
 #make sure on the master branch and then pull for any new commits
 git checkout master
 git pull
+#check out the cppSetupTools version this commit uses
+git submodule update --init
 #re-run install
 ./configure.py
 ./setup.py --compfile compfile.mk --outMakefile makefile-common.mk --overWrite

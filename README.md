@@ -27,9 +27,11 @@ There are 4 different ways input data can be supplied to PathWeaver. One is to s
 PathWeaver is written in c++ but its install setup scripts are written in Python3. Within the repository is an install script that can be used which will download PathWeaver's dependencies. The only things that need to be present first are Python3, cmake, and a modern c++ complier that can handle c++17 or above. 
 
 ```bash
-git clone https://github.com/nickjhathaway/PathWeaver.git 
+#--recursive also gets the cppSetupTools submodule (configure.py and setup.py fetch it too if it's missing)
+git clone --recursive https://github.com/nickjhathaway/PathWeaver.git 
 cd PathWeaver 
-./install.sh 
+#number of CPUs to build with
+./install.sh 7
 
 bin/PathWeaver
 ```
