@@ -520,7 +520,7 @@ void CarmenRunner::getCombinedSeqsPostHandler(std::shared_ptr<restbed::Session> 
 	Json::Value ret;
 
 	std::string searchTerm = "combined";
-	if (njh::in(searchTerm, seqs_->cache_)) {
+	if (seqs_->containsRecord(searchTerm)) {
 		uint32_t sesUid = std::numeric_limits<uint32_t>::max();
 		//check to see if there is a session already started associated with this seq
 		if (!postData.isMember("sessionUID")) {
@@ -528,8 +528,15 @@ void CarmenRunner::getCombinedSeqsPostHandler(std::shared_ptr<restbed::Session> 
 		} else {
 			sesUid = postData["sessionUID"].asUInt();
 		}
-		ret = seqsBySession_[sesUid]->getJson(searchTerm);
-		ret["sessionUID"] = njh::json::toJson(sesUid);
+		//nullptr if the session doesn't exist
+		auto seqCache = getSeqCacheSession(sesUid);
+		if (nullptr == seqCache) {
+			std::cerr << __PRETTY_FUNCTION__ << ": error, sessionUID: " << sesUid
+					<< " is not currently in seqsBySession_" << std::endl;
+		} else {
+			ret = seqCache->getJson(searchTerm);
+			ret["sessionUID"] = njh::json::toJson(sesUid);
+		}
 	} else {
 		std::cerr << __PRETTY_FUNCTION__ << ": couldn't find " << searchTerm
 				<< " Couldn't find :" << searchTerm << ", options are: " << njh::conToStr(njh::getVecOfMapKeys(seqs_->cache_), ", ")
